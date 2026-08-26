@@ -4,10 +4,18 @@ import type {
   CreateExpenseRequest,
   GetExpensesParams,
   UpdateExpenseRequest,
+  LoginRequest,
 } from "../types/api";
 import type { Expense } from "../types/expense";
 
 import { expenses } from "./data/expenses";
+
+import { mockCredentials, mockUser } from "./data/auth";
+import {
+  clearMockSession,
+  getMockSession,
+  setMockSession,
+} from "./session";
 
 const API_BASE_URL = "/api";
 
@@ -166,4 +174,57 @@ export const handlers = [
       data: expense,
     });
   }),
+
+  http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
+    const body = (await request.json()) as LoginRequest;
+
+    if (
+      body.email !== mockCredentials.email ||
+      body.password !== mockCredentials.password
+    ) {
+      return HttpResponse.json(
+        {
+          message: "Invalid email or password.",
+          code: "INVALID_CREDENTIALS",
+        },
+        { status: 401 },
+      );
+    }
+
+    setMockSession(mockUser);
+
+    return HttpResponse.json({
+      data: {
+        user: mockUser,
+        isAuthenticated: true,
+      },
+    });
+  }),
+
+  http.post(`${API_BASE_URL}/auth/logout`, () => {
+    clearMockSession();
+
+    return HttpResponse.json({
+      data: null,
+    });
+  }),
+
+  http.get(`${API_BASE_URL}/auth/me`, () => {
+    const user = getMockSession();
+
+    if (!user) {
+      return HttpResponse.json(
+        {
+          message: "No active session.",
+          code: "UNAUTHENTICATED",
+        },
+        { status: 401 },
+      );
+    }
+
+    return HttpResponse.json({
+      data: user,
+    });
+  }),
 ];
+

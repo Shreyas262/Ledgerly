@@ -2,12 +2,18 @@ import { createBrowserRouter } from "react-router-dom";
 
 import { DashboardPage } from "../features/analytics/pages/DashboardPage";
 import { AppLayout } from "../layouts/AppLayout/AppLayout";
+import { LoginPage } from "../features/auth/pages/LoginPage";
 
 function PlaceholderPage({ title }: { title: string }) {
   return <h1>{title}</h1>;
 }
 
 export const router = createBrowserRouter([
+  {
+    path: "/login",
+    element: <LoginPage />,
+  },
+
   {
     element: <AppLayout />,
     children: [

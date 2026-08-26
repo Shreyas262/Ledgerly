@@ -12,8 +12,9 @@ dist
 dist-ssr
 *.local
 
-LedgerlyArchitecture.md
 .env
+LedgerlyArchitecture.md
+ProgressTracker.md
 
 # Editor directories and files
 .vscode/*

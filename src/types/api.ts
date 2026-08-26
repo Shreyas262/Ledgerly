@@ -4,6 +4,7 @@ import type {
   ID,
 } from "./common";
 import type { Expense, ExpenseCategory } from "./expense";
+import type { AuthSession, User } from "./auth"
 
 export interface ApiResponse<T> {
   data: T;
@@ -45,4 +46,17 @@ export interface UpdateExpenseRequest {
 
 export interface SubmitExpenseResponse {
   data: Expense;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  data: AuthSession;
+}
+
+export interface GetCurrentUserResponse {
+  data: User;
 }
