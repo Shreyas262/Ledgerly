@@ -14,5 +14,6 @@ export interface User {
 
 export interface AuthSession {
   user: User;
+  sessionId: string;
   isAuthenticated: boolean;
 }

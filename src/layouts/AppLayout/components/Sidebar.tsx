@@ -30,7 +30,7 @@ interface SidebarProps {
 const navigationItems = [
   {
     label: "Dashboard",
-    path: "/",
+    path: "/dashboard",
     icon: <DashboardOutlined />,
   },
   {

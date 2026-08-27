@@ -191,11 +191,12 @@ export const handlers = [
       );
     }
 
-    setMockSession(mockUser);
+    const session = setMockSession(mockUser);
 
     return HttpResponse.json({
       data: {
         user: mockUser,
+        sessionId: session.sessionId,
         isAuthenticated: true,
       },
     });
@@ -210,9 +211,9 @@ export const handlers = [
   }),
 
   http.get(`${API_BASE_URL}/auth/me`, () => {
-    const user = getMockSession();
+    const session = getMockSession();
 
-    if (!user) {
+    if (!session) {
       return HttpResponse.json(
         {
           message: "No active session.",
@@ -222,8 +223,20 @@ export const handlers = [
       );
     }
 
+    if (session.userId !== mockUser.id) {
+      clearMockSession();
+
+      return HttpResponse.json(
+        {
+          message: "Invalid session.",
+          code: "INVALID_SESSION",
+        },
+        { status: 401 },
+      );
+    }
+
     return HttpResponse.json({
-      data: user,
+      data: mockUser,
     });
   }),
 ];

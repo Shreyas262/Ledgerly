@@ -9,7 +9,18 @@ import {
   IconButton,
   Toolbar,
   Typography,
+  Menu,
+  MenuItem,
 } from "@mui/material";
+import type { MouseEvent } from "react";
+
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAppDispatch } from "../../../store/hooks";
+
+import { useLogoutMutation } from "../../../features/auth/api/authApi";
+import { useAuth } from "../../../features/auth/context/AuthContext";
+import { baseApi } from "../../../services/api/baseApi";
 
 interface TopbarProps {
   isMobile: boolean;
@@ -22,6 +33,37 @@ export function Topbar({
   mobileSidebaropen,
   onMobileMenuClick,
 }: TopbarProps) {
+
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const { user } = useAuth();
+
+  const [logout, { isLoading }] = useLogoutMutation();
+
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+
+  const menuOpen = Boolean(anchorEl);
+
+  const handleAccountClick = (
+    event: MouseEvent<HTMLElement>,
+  ) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout().unwrap();
+    } finally {
+      dispatch(baseApi.util.resetApiState());
+      navigate("/login", { replace: true });
+    }
+  };
+
   return (
     <AppBar
       position="sticky"
@@ -51,18 +93,40 @@ export function Topbar({
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+
           <IconButton aria-label="Notifications">
             <NotificationsNoneOutlined />
           </IconButton>
 
-          <Avatar
-            sx={{
-              width: 36,
-              height: 36,
-            }}
+          <IconButton
+            onClick={handleAccountClick}
+            aria-label="Open account menu"
+            aria-controls={menuOpen ? "account-menu" : undefined}
+            aria-haspopup="true"
+            aria-expanded={menuOpen ? "true" : undefined}
           >
-            U
-          </Avatar>
+            <Avatar>
+              {user?.name?.charAt(0).toUpperCase()}
+            </Avatar>
+          </IconButton>
+          <Menu
+            id="account-menu"
+            anchorEl={anchorEl}
+            open={menuOpen}
+            onClose={handleMenuClose}
+          >
+            <MenuItem onClick={handleMenuClose}>
+              Profile
+            </MenuItem>
+
+            <MenuItem
+              onClick={handleLogout}
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing out..." : "Sign out"}
+            </MenuItem>
+          </Menu>
+
         </Box>
       </Toolbar>
     </AppBar>

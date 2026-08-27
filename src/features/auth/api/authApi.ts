@@ -13,6 +13,7 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body: credentials,
       }),
+      invalidatesTags: ["User"],
     }),
 
     logout: builder.mutation<ApiResponse<null>, void>({
@@ -24,6 +25,7 @@ export const authApi = baseApi.injectEndpoints({
 
     getCurrentUser: builder.query<ApiResponse<User>, void>({
       query: () => "/auth/me",
+      providesTags: ["User"],
     }),
   }),
 });

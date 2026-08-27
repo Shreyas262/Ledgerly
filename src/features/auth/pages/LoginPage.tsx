@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import { useState, type SyntheticEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 import { useLoginMutation } from "../api/authApi";
 
@@ -15,6 +16,7 @@ export function LoginPage() {
   const navigate = useNavigate();
 
   const [login, { isLoading, isError }] = useLoginMutation();
+  const { refetchUser } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,8 +31,9 @@ export function LoginPage() {
         email,
         password,
       }).unwrap();
+      await refetchUser().unwrap();
 
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch {
       // Error state is rendered below.
     }
