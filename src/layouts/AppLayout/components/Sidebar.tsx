@@ -20,6 +20,9 @@ import {
   Typography,
 } from "@mui/material";
 import { NavLink } from "react-router-dom";
+import type { Permission } from "../../../types/auth";
+import { useAuth } from "../../../features/auth/context/AuthContext";
+import { hasPermission } from "../../../features/auth/utils/permissions";
 
 interface SidebarProps {
   isMobile: boolean;
@@ -27,7 +30,14 @@ interface SidebarProps {
   onMobileClose: () => void;
 }
 
-const navigationItems = [
+interface NavigationItem {
+  label: string;
+  path: string;
+  icon: React.ReactNode;
+  permission?: Permission;
+}
+
+const navigationItems: NavigationItem[] = [
   {
     label: "Dashboard",
     path: "/dashboard",
@@ -37,36 +47,43 @@ const navigationItems = [
     label: "Expenses",
     path: "/expenses",
     icon: <ReceiptLongOutlined />,
+    permission: "expenses.read",
   },
   {
     label: "Approvals",
     path: "/approvals",
     icon: <RequestQuoteOutlined />,
+    permission: "expenses.approve",
   },
   {
     label: "Budgets",
     path: "/budgets",
     icon: <AccountBalanceOutlined />,
+    permission: "budgets.read",
   },
   {
     label: "Analytics",
     path: "/analytics",
     icon: <AssessmentOutlined />,
+    permission: "analytics.read",
   },
   {
     label: "Users",
     path: "/users",
     icon: <PeopleOutlined />,
+    permission: "users.read",
   },
   {
     label: "Roles & Permissions",
     path: "/roles",
     icon: <SecurityOutlined />,
+    permission: "roles.read",
   },
   {
     label: "Policies",
     path: "/policies",
     icon: <PolicyOutlined />,
+    permission: "policies.read",
   },
   {
     label: "Settings",
@@ -76,6 +93,17 @@ const navigationItems = [
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+
+  const { user } = useAuth();
+
+  const visibleNavigationItems = navigationItems.filter((item) => {
+    if (!item.permission) {
+      return true;
+    }
+
+    return hasPermission(user, item.permission);
+  });
+
   return (
     <Box sx={{ width: 260 }}>
       <Box sx={{ px: 3, py: 3 }}>
@@ -92,7 +120,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <Box component="nav" aria-label="Main navigation">
         <List sx={{ px: 1.5, py: 2 }}>
-          {navigationItems.map((item) => (
+          {visibleNavigationItems.map((item) => (
             <ListItemButton
               key={item.path}
               component={NavLink}

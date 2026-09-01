@@ -16,39 +16,39 @@
 - [x] Project initialized
 - [x] TypeScript configured
 - [x] MUI configured
-- [x] Redux configured
+- [x] Redux configurex
 - [x] RTK Query configured
 - [x] Core types
 - [x] Mock Backend
 
 ## Day 2
 
-- [~] Theme
-- [~] App shell
-- [~] Sidebar
-- [~] Topbar
-- [~] Responsive navigation
-- [~] Common UI states
-- [~] Accessibility baseline
+- [ ] Theme
+- [x] App shell
+- [x] Sidebar
+- [x] Topbar
+- [x] Responsive navigation
+- [x] Common UI states
+- [x] Accessibility baseline
 
 ## Day 3
 
-- [ ] Login
-- [ ] Logout
-- [ ] Session/current user
-- [ ] Protected routes
-- [ ] Auth layout
-- [ ] Unauthorized state
+- [x] Login
+- [x] Logout
+- [x] Session/current user
+- [x] Protected routes
+- [x] Auth layout
+- [x] Unauthorized state
 
 ## Day 4
 
-- [ ] Users
-- [ ] Roles
-- [ ] Permissions
-- [ ] Permission checks
-- [ ] Permission-aware navigation
-- [ ] Permission-aware actions
-- [ ] Authorized routes
+- [x] Users
+- [x] Roles
+- [x] Permissions
+- [x] Permission checks
+- [x] Permission-aware navigation
+- [x] Permission-aware actions
+- [x] Authorized routes
 
 ## Day 5
 

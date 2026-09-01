@@ -2,8 +2,8 @@ import { Navigate, Outlet } from "react-router-dom";
 
 import { useAuth } from "../features/auth/context/AuthContext";
 import { hasPermission } from "../features/auth/utils/permissions";
+import type { Permission } from "../types/auth";
 import { ForbiddenPage } from "../features/auth/pages/ForbiddenPage";
-import type { Permission } from "../types/permissions";
 
 interface PermissionRouteProps {
   permission: Permission;

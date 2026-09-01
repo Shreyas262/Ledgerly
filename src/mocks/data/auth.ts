@@ -7,8 +7,8 @@ export const mockUser: User = {
   email: "alex@ledgerly.dev",
   role: "employee",
   permissions: [
-    "expenses.read",
     "expenses.create",
+    "expenses.read",
     "expenses.update",
     "expenses.submit",
   ],

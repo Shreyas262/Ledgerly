@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
-import { LoadingState } from "../components/common/loadingState/LoadingState";
+import { LoadingState } from "../components/common/LoadingState";
 import { useAuth } from "../features/auth/context/AuthContext";
 
 export function ProtectedRoute() {

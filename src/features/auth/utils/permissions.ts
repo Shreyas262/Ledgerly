@@ -1,5 +1,4 @@
-import type { User } from "../../../types/auth";
-import type { Permission } from "../../../types/permissions";
+import type { Permission, User } from "../../../types/auth";
 
 export function hasPermission(
   user: User | null,

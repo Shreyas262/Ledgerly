@@ -5,7 +5,7 @@ import {
 } from "@mui/material";
 
 import { expenses } from "../../../mocks/data/expenses";
-import { StatusBadge } from "../../../components/common/statusBadge/StatusBadge";
+import { StatusBadge } from "../../../components/common/StatusBadge";
 
 export function RecentExpenses() {
   const recentExpenses = expenses.slice(0, 5);

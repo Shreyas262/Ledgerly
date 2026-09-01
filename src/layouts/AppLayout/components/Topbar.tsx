@@ -15,12 +15,16 @@ import {
 import type { MouseEvent } from "react";
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useMatches } from "react-router-dom";
 import { useAppDispatch } from "../../../store/hooks";
 
 import { useLogoutMutation } from "../../../features/auth/api/authApi";
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { baseApi } from "../../../services/api/baseApi";
+
+interface RouteHandle {
+  title?: string;
+}
 
 interface TopbarProps {
   isMobile: boolean;
@@ -34,6 +38,21 @@ export function Topbar({
   onMobileMenuClick,
 }: TopbarProps) {
 
+  const matches = useMatches();
+  const currentMatch = [...matches]
+    .reverse()
+    .find((match) => {
+      const handle = match.handle as
+        | RouteHandle
+        | undefined;
+
+      return Boolean(handle?.title);
+    });
+  const handle = currentMatch?.handle as
+    | RouteHandle
+    | undefined;
+  
+  const pageTitle = handle?.title ?? "Ledgerly";
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const { user } = useAuth();
@@ -87,8 +106,8 @@ export function Topbar({
             </IconButton>
           )}
 
-          <Typography variant="h6" sx={{fontWeight:600}}>
-            Dashboard
+          <Typography variant="h6" component="h1" sx={{fontWeight:600}}>
+            {pageTitle}
           </Typography>
         </Box>
 
