@@ -20,7 +20,6 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
 
-import { CreateRoleForm } from "../components/CreateRoleForm";
 import { EditRoleForm } from "../components/EditRoleForm";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";

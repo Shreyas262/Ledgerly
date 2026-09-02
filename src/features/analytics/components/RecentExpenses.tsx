@@ -26,9 +26,6 @@ export function RecentExpenses() {
           }}
         >
           <Stack spacing={0.25}>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {expense.merchant}
-            </Typography>
 
             <Typography variant="caption" color="text.secondary">
               {expense.category}

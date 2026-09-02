@@ -1,45 +1,56 @@
-import type { ExpenseStatus, ID, CurrencyCode } from "./common";
-
-export type ExpenseCategory =
-  | "MEALS"
-  | "TRAVEL"
-  | "ENTERTAINMENT"
-  | "OFFICE"
-  | "OTHER";
+import type { ID, ExpenseStatus } from "./common";
 
 export interface Expense {
   id: ID;
   organizationId: ID;
   employeeId: ID;
 
-  amount: number;
-  currency: CurrencyCode;
-
-  category: ExpenseCategory;
-  merchant: string;
+  title: string;
   description: string;
-  expenseDate: string;
 
-  projectId?: ID;
-  costCenterId?: ID;
+  amount: number;
+  currency: "INR";
 
+  category: string;
   status: ExpenseStatus;
 
-  receiptUrl?: string;
-
-  submittedAt?: string;
-  reviewedAt?: string;
-  approvedBy?: ID;
-
-  rejectionReason?: string;
-
-  reimbursementStatus: ReimbursementStatus;
+  expenseDate: string;
 
   createdAt: string;
   updatedAt: string;
 }
 
-export type ReimbursementStatus =
-  | "NOT_APPLICABLE"
-  | "PENDING"
-  | "COMPLETED";
+export interface CreateExpenseRequest {
+  title: string;
+  description: string;
+  amount: number;
+  currency: "INR";
+  category: string;
+  expenseDate: string;
+}
+
+export interface UpdateExpenseRequest {
+  id: string;
+  title: string;
+  description: string;
+  amount: number;
+  currency: "INR";
+  category: string;
+  expenseDate: string;
+}
+
+export interface ExpenseFilter {
+  search: string;
+  status: ExpenseStatus | "all";
+  category: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+export const initialExpenseFilters: ExpenseFilter = {
+  search: "",
+  status: "all",
+  category: "all",
+  dateFrom: "",
+  dateTo: "",
+};

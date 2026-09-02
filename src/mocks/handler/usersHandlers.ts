@@ -9,12 +9,14 @@ import type {
 
 import { users } from "../data/users";
 
+const API_BASE_URL = "/api"
+
 export const usersHandlers = [
-  http.get("/api/users", () => {
+  http.get(`${API_BASE_URL}/users`, () => {
     return HttpResponse.json(users);
   }),
 
-  http.post("/api/users", async ({ request }) => {
+  http.post(`${API_BASE_URL}/users`, async ({ request }) => {
     const body = (await request.json()) as CreateUserPayload;
 
     const existingUser = users.find(
@@ -54,7 +56,7 @@ export const usersHandlers = [
     });
   }),
 
-  http.put("/api/users/:id", async ({ params, request }) => {
+  http.put(`${API_BASE_URL}/users/:id`, async ({ params, request }) => {
     const userId = String(params.id);
 
     const body = (await request.json()) as UpdateUserPayload;
@@ -119,7 +121,7 @@ export const usersHandlers = [
     }),
 
 
-  http.delete("/api/users/:id", ({ params }) => {
+  http.delete(`${API_BASE_URL}/users/:id`, ({ params }) => {
     const userIndex = users.findIndex(
       (user) => user.id === params.id,
     );
@@ -136,7 +138,7 @@ export const usersHandlers = [
       status: 204,
     });
   }),
-  http.delete("/api/users/:id",
+  http.delete(`${API_BASE_URL}/users/:id`,
     ({ params }) => {
       const userId = String(params.id);
 

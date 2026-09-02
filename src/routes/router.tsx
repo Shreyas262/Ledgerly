@@ -6,9 +6,12 @@ import { LoginPage } from "../features/auth/pages/LoginPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { PermissionRoute } from "./PermissionRoute";
 import { ExpensesPage } from "../features/expenses/pages/ExpensesPage";
+import { ExpenseDetailsPage } from "../features/expenses/pages/ExpenseDetailsPage";
 import { RolesPage } from "../features/roles/pages/RolesPage";
 import { NotFound } from "../pages/NotFound";
 import { UsersPage } from "../features/users/pages/UsersPage";
+import { CreateExpensePage } from "../features/expenses/pages/CreateExpensePage";
+import { EditExpensePage } from "../features/expenses/pages/EditExpensePage";
 
 function PlaceholderPage({ title }: { title: string }) {
   return <h1>{title}</h1>;
@@ -46,7 +49,28 @@ export const router = createBrowserRouter([
                 handle: {
                   title: "Expenses",
                 },
-              }
+              },
+              {
+                path: "/expenses/:id",
+                element: <ExpenseDetailsPage />,
+                handle: {
+                  title: "Expense Details",
+                },
+              },
+              {
+                path: "/expenses/new",
+                element: <CreateExpensePage />,
+                handle: {
+                  title: "Create Expense",
+                },
+              },
+              {
+                path: "/expenses/:id/edit",
+                element: <EditExpensePage />,
+                handle: {
+                  title: "Edit Expense",
+                },
+              },
             ],
           },
           {

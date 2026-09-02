@@ -1,170 +1,164 @@
 import { http, HttpResponse } from "msw";
 
-import type {
-  CreateExpenseRequest,
-  GetExpensesParams,
-  UpdateExpenseRequest,
-} from "../../types/api";
-import type { Expense } from "../../types/expense";
-
 import { expenses } from "../data/expenses";
+import type { CreateExpenseRequest, Expense, UpdateExpenseRequest } from "../../types/expense";
 
-const API_BASE_URL = "/api";
-
-export const expenseHandlers = [
-  http.get(`${API_BASE_URL}/expenses`, ({ request }) => {
-    const url = new URL(request.url);
-
-    const status = url.searchParams.get("status") as
-      | GetExpensesParams["status"]
-      | null;
-
-    const category = url.searchParams.get("category") as
-      | GetExpensesParams["category"]
-      | null;
-
-    const employeeId = url.searchParams.get("employeeId");
-
-    let filteredExpenses = [...expenses];
-
-    if (status) {
-      filteredExpenses = filteredExpenses.filter(
-        (expense) => expense.status === status,
-      );
-    }
-
-    if (category) {
-      filteredExpenses = filteredExpenses.filter(
-        (expense) => expense.category === category,
-      );
-    }
-
-    if (employeeId) {
-      filteredExpenses = filteredExpenses.filter(
-        (expense) => expense.employeeId === employeeId,
-      );
-    }
-
-    return HttpResponse.json({
-      data: filteredExpenses,
-      total: filteredExpenses.length,
-    });
+export const expensesHandlers = [
+  http.get("/api/expenses", () => {
+    return HttpResponse.json(expenses);
   }),
+  http.get("/api/expenses/:id", ({ params }) => {
+    const expenseId = String(params.id);
 
-  http.get(`${API_BASE_URL}/expenses/:id`, ({ params }) => {
-    const expense = expenses.find((item) => item.id === params.id);
+    const expense = expenses.find(
+      (item) => item.id === expenseId,
+    );
 
     if (!expense) {
       return HttpResponse.json(
         {
-          message: "Expense not found",
-          code: "EXPENSE_NOT_FOUND",
+          message: "Expense not found.",
         },
-        { status: 404 },
+        {
+          status: 404,
+        },
       );
     }
 
-    return HttpResponse.json({
-      data: expense,
-    });
+    return HttpResponse.json(expense);
   }),
 
-  http.post(`${API_BASE_URL}/expenses`, async ({ request }) => {
-    const body = (await request.json()) as CreateExpenseRequest;
+  http.post("/api/expenses",async ({ request }) => {
+      const body =
+        (await request.json()) as CreateExpenseRequest;
 
-    const now = new Date().toISOString();
+      const now = new Date().toISOString();
 
-    const newExpense: Expense = {
-      id: `exp-${Date.now()}`,
-      organizationId: "org-001",
-      employeeId: "user-001",
-      amount: body.amount,
-      currency: body.currency,
-      category: body.category,
-      merchant: body.merchant,
+      const newExpense: Expense = {
+        id: crypto.randomUUID(),
+        organizationId: "org-001",
+        employeeId: "user-001",
+
+        title: body.title,
+        description: body.description,
+        amount: body.amount,
+        currency: "INR",
+        category: body.category,
+        expenseDate: body.expenseDate,
+
+        status: "draft",
+
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      expenses.push(newExpense);
+
+      return HttpResponse.json(
+        newExpense,
+        {
+          status: 201,
+        },
+      );
+    },
+  ),
+  
+  http.put("/api/expenses/:id", async ({ params, request }) => {
+    const expenseId = String(params.id);
+
+    const expenseIndex = expenses.findIndex(
+      (item) => item.id === expenseId,
+    );
+
+    if (expenseIndex === -1) {
+      return HttpResponse.json(
+        {
+          message: "Expense not found.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    const body =
+      (await request.json()) as Omit<
+        UpdateExpenseRequest,
+        "id"
+      >;
+
+    const existingExpense = expenses[expenseIndex];
+
+    if (existingExpense.status !== "draft") {
+      return HttpResponse.json(
+        {
+          message:
+            "Only draft expenses can be edited.",
+        },
+        {
+          status: 409,
+        },
+      );
+    }
+
+    const updatedExpense: Expense = {
+      ...existingExpense,
+
+      title: body.title,
       description: body.description,
+      amount: body.amount,
+      currency: "INR",
+      category: body.category,
       expenseDate: body.expenseDate,
-      status: "DRAFT",
-      reimbursementStatus: "NOT_APPLICABLE",
-      createdAt: now,
-      updatedAt: now,
+
+      updatedAt: new Date().toISOString(),
     };
 
-    expenses.push(newExpense);
+    expenses[expenseIndex] = updatedExpense;
 
-    return HttpResponse.json(
-      {
-        data: newExpense,
-      },
-      { status: 201 },
-    );
+    return HttpResponse.json(updatedExpense);
   }),
+  
+  http.post("/api/expenses/:id/submit", ({ params }) => {
+      const expenseId = String(params.id);
 
-  http.patch(`${API_BASE_URL}/expenses/:id`, async ({ params, request }) => {
-    const expense = expenses.find((item) => item.id === params.id);
-
-    if (!expense) {
-      return HttpResponse.json(
-        {
-          message: "Expense not found",
-          code: "EXPENSE_NOT_FOUND",
-        },
-        { status: 404 },
+      const expenseIndex = expenses.findIndex(
+        (item) => item.id === expenseId,
       );
-    }
 
-    if (expense.status !== "DRAFT") {
-      return HttpResponse.json(
-        {
-          message: "Only draft expenses can be edited.",
-          code: "EXPENSE_NOT_EDITABLE",
-        },
-        { status: 409 },
-      );
-    }
+      if (expenseIndex === -1) {
+        return HttpResponse.json(
+          {
+            message: "Expense not found.",
+          },
+          {
+            status: 404,
+          },
+        );
+      }
 
-    const body = (await request.json()) as UpdateExpenseRequest;
+      const expense = expenses[expenseIndex];
 
-    Object.assign(expense, {
-      ...body,
-      updatedAt: new Date().toISOString(),
-    });
+      if (expense.status !== "draft") {
+        return HttpResponse.json(
+          {
+            message:
+              "Only draft expenses can be submitted.",
+          },
+          {
+            status: 409,
+          },
+        );
+      }
 
-    return HttpResponse.json({
-      data: expense,
-    });
-  }),
+      const updatedExpense: Expense = {
+        ...expense,
+        status: "submitted",
+        updatedAt: new Date().toISOString(),
+      };
 
-  http.post(`${API_BASE_URL}/expenses/:id/submit`, ({ params }) => {
-    const expense = expenses.find((item) => item.id === params.id);
+      expenses[expenseIndex] = updatedExpense;
 
-    if (!expense) {
-      return HttpResponse.json(
-        {
-          message: "Expense not found",
-          code: "EXPENSE_NOT_FOUND",
-        },
-        { status: 404 },
-      );
-    }
-
-    if (expense.status !== "DRAFT") {
-      return HttpResponse.json(
-        {
-          message: "Only draft expenses can be submitted.",
-          code: "EXPENSE_NOT_SUBMITTABLE",
-        },
-        { status: 409 },
-      );
-    }
-
-    expense.status = "SUBMITTED";
-    expense.submittedAt = new Date().toISOString();
-    expense.updatedAt = new Date().toISOString();
-
-    return HttpResponse.json({
-      data: expense,
-    });
+      return HttpResponse.json(updatedExpense);
   }),
 ];
-

@@ -1,6 +1,6 @@
 import { Chip } from "@mui/material";
 
-import type { ExpenseStatus } from "../../../types/common";
+import type { ExpenseStatus } from "../../types/common";
 
 interface StatusBadgeProps {
   status: ExpenseStatus;
@@ -20,35 +20,35 @@ const statusConfig: Record<
       | "warning";
   }
 > = {
-  DRAFT: {
+  draft: {
     label: "Draft",
     color: "default",
   },
-  SUBMITTED: {
+  submitted: {
     label: "Submitted",
     color: "info",
   },
-  UNDER_REVIEW: {
+  under_review: {
     label: "Under Review",
     color: "warning",
   },
-  REJECTED: {
+  rejected: {
     label: "Rejected",
     color: "error",
   },
-  APPROVED: {
+  approved: {
     label: "Approved",
     color: "success",
   },
-  REIMBURSEMENT_PENDING: {
+  reimbursement_pending: {
     label: "Reimbursement Pending",
     color: "warning",
   },
-  REIMBURSED: {
+  reimbursed: {
     label: "Reimbursed",
     color: "success",
   },
-  CANCELLED: {
+  cancelled: {
     label: "Cancelled",
     color: "default",
   },
