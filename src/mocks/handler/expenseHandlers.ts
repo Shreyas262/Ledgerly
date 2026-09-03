@@ -1,12 +1,26 @@
 import { http, HttpResponse } from "msw";
 
 import { expenses } from "../data/expenses";
-import type { CreateExpenseRequest, Expense, UpdateExpenseRequest } from "../../types/expense";
+
+import type {
+  CreateExpenseRequest,
+  Expense,
+  UpdateExpenseRequest,
+} from "../../types/expense";
 
 export const expensesHandlers = [
+  // ---------------------------------------------------------------------------
+  // GET /api/expenses
+  // ---------------------------------------------------------------------------
+
   http.get("/api/expenses", () => {
     return HttpResponse.json(expenses);
   }),
+
+  // ---------------------------------------------------------------------------
+  // GET /api/expenses/:id
+  // ---------------------------------------------------------------------------
+
   http.get("/api/expenses/:id", ({ params }) => {
     const expenseId = String(params.id);
 
@@ -28,7 +42,13 @@ export const expensesHandlers = [
     return HttpResponse.json(expense);
   }),
 
-  http.post("/api/expenses",async ({ request }) => {
+  // ---------------------------------------------------------------------------
+  // POST /api/expenses
+  // ---------------------------------------------------------------------------
+
+  http.post(
+    "/api/expenses",
+    async ({ request }) => {
       const body =
         (await request.json()) as CreateExpenseRequest;
 
@@ -62,64 +82,78 @@ export const expensesHandlers = [
       );
     },
   ),
-  
-  http.put("/api/expenses/:id", async ({ params, request }) => {
-    const expenseId = String(params.id);
 
-    const expenseIndex = expenses.findIndex(
-      (item) => item.id === expenseId,
-    );
+  // ---------------------------------------------------------------------------
+  // PUT /api/expenses/:id
+  // ---------------------------------------------------------------------------
 
-    if (expenseIndex === -1) {
-      return HttpResponse.json(
-        {
-          message: "Expense not found.",
-        },
-        {
-          status: 404,
-        },
+  http.put(
+    "/api/expenses/:id",
+    async ({ params, request }) => {
+      const expenseId = String(params.id);
+
+      const expenseIndex = expenses.findIndex(
+        (item) => item.id === expenseId,
       );
-    }
 
-    const body =
-      (await request.json()) as Omit<
-        UpdateExpenseRequest,
-        "id"
-      >;
+      if (expenseIndex === -1) {
+        return HttpResponse.json(
+          {
+            message: "Expense not found.",
+          },
+          {
+            status: 404,
+          },
+        );
+      }
 
-    const existingExpense = expenses[expenseIndex];
+      const body =
+        (await request.json()) as Omit<
+          UpdateExpenseRequest,
+          "id"
+        >;
 
-    if (existingExpense.status !== "draft") {
-      return HttpResponse.json(
-        {
-          message:
-            "Only draft expenses can be edited.",
-        },
-        {
-          status: 409,
-        },
-      );
-    }
+      const existingExpense =
+        expenses[expenseIndex];
 
-    const updatedExpense: Expense = {
-      ...existingExpense,
+      if (existingExpense.status !== "draft") {
+        return HttpResponse.json(
+          {
+            message:
+              "Only draft expenses can be edited.",
+          },
+          {
+            status: 409,
+          },
+        );
+      }
 
-      title: body.title,
-      description: body.description,
-      amount: body.amount,
-      currency: "INR",
-      category: body.category,
-      expenseDate: body.expenseDate,
+      const updatedExpense: Expense = {
+        ...existingExpense,
 
-      updatedAt: new Date().toISOString(),
-    };
+        title: body.title,
+        description: body.description,
+        amount: body.amount,
+        currency: "INR",
+        category: body.category,
+        expenseDate: body.expenseDate,
 
-    expenses[expenseIndex] = updatedExpense;
+        updatedAt: new Date().toISOString(),
+      };
 
-    return HttpResponse.json(updatedExpense);
-  }),
-  
-  http.post("/api/expenses/:id/submit", ({ params }) => {
+      expenses[expenseIndex] = updatedExpense;
+
+      return HttpResponse.json(updatedExpense);
+    },
+  ),
+
+  // ---------------------------------------------------------------------------
+  // POST /api/expenses/:id/submit
+  // ---------------------------------------------------------------------------
+
+  http.post(
+    "/api/expenses/:id/submit",
+    ({ params }) => {
       const expenseId = String(params.id);
 
       const expenseIndex = expenses.findIndex(
@@ -160,5 +194,163 @@ export const expensesHandlers = [
       expenses[expenseIndex] = updatedExpense;
 
       return HttpResponse.json(updatedExpense);
+    },
+  ),
+
+  // ---------------------------------------------------------------------------
+  // POST /api/expenses/:id/review
+  // ---------------------------------------------------------------------------
+
+  http.post(
+    "/api/expenses/:id/review",
+    ({ params }) => {
+      const expenseId = String(params.id);
+
+      const expenseIndex = expenses.findIndex(
+        (item) => item.id === expenseId,
+      );
+
+      if (expenseIndex === -1) {
+        return HttpResponse.json(
+          {
+            message: "Expense not found.",
+          },
+          {
+            status: 404,
+          },
+        );
+      }
+
+      const expense = expenses[expenseIndex];
+
+      if (expense.status !== "submitted") {
+        return HttpResponse.json(
+          {
+            message:
+              "Only submitted expenses can enter review.",
+          },
+          {
+            status: 409,
+          },
+        );
+      }
+
+      const updatedExpense: Expense = {
+        ...expense,
+        status: "under_review",
+        updatedAt: new Date().toISOString(),
+      };
+
+      expenses[expenseIndex] = updatedExpense;
+
+      return HttpResponse.json(updatedExpense);
+    },
+  ),
+
+  http.post("/api/expenses/:id/approve", ({ params }) =>
+  {
+    const expenseId = String(params.id);
+
+    const expenseIndex = expenses.findIndex(
+      (item) => item.id === expenseId,
+    );
+
+    if (expenseIndex === -1) {
+      return HttpResponse.json(
+        {
+          message: "Expense not found.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    const expense = expenses[expenseIndex];
+
+    if (expense.status !== "under_review") {
+      return HttpResponse.json(
+        {
+          message:
+            "Only expenses under review can be approved.",
+        },
+        {
+          status: 409,
+        },
+      );
+    }
+
+    const updatedExpense: Expense = {
+      ...expense,
+      status: "approved",
+      updatedAt: new Date().toISOString(),
+    };
+
+    expenses[expenseIndex] = updatedExpense;
+
+    return HttpResponse.json(updatedExpense);
   }),
+
+  http.post("/api/expenses/:id/reject", async ({ params, request }) => {
+    const expenseId = String(params.id);
+
+    const expenseIndex = expenses.findIndex(
+      (item) => item.id === expenseId,
+    );
+
+    if (expenseIndex === -1) {
+      return HttpResponse.json(
+        {
+          message: "Expense not found.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    const expense = expenses[expenseIndex];
+
+    if (expense.status !== "under_review") {
+      return HttpResponse.json(
+        {
+          message:
+            "Only expenses under review can be rejected.",
+        },
+        {
+          status: 409,
+        },
+      );
+    }
+
+    const body = (await request.json()) as {
+      reason: string;
+    };
+
+    const reason = body.reason.trim();
+
+    if (!reason) {
+      return HttpResponse.json(
+        {
+          message:
+            "A rejection reason is required.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const updatedExpense: Expense = {
+      ...expense,
+      status: "rejected",
+      rejectionReason: reason,
+      updatedAt: new Date().toISOString(),
+    };
+
+    expenses[expenseIndex] = updatedExpense;
+
+    return HttpResponse.json(updatedExpense);
+  },
+),
 ];

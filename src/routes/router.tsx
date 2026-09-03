@@ -12,6 +12,7 @@ import { NotFound } from "../pages/NotFound";
 import { UsersPage } from "../features/users/pages/UsersPage";
 import { CreateExpensePage } from "../features/expenses/pages/CreateExpensePage";
 import { EditExpensePage } from "../features/expenses/pages/EditExpensePage";
+import { ApprovalsPage } from "../features/approvals/pages/ApprovalPage";
 
 function PlaceholderPage({ title }: { title: string }) {
   return <h1>{title}</h1>;
@@ -52,7 +53,7 @@ export const router = createBrowserRouter([
               },
               {
                 path: "/expenses/:id",
-                element: <ExpenseDetailsPage />,
+                element: <ExpenseDetailsPage mode="default" />,
                 handle: {
                   title: "Expense Details",
                 },
@@ -74,11 +75,26 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            path: "/approvals",
-            element: <PlaceholderPage title="Approvals" />,
-            handle: {
-              title: "Approvals",
-            },
+            element: <PermissionRoute permission="expenses.approve" />,
+            children: [
+              {
+                path: "/approvals",
+                element: <ApprovalsPage />,
+                handle: {
+                  title: "Approval Queue",
+                },
+              },
+              {
+                path: "/approvals/:id",
+                element: (
+                  <ExpenseDetailsPage mode="review"
+                  />
+                ),
+                handle: {
+                  title: "Expense Review",
+                },
+              },
+            ]
           },
           {
             path: "/budgets",

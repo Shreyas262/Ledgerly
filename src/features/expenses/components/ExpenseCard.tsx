@@ -1,8 +1,8 @@
 import {
+  Box,
   Button,
   Chip,
   Paper,
-  Box,
   Stack,
   Typography,
 } from "@mui/material";
@@ -15,9 +15,12 @@ import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 
 interface ExpenseCardProps {
   expense: Expense;
+  variant?: "default" | "approval";
   onView: (expense: Expense) => void;
-  onSubmit: (expense: Expense) => void;
-  isSubmitting: boolean;
+  onSubmit?: (expense: Expense) => void;
+  onStartReview?: (expense: Expense) => void;
+  isSubmitting?: boolean;
+  isStartingReview?: boolean;
 }
 
 interface StatusConfig {
@@ -72,34 +75,40 @@ const statusConfig: Record<
 
 export function ExpenseCard({
   expense,
+  variant = "default",
   onView,
   onSubmit,
+  onStartReview,
+  isSubmitting = false,
+  isStartingReview = false,
 }: ExpenseCardProps) {
   const { can } = usePermissions();
 
   const status = statusConfig[expense.status];
 
-  const canEdit =
-    expense.status === "draft" &&
-    can("expenses.update");
-
   const canSubmit =
+    variant === "default" &&
     expense.status === "draft" &&
     can("expenses.submit");
+
+  const canStartReview =
+    variant === "approval" &&
+    expense.status === "submitted" &&
+    can("expenses.approve");
 
   return (
     <Paper sx={{ p: 2 }}>
       <Stack spacing={2}>
         <Box
-        sx={{
+          sx={{
             display: "flex",
             flexDirection: {
-            xs: "column",
-            sm: "row",
+              xs: "column",
+              sm: "row",
             },
             justifyContent: "space-between",
             gap: 2,
-        }}
+          }}
         >
           <Stack spacing={0.5}>
             <Typography variant="h6">
@@ -123,18 +132,18 @@ export function ExpenseCard({
 
           <Box
             sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: {
+              display: "flex",
+              flexDirection: "column",
+              alignItems: {
                 xs: "flex-start",
                 sm: "flex-end",
-                },
-                gap: 1,
+              },
+              gap: 1,
             }}
           >
             <Typography
               variant="h6"
-              sx={{fontWeight: 600}}
+              sx={{ fontWeight: 600 }}
             >
               {expense.currency}{" "}
               {expense.amount.toLocaleString()}
@@ -149,9 +158,14 @@ export function ExpenseCard({
         </Box>
 
         <Stack
-          direction="row"
-          sx={{justifyContent: "flex-end"}}
+          direction={{
+            xs: "column",
+            sm: "row",
+          }}
           spacing={1}
+          sx={{
+            justifyContent: "flex-end",
+          }}
         >
           <Button
             variant="outlined"
@@ -163,9 +177,22 @@ export function ExpenseCard({
           {canSubmit && (
             <Button
               variant="contained"
-              onClick={() => onSubmit(expense)}
+              onClick={() => onSubmit?.(expense)}
+              loading={isSubmitting}
             >
               Submit
+            </Button>
+          )}
+
+          {canStartReview && (
+            <Button
+              variant="contained"
+              onClick={() =>
+                onStartReview?.(expense)
+              }
+              loading={isStartingReview}
+            >
+              Start Review
             </Button>
           )}
         </Stack>

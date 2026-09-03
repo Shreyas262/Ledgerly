@@ -57,4 +57,18 @@ export const expenses: Expense[] = [
     createdAt: "2026-08-18T08:00:00.000Z",
     updatedAt: "2026-08-19T14:00:00.000Z",
   },
+  {
+    id: "expense-005",
+    organizationId: "org-001",
+    employeeId: "user-004",
+    title: "Office party",
+    description: "Company anniversary party",
+    amount: 10000,
+    currency: "INR",
+    category: "Office",
+    status: "under_review",
+    expenseDate: "2026-08-30",
+    createdAt: "2026-08-30T10:00:00.000Z",
+    updatedAt: "2026-08-30T15:00:00.000Z",
+  },
 ];

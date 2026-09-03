@@ -5,12 +5,35 @@ export const expensesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getExpenses: builder.query<Expense[], void>({
       query: () => "/expenses",
-      providesTags: ["Expense"],
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({
+                type: "Expense" as const,
+                id,
+              })),
+              {
+                type: "Expense" as const,
+                id: "LIST",
+              },
+            ]
+          : [
+              {
+                type: "Expense" as const,
+                id: "LIST",
+              },
+            ],
     }),
 
     getExpenseById: builder.query<Expense, string>({
       query: (id) => `/expenses/${id}`,
-      providesTags: ["Expense"],
+
+      providesTags: (_result, _error, id) => [
+        {
+          type: "Expense",
+          id,
+        },
+      ],
     }),
 
     createExpense: builder.mutation<Expense, CreateExpenseRequest>({
@@ -19,16 +42,21 @@ export const expensesApi = baseApi.injectEndpoints({
         method: "POST",
         body: expense,
       }),
-      invalidatesTags: ["Expense"],
+
+      invalidatesTags: [{ type: "Expense", id: "LIST" }],
     }),
 
     updateExpense: builder.mutation<Expense, UpdateExpenseRequest>({
-      query: ({id, ...body}) => ({
+      query: ({ id, ...body }) => ({
         url: `/expenses/${id}`,
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["Expense"],
+
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Expense", id },
+        { type: "Expense", id: "LIST" },
+      ],
     }),
 
     submitExpense: builder.mutation<Expense, string>({
@@ -36,7 +64,74 @@ export const expensesApi = baseApi.injectEndpoints({
         url: `/expenses/${id}/submit`,
         method: "POST",
       }),
-      invalidatesTags: ["Expense"],
+
+      invalidatesTags: (_result, _error, id) => [
+        {
+          type: "Expense",
+          id,
+        },
+        {
+          type: "Expense",
+          id: "LIST",
+        },
+      ],
+    }),
+
+    startExpenseReview: builder.mutation<Expense, string>({
+      query: (id) => ({
+        url: `/expenses/${id}/review`,
+        method: "POST",
+      }),
+
+      invalidatesTags: (_result, _error, id) => [
+        {
+          type: "Expense",
+          id,
+        },
+        {
+          type: "Expense",
+          id: "LIST",
+        },
+      ],
+    }),
+    
+    approveExpense: builder.mutation<Expense, string>({
+      query: (id) => ({
+        url: `/expenses/${id}/approve`,
+        method: "POST",
+      }),
+
+      invalidatesTags: (_result, _error, id) => [
+        {
+          type: "Expense",
+          id,
+        },
+        {
+          type: "Expense",
+          id: "LIST",
+        },
+      ],
+    }),
+
+    rejectExpense: builder.mutation<Expense,{id: string; reason: string;}>({
+      query: ({ id, reason }) => ({
+        url: `/expenses/${id}/reject`,
+        method: "POST",
+        body: {
+          reason,
+        },
+      }),
+
+      invalidatesTags: (_result, _error, { id }) => [
+        {
+          type: "Expense",
+          id,
+        },
+        {
+          type: "Expense",
+          id: "LIST",
+        },
+      ],
     }),
   }),
 });
@@ -47,4 +142,7 @@ export const {
   useCreateExpenseMutation,
   useUpdateExpenseMutation,
   useSubmitExpenseMutation,
+  useStartExpenseReviewMutation,
+  useApproveExpenseMutation,
+  useRejectExpenseMutation,
 } = expensesApi;

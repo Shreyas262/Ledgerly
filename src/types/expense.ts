@@ -13,6 +13,7 @@ export interface Expense {
 
   category: string;
   status: ExpenseStatus;
+  rejectionReason?: string;
 
   expenseDate: string;
 
