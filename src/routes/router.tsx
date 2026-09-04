@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
-import { DashboardPage } from "../features/analytics/pages/DashboardPage";
+import { DashboardPage } from "../features/dashboard/pages/DashboardPage";
 import { AppLayout } from "../layouts/AppLayout/AppLayout";
 import { LoginPage } from "../features/auth/pages/LoginPage";
 import { ProtectedRoute } from "./ProtectedRoute";
@@ -13,6 +13,15 @@ import { UsersPage } from "../features/users/pages/UsersPage";
 import { CreateExpensePage } from "../features/expenses/pages/CreateExpensePage";
 import { EditExpensePage } from "../features/expenses/pages/EditExpensePage";
 import { ApprovalsPage } from "../features/approvals/pages/ApprovalPage";
+import { BudgetsPage } from "../features/budgets/pages/BudgetsPage";
+import { BudgetDetailsPage } from "../features/budgets/pages/BudgetDetailsPage";
+import { EditBudgetPage } from "../features/budgets/pages/EditBudgetPage";
+import { CreateBudgetPage } from "../features/budgets/pages/CreateBudgetPage";
+import { AnalyticsPage } from "../features/analytics/pages/AnalyticsPage";
+import { PolicyDetailsPage } from "../features/policies/pages/PolicyDetailsPage";
+import { CreatePolicyPage } from "../features/policies/pages/CreatePolicyPage";
+import { EditPolicyPage } from "../features/policies/pages/EditPolicyPage";
+import { PoliciesPage } from "../features/policies/pages/policiesPage";
 
 function PlaceholderPage({ title }: { title: string }) {
   return <h1>{title}</h1>;
@@ -97,18 +106,51 @@ export const router = createBrowserRouter([
             ]
           },
           {
-            path: "/budgets",
-            element: <PlaceholderPage title="Budgets" />,
-            handle: {
-              title: "Budgets"
-            },
+            element: <PermissionRoute permission="budgets.read" />,
+            children: [
+              {
+                path: "/budgets",
+                element: <BudgetsPage />,
+                handle: {
+                  title: "Budgets"
+                }
+              },
+              {
+                path: "/budgets/:id",
+                element: (
+                  <BudgetDetailsPage />
+                ),
+                handle: {
+                  title: "Budget Details",
+                },
+              },
+              {
+                path: "/budgets/:id/edit",
+                element: <EditBudgetPage />,
+                handle: {
+                  title: "Edit Budget"
+                }
+              },
+              {
+                path: "/budgets/new",
+                element: <CreateBudgetPage />,
+                handle: {
+                  title: "Create Budget"
+                }
+              },
+            ]
           },
           {
-            path: "/analytics",
-            element: <PlaceholderPage title="Analytics" />,
-            handle: {
-              title: "Analytics"
-            },
+            element: <PermissionRoute permission="analytics.read" />,
+            children: [
+              {
+                path: "/analytics",
+                element: <AnalyticsPage />,
+                handle: {
+                  title: "Analytics",
+                },
+              },
+            ]
           },
           {
             element: <PermissionRoute permission="users.read" />,
@@ -135,11 +177,37 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            path: "/policies",
-            element: <PlaceholderPage title="Policies" />,
-            handle: {
-              title: "Policies",
-            },
+            element: <PermissionRoute permission="policies.read" />,
+            children: [
+              {
+                path: "/policies",
+                element: <PoliciesPage />,
+                handle: {
+                  title: "Policies",
+                },
+              },
+              {
+                path: "/policies/:id",
+                element: <PolicyDetailsPage />,
+                handle: {
+                  title: "Policy Details",
+                },
+              },
+              {
+                path: "/policies/new",
+                element: <CreatePolicyPage />,
+                handle: {
+                  title: "Create Policy",
+                },
+              },
+              {
+                path: "/policies/:id/edit",
+                element: <EditPolicyPage />,
+                handle: {
+                  title: "Edit Policy",
+                },
+              },
+            ]
           },
           {
             path: "/settings",

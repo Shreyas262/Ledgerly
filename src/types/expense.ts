@@ -15,6 +15,9 @@ export interface Expense {
   status: ExpenseStatus;
   rejectionReason?: string;
 
+  department?: string;
+  project?: string;
+
   expenseDate: string;
 
   createdAt: string;

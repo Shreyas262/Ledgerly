@@ -32,6 +32,7 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
+import { ReceiptUpload } from "../components/ReceiptUpload";
 
 interface ExpenseFormData {
   title: string;
@@ -57,6 +58,7 @@ export function EditExpensePage() {
   }>();
 
   const { can } = usePermissions();
+  const [receipt, setReceipt] = useState<File | null>(null);
 
   const {
     data: expense,
@@ -247,6 +249,11 @@ export function EditExpensePage() {
                 shrink: true,
               },
             }}
+          />
+
+          <ReceiptUpload
+            value={receipt}
+            onChange={setReceipt}
           />
 
           <Stack

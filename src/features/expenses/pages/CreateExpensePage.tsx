@@ -11,6 +11,7 @@ import { ArrowBackOutlined } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
 import { useCreateExpenseMutation } from "../api/expenseApi";
+import { ReceiptUpload } from "../components/ReceiptUpload";
 
 interface ExpenseFormData {
   title: string;
@@ -29,6 +30,8 @@ const initialFormData: ExpenseFormData = {
 };
 
 export function CreateExpensePage() {
+
+  const [receipt, setReceipt] = useState<File | null>(null);
   const navigate = useNavigate();
 
   const [formData, setFormData] =
@@ -72,13 +75,18 @@ export function CreateExpensePage() {
 
   return (
     <Stack spacing={3}>
-      <Button
-        variant="text"
-        startIcon={<ArrowBackOutlined />}
-        onClick={() => navigate("/expenses")}
+      <Stack
+        direction={"row"}
+        sx={{justifyContent: "flex-start", alignItems: "center"}}
       >
-        Back to Expenses
-      </Button>
+        <Button
+          variant="text"
+          startIcon={<ArrowBackOutlined />}
+          onClick={() => navigate(-1)}
+        >
+          Back to Expenses
+        </Button>
+      </Stack>
 
       <Typography variant="h4">
         Create Expense
@@ -154,6 +162,11 @@ export function CreateExpensePage() {
                 shrink: true,
               },
             }}
+          />
+
+          <ReceiptUpload
+            value={receipt}
+            onChange={setReceipt}
           />
 
           <Stack

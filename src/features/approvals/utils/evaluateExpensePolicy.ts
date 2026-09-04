@@ -1,4 +1,5 @@
 import type { Expense } from "../../../types/expense";
+import type { ExpensePolicy } from "../../../types/policy";
 
 export interface ExpensePolicyConfig {
   approvalLimit: number;
@@ -20,11 +21,12 @@ const DEFAULT_POLICY_CONFIG: ExpensePolicyConfig = {
 
 export function evaluateExpensePolicy(
   expense: Expense,
-  config: ExpensePolicyConfig = DEFAULT_POLICY_CONFIG,
+  policy?: ExpensePolicy | ExpensePolicyConfig,
 ): ExpensePolicyResult {
-  const amount = Number(expense.amount);
+  const config =
+    policy ?? DEFAULT_POLICY_CONFIG;
 
-  if (amount > config.approvalLimit) {
+  if (expense.amount > config.approvalLimit) {
     return {
       allowed: false,
       reason: `Expenses above ₹${config.approvalLimit.toLocaleString(

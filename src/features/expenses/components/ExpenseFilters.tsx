@@ -1,3 +1,4 @@
+import type React from "react";
 import {
   FormControl,
   InputLabel,
@@ -7,18 +8,15 @@ import {
   TextField,
   Button,
 } from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material";
 
-import type {
-  ExpenseFilter as ExpenseFiltersState,
-} from "../../../types/expense";
+import type { ExpenseFilter as ExpenseFiltersState } from "../../../types/expense";
 import type { ExpenseStatus } from "../../../types/common";
 
 interface ExpenseFiltersProps {
   filters: ExpenseFiltersState;
   categories: string[];
-  onChange: (
-    filters: ExpenseFiltersState,
-  ) => void;
+  onChange: (filters: ExpenseFiltersState) => void;
   onReset: () => void;
 }
 
@@ -26,42 +24,15 @@ const statusOptions: {
   value: ExpenseStatus | "all";
   label: string;
 }[] = [
-  {
-    value: "all",
-    label: "All statuses",
-  },
-  {
-    value: "draft",
-    label: "Draft",
-  },
-  {
-    value: "submitted",
-    label: "Submitted",
-  },
-  {
-    value: "under_review",
-    label: "Under Review",
-  },
-  {
-    value: "rejected",
-    label: "Rejected",
-  },
-  {
-    value: "approved",
-    label: "Approved",
-  },
-  {
-    value: "reimbursement_pending",
-    label: "Reimbursement Pending",
-  },
-  {
-    value: "reimbursed",
-    label: "Reimbursed",
-  },
-  {
-    value: "cancelled",
-    label: "Cancelled",
-  },
+  { value: "all", label: "All statuses" },
+  { value: "draft", label: "Draft" },
+  { value: "submitted", label: "Submitted" },
+  { value: "under_review", label: "Under Review" },
+  { value: "rejected", label: "Rejected" },
+  { value: "approved", label: "Approved" },
+  { value: "reimbursement_pending", label: "Reimbursement Pending" },
+  { value: "reimbursed", label: "Reimbursed" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 
 export function ExpenseFilters({
@@ -70,9 +41,9 @@ export function ExpenseFilters({
   onChange,
   onReset,
 }: ExpenseFiltersProps) {
-  
+  // Corrected type for TextField
   const handleSearchChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
     onChange({
       ...filters,
@@ -80,24 +51,16 @@ export function ExpenseFilters({
     });
   };
 
-  const handleStatusChange = (
-    event: React.ChangeEvent<
-      HTMLInputElement
-    >,
-  ) => {
+  // Fixed: Uses SelectChangeEvent instead of React.ChangeEvent<HTMLInputElement>
+  const handleStatusChange = (event: SelectChangeEvent<string>) => {
     onChange({
       ...filters,
-      status: event.target.value as
-        | ExpenseStatus
-        | "all",
+      status: event.target.value as ExpenseStatus | "all",
     });
   };
 
-  const handleCategoryChange = (
-    event: React.ChangeEvent<
-      HTMLInputElement
-    >,
-  ) => {
+  // Fixed: Uses SelectChangeEvent instead of React.ChangeEvent<HTMLInputElement>
+  const handleCategoryChange = (event: SelectChangeEvent<string>) => {
     onChange({
       ...filters,
       category: event.target.value,
@@ -105,12 +68,12 @@ export function ExpenseFilters({
   };
 
   return (
-    
     <Stack
       direction={{
         xs: "column",
         md: "row",
       }}
+      sx={{ alignItems: "center",}}
       spacing={2}
     >
       <TextField
@@ -122,17 +85,13 @@ export function ExpenseFilters({
 
       <FormControl fullWidth>
         <InputLabel>Status</InputLabel>
-
         <Select
           label="Status"
           value={filters.status}
           onChange={handleStatusChange}
         >
           {statusOptions.map((option) => (
-            <MenuItem
-              key={option.value}
-              value={option.value}
-            >
+            <MenuItem key={option.value} value={option.value}>
               {option.label}
             </MenuItem>
           ))}
@@ -141,70 +100,63 @@ export function ExpenseFilters({
 
       <FormControl fullWidth>
         <InputLabel>Category</InputLabel>
-
         <Select
           label="Category"
           value={filters.category}
           onChange={handleCategoryChange}
         >
-          <MenuItem value="all">
-            All categories
-          </MenuItem>
-
+          <MenuItem value="all">All categories</MenuItem>
           {categories.map((category) => (
-            <MenuItem
-              key={category}
-              value={category}
-            >
+            <MenuItem key={category} value={category}>
               {category}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
-      
+
       <TextField
         label="From"
         type="date"
         value={filters.dateFrom}
-        onChange={(event) =>
-            onChange({
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+          onChange({
             ...filters,
             dateFrom: event.target.value,
-            })
+          })
         }
         slotProps={{
-            inputLabel: {
+          inputLabel: {
             shrink: true,
-            },
+          },
         }}
         fullWidth
-        />
+      />
 
-        <TextField
+      <TextField
         label="To"
         type="date"
         value={filters.dateTo}
-        onChange={(event) =>
-            onChange({
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+          onChange({
             ...filters,
             dateTo: event.target.value,
-            })
+          })
         }
         slotProps={{
-            inputLabel: {
+          inputLabel: {
             shrink: true,
-            },
+          },
         }}
         fullWidth
-        />
-        
-        <Button
-            variant="text"
-            onClick={onReset}
-        >
-            Reset Filters
-        </Button>
-          
+      />
+
+      <Button
+        variant="text"
+        onClick={onReset}
+        sx={{ whitespace: "nowrap" }}
+      >
+        Reset Filters
+      </Button>
     </Stack>
   );
 }
