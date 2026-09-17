@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useCreateExpenseMutation } from "../api/expenseApi";
 import { ReceiptUpload } from "../components/ReceiptUpload";
+import { useAuth } from "../../auth/context/AuthContext";
 
 interface ExpenseFormData {
   title: string;
@@ -30,24 +31,17 @@ const initialFormData: ExpenseFormData = {
 };
 
 export function CreateExpensePage() {
-
   const [receipt, setReceipt] = useState<File | null>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const [formData, setFormData] =
-    useState<ExpenseFormData>(initialFormData);
+  const [formData, setFormData] = useState<ExpenseFormData>(initialFormData);
 
-  const [
-    createExpense,
-    {
-      isLoading,
-      isError,
-    },
-  ] = useCreateExpenseMutation();
+  const [createExpense, { isLoading, isError }] = useCreateExpenseMutation();
 
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  if (!user) return;
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
     setFormData((current) => ({
@@ -56,13 +50,12 @@ export function CreateExpensePage() {
     }));
   };
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>,
-  ) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const createdExpense = await createExpense({
       title: formData.title.trim(),
+      employeeId: user.id,
       description: formData.description.trim(),
       amount: Number(formData.amount),
       currency: "INR",
@@ -77,7 +70,7 @@ export function CreateExpensePage() {
     <Stack spacing={3}>
       <Stack
         direction={"row"}
-        sx={{justifyContent: "flex-start", alignItems: "center"}}
+        sx={{ justifyContent: "flex-start", alignItems: "center" }}
       >
         <Button
           variant="text"
@@ -88,21 +81,11 @@ export function CreateExpensePage() {
         </Button>
       </Stack>
 
-      <Typography variant="h4">
-        Create Expense
-      </Typography>
+      <Typography variant="h4">Create Expense</Typography>
 
       <Paper sx={{ p: 3 }}>
-        <Stack
-          component="form"
-          spacing={3}
-          onSubmit={handleSubmit}
-        >
-          {isError && (
-            <Alert severity="error">
-              Failed to create expense.
-            </Alert>
-          )}
+        <Stack component="form" spacing={3} onSubmit={handleSubmit}>
+          {isError && <Alert severity="error">Failed to create expense.</Alert>}
 
           <TextField
             label="Title"
@@ -164,14 +147,11 @@ export function CreateExpensePage() {
             }}
           />
 
-          <ReceiptUpload
-            value={receipt}
-            onChange={setReceipt}
-          />
+          <ReceiptUpload value={receipt} onChange={setReceipt} />
 
           <Stack
             direction="row"
-            sx={{justifyContent: "flex-end"}}
+            sx={{ justifyContent: "flex-end" }}
             spacing={2}
           >
             <Button
@@ -182,11 +162,7 @@ export function CreateExpensePage() {
               Cancel
             </Button>
 
-            <Button
-              type="submit"
-              variant="contained"
-              loading={isLoading}
-            >
+            <Button type="submit" variant="contained" loading={isLoading}>
               Create Expense
             </Button>
           </Stack>

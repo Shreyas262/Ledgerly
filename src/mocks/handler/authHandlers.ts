@@ -1,7 +1,8 @@
-import { http, HttpResponse } from "msw"
+import { http, HttpResponse } from "msw";
 
 import { users } from "../data/users";
 import { credentials } from "../data/credentials";
+import { auditLogs } from "../data/auditLogs";
 import {
   clearMockSession,
   getMockSession,
@@ -51,6 +52,18 @@ export const authHandlers = [
 
     const session = setMockSession(user);
 
+    auditLogs.push({
+      id: crypto.randomUUID(),
+      organizationId: user.organizationId,
+      actorId: user.id,
+      actorName: user.name,
+      action: "login",
+      resource: "auth",
+      resourceId: user.id,
+      description: "Signed in to Ledgerly.",
+      createdAt: new Date().toISOString(),
+    });
+
     return HttpResponse.json({
       data: {
         user,
@@ -61,6 +74,28 @@ export const authHandlers = [
   }),
 
   http.post(`${API_BASE_URL}/auth/logout`, () => {
+    const session = getMockSession();
+
+    if (session) {
+      const user = users.find(
+        (item) => item.id === session.userId,
+      );
+
+      if (user) {
+        auditLogs.push({
+          id: crypto.randomUUID(),
+          organizationId: user.organizationId,
+          actorId: user.id,
+          actorName: user.name,
+          action: "logout",
+          resource: "auth",
+          resourceId: user.id,
+          description: "Signed out of Ledgerly.",
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+
     clearMockSession();
 
     return HttpResponse.json({
@@ -81,7 +116,9 @@ export const authHandlers = [
       );
     }
 
-    const user = users.find(u => session.userId === u.id)
+    const user = users.find(
+      (u) => session.userId === u.id,
+    );
 
     if (!user) {
       clearMockSession();
@@ -99,4 +136,4 @@ export const authHandlers = [
       data: user,
     });
   }),
-]
+];

@@ -4,7 +4,7 @@ export const expenses: Expense[] = [
   {
     id: "expense-001",
     organizationId: "org-001",
-    employeeId: "user-001",
+    employeeId: "user-1",
     title: "Client dinner",
     description: "Dinner with client during business meeting",
     amount: 8500,
@@ -18,7 +18,7 @@ export const expenses: Expense[] = [
   {
     id: "expense-002",
     organizationId: "org-001",
-    employeeId: "user-001",
+    employeeId: "user-1",
     title: "Flight to Mumbai",
     description: "Business travel for client meeting",
     amount: 12500,
@@ -32,7 +32,7 @@ export const expenses: Expense[] = [
   {
     id: "expense-003",
     organizationId: "org-001",
-    employeeId: "user-002",
+    employeeId: "user-2",
     title: "Office supplies",
     description: "Stationery and office supplies",
     amount: 3200,
@@ -46,7 +46,7 @@ export const expenses: Expense[] = [
   {
     id: "expense-004",
     organizationId: "org-001",
-    employeeId: "user-003",
+    employeeId: "user-3",
     title: "Hotel accommodation",
     description: "Two-night stay for business conference",
     amount: 7800,
@@ -60,7 +60,7 @@ export const expenses: Expense[] = [
   {
     id: "expense-005",
     organizationId: "org-001",
-    employeeId: "user-004",
+    employeeId: "user-4",
     title: "Office party",
     description: "Company anniversary party",
     amount: 10000,

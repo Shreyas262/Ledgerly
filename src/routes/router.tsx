@@ -21,11 +21,12 @@ import { AnalyticsPage } from "../features/analytics/pages/AnalyticsPage";
 import { PolicyDetailsPage } from "../features/policies/pages/PolicyDetailsPage";
 import { CreatePolicyPage } from "../features/policies/pages/CreatePolicyPage";
 import { EditPolicyPage } from "../features/policies/pages/EditPolicyPage";
-import { PoliciesPage } from "../features/policies/pages/policiesPage";
-
-function PlaceholderPage({ title }: { title: string }) {
-  return <h1>{title}</h1>;
-}
+import { PoliciesPage } from "../features/policies/pages/PoliciesPage";
+import { UserProfilePage } from "../features/userProfile/pages/UserProfilePage";
+import { SettingsPage } from "../features/settings/pages/SettingsPage";
+import AuditPage from "../features/audit/pages/AuditPage";
+import AuditDetailsPage from "../features/audit/pages/AuditDetailsPage";
+import { SecurityPage } from "../features/security/pages/SecurityPage";
 
 export const router = createBrowserRouter([
   {
@@ -48,6 +49,13 @@ export const router = createBrowserRouter([
             element: <DashboardPage />,
             handle: {
               title: "Dashboard",
+            },
+          },
+          {
+            path: "/profile",
+            element: <UserProfilePage />,
+            handle: {
+              title: "Profile",
             },
           },
           {
@@ -95,15 +103,12 @@ export const router = createBrowserRouter([
               },
               {
                 path: "/approvals/:id",
-                element: (
-                  <ExpenseDetailsPage mode="review"
-                  />
-                ),
+                element: <ExpenseDetailsPage mode="review" />,
                 handle: {
                   title: "Expense Review",
                 },
               },
-            ]
+            ],
           },
           {
             element: <PermissionRoute permission="budgets.read" />,
@@ -112,14 +117,12 @@ export const router = createBrowserRouter([
                 path: "/budgets",
                 element: <BudgetsPage />,
                 handle: {
-                  title: "Budgets"
-                }
+                  title: "Budgets",
+                },
               },
               {
                 path: "/budgets/:id",
-                element: (
-                  <BudgetDetailsPage />
-                ),
+                element: <BudgetDetailsPage />,
                 handle: {
                   title: "Budget Details",
                 },
@@ -128,17 +131,17 @@ export const router = createBrowserRouter([
                 path: "/budgets/:id/edit",
                 element: <EditBudgetPage />,
                 handle: {
-                  title: "Edit Budget"
-                }
+                  title: "Edit Budget",
+                },
               },
               {
                 path: "/budgets/new",
                 element: <CreateBudgetPage />,
                 handle: {
-                  title: "Create Budget"
-                }
+                  title: "Create Budget",
+                },
               },
-            ]
+            ],
           },
           {
             element: <PermissionRoute permission="analytics.read" />,
@@ -150,7 +153,7 @@ export const router = createBrowserRouter([
                   title: "Analytics",
                 },
               },
-            ]
+            ],
           },
           {
             element: <PermissionRoute permission="users.read" />,
@@ -161,7 +164,7 @@ export const router = createBrowserRouter([
                 handle: {
                   title: "Users",
                 },
-              }
+              },
             ],
           },
           {
@@ -171,9 +174,9 @@ export const router = createBrowserRouter([
                 path: "/roles",
                 element: <RolesPage />,
                 handle: {
-                  title: "Roles & Permissions"
+                  title: "Roles & Permissions",
                 },
-              }
+              },
             ],
           },
           {
@@ -207,18 +210,44 @@ export const router = createBrowserRouter([
                   title: "Edit Policy",
                 },
               },
-            ]
+            ],
+          },
+          {
+            element: <PermissionRoute permission="audit.read" />,
+            children: [
+              {
+                path: "/audit",
+                element: <AuditPage />,
+                handle: {
+                  title: "Audit",
+                },
+              },
+              {
+                path: "/audit/:id",
+                element: <AuditDetailsPage />,
+                handle: {
+                  title: "Audit Details",
+                },
+              },
+            ],
           },
           {
             path: "/settings",
-            element: <PlaceholderPage title="Settings" />,
+            element: <SettingsPage />,
             handle: {
-              title: "Settings"
+              title: "Settings",
+            },
+          },
+          {
+            path: "/security",
+            element: <SecurityPage />,
+            handle: {
+              title: "Activity",
             },
           },
         ],
       },
-    ]
+    ],
   },
   {
     path: "*",

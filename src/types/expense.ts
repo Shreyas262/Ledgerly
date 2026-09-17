@@ -26,6 +26,7 @@ export interface Expense {
 
 export interface CreateExpenseRequest {
   title: string;
+  employeeId: string,
   description: string;
   amount: number;
   currency: "INR";

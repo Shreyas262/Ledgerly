@@ -9,6 +9,9 @@ import {
   SecurityOutlined,
   SettingsOutlined,
 } from "@mui/icons-material";
+
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import HistoryIcon from "@mui/icons-material/History";
 import {
   Box,
   Divider,
@@ -86,6 +89,17 @@ const navigationItems: NavigationItem[] = [
     permission: "policies.read",
   },
   {
+    label: "Audit Log",
+    path: "/audit",
+    icon: <AssignmentTurnedInIcon />,
+    permission: "audit.read",
+  },
+  {
+    label: "Activity",
+    path: "/security",
+    icon: <HistoryIcon />,
+  },
+  {
     label: "Settings",
     path: "/settings",
     icon: <SettingsOutlined />,
@@ -93,7 +107,6 @@ const navigationItems: NavigationItem[] = [
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-
   const { user } = useAuth();
 
   const visibleNavigationItems = navigationItems.filter((item) => {
@@ -107,7 +120,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <Box sx={{ width: 260 }}>
       <Box sx={{ px: 3, py: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }} >
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
           Ledgerly
         </Typography>
 
@@ -138,9 +151,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 },
               }}
             >
-              <ListItemIcon sx={{ minWidth: 40 }}>
-                {item.icon}
-              </ListItemIcon>
+              <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
 
               <ListItemText primary={item.label} />
             </ListItemButton>
@@ -151,11 +162,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function Sidebar({
-  isMobile,
-  mobileOpen,
-  onMobileClose,
-}: SidebarProps) {
+export function Sidebar({ isMobile, mobileOpen, onMobileClose }: SidebarProps) {
   if (isMobile) {
     return (
       <Drawer

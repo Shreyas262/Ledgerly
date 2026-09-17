@@ -1,7 +1,4 @@
-import {
-  MenuOutlined,
-  NotificationsNoneOutlined,
-} from "@mui/icons-material";
+import { MenuOutlined, NotificationsNoneOutlined } from "@mui/icons-material";
 import {
   AppBar,
   Avatar,
@@ -37,21 +34,14 @@ export function Topbar({
   mobileSidebaropen,
   onMobileMenuClick,
 }: TopbarProps) {
-
   const matches = useMatches();
-  const currentMatch = [...matches]
-    .reverse()
-    .find((match) => {
-      const handle = match.handle as
-        | RouteHandle
-        | undefined;
+  const currentMatch = [...matches].reverse().find((match) => {
+    const handle = match.handle as RouteHandle | undefined;
 
-      return Boolean(handle?.title);
-    });
-  const handle = currentMatch?.handle as
-    | RouteHandle
-    | undefined;
-  
+    return Boolean(handle?.title);
+  });
+  const handle = currentMatch?.handle as RouteHandle | undefined;
+
   const pageTitle = handle?.title ?? "Ledgerly";
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -64,14 +54,17 @@ export function Topbar({
 
   const menuOpen = Boolean(anchorEl);
 
-  const handleAccountClick = (
-    event: MouseEvent<HTMLElement>,
-  ) => {
+  const handleAccountClick = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleProfileClick = () => {
+    handleMenuClose();
+    navigate("/profile");
   };
 
   const handleLogout = async () => {
@@ -106,13 +99,12 @@ export function Topbar({
             </IconButton>
           )}
 
-          <Typography variant="h6" component="h1" sx={{fontWeight:600}}>
+          <Typography variant="h6" component="h1" sx={{ fontWeight: 600 }}>
             {pageTitle}
           </Typography>
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-
           <IconButton aria-label="Notifications">
             <NotificationsNoneOutlined />
           </IconButton>
@@ -124,9 +116,7 @@ export function Topbar({
             aria-haspopup="true"
             aria-expanded={menuOpen ? "true" : undefined}
           >
-            <Avatar>
-              {user?.name?.charAt(0).toUpperCase()}
-            </Avatar>
+            <Avatar>{user?.name?.charAt(0).toUpperCase()}</Avatar>
           </IconButton>
           <Menu
             id="account-menu"
@@ -134,18 +124,12 @@ export function Topbar({
             open={menuOpen}
             onClose={handleMenuClose}
           >
-            <MenuItem onClick={handleMenuClose}>
-              Profile
-            </MenuItem>
+            <MenuItem onClick={handleProfileClick}>Profile</MenuItem>
 
-            <MenuItem
-              onClick={handleLogout}
-              disabled={isLoading}
-            >
+            <MenuItem onClick={handleLogout} disabled={isLoading}>
               {isLoading ? "Signing out..." : "Sign out"}
             </MenuItem>
           </Menu>
-
         </Box>
       </Toolbar>
     </AppBar>

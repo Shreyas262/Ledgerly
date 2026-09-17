@@ -15,14 +15,16 @@ import { calculateMonthlySpending } from "../utils/calculateMonthlySpending";
 import { SpendingTrend } from "../components/SpendingTrend";
 import { CategoryAnalysis } from "../components/CategoryAnalysis";
 import { calculateCategorySpending } from "../utils/calculateCategorySpending";
-import { DimensionAnalysis } from "../components/DimensionAnalysis";
-import { calculateDimensionSpending } from "../utils/calculateDimensionSpending";
 import { ApprovalMetrics } from "../components/ApprovalMetrics";
 import { calculateApprovalMetrics } from "../utils/calculateApprovalMetrics";
 import { useMemo, useState } from "react";
 import { DashboardDateFilter } from "../components/DashboardDateFilter";
 import { filterExpensesByDate } from "../utils/filterExpensesByDate";
-import type { DashboardDateRange } from "../types/dashboardFilters";
+
+interface DashboardDateRange{
+  startDate: string,
+  endDate: string,
+}
 
 export function DashboardPage() {
 
@@ -67,18 +69,6 @@ export function DashboardPage() {
   const categorySpending =
     calculateCategorySpending(
       filteredExpenses,
-    );
-
-  const departmentSpending =
-    calculateDimensionSpending(
-      filteredExpenses,
-      (expense) => expense.department,
-    );
-
-  const projectSpending =
-    calculateDimensionSpending(
-      filteredExpenses,
-      (expense) => expense.project,
     );
 
   const approvalMetrics =
@@ -155,24 +145,6 @@ export function DashboardPage() {
 
         <Grid size={{ xs: 12, md: 6 }}>
           <CategoryAnalysis data={categorySpending} />
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 6 }}>
-          <DimensionAnalysis
-            title="Spending by Department"
-            description="Expense spending across departments"
-            data={departmentSpending}
-            emptyMessage="No department data available."
-          />
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 6 }}>
-          <DimensionAnalysis
-            title="Spending by Project"
-            description="Expense spending across projects"
-            data={projectSpending}
-            emptyMessage="No project data available."
-          />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
