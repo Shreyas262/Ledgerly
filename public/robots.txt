@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+Disallow: /login
+Disallow: /dashboard
+Disallow: /expenses
+Disallow: /approvals
+Disallow: /budgets
+Disallow: /analytics
+Disallow: /policies
+Disallow: /users
+Disallow: /roles
+Disallow: /audit
+Disallow: /security
+Disallow: /settings
+Disallow: /profile

@@ -1,16 +1,9 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Alert, Button, Stack, TextField, Typography } from "@mui/material";
 import { useState, type SyntheticEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
 import { useLoginMutation } from "../api/authApi";
+import AuthLayout from "../../../layouts/AuthLayout/AuthLayout";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -21,9 +14,7 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = async (
-    event: SyntheticEvent<HTMLFormElement>,
-  ) => {
+  const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     try {
@@ -31,6 +22,7 @@ export function LoginPage() {
         email,
         password,
       }).unwrap();
+
       await refetchUser().unwrap();
 
       navigate("/dashboard", { replace: true });
@@ -40,69 +32,51 @@ export function LoginPage() {
   };
 
   return (
-    <Box
-      component="main"
-      sx={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        px: 2,
-      }}
-    >
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{
-          width: "100%",
-          maxWidth: 420,
-        }}
-      >
-        <Stack spacing={3}>
-          <Stack spacing={0.5}>
-            <Typography variant="h4" component="h1" sx={{fontWeight: 700}}>
-              Sign in
-            </Typography>
+    <AuthLayout>
+      <Stack component="form" onSubmit={handleSubmit} spacing={3} noValidate>
+        <Stack spacing={0.5}>
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+            Sign in
+          </Typography>
 
-            <Typography color="text.secondary">
-              Sign in to continue to Ledgerly.
-            </Typography>
-          </Stack>
-
-          {isError && (
-            <Alert severity="error">
-              Invalid email or password.
-            </Alert>
-          )}
-
-          <TextField
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            fullWidth
-          />
-
-          <TextField
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            fullWidth
-          />
-
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={isLoading}
-            fullWidth
-          >
-            {isLoading ? "Signing in..." : "Sign in"}
-          </Button>
+          <Typography variant="body2" color="text.secondary">
+            Enter your credentials to access your account.
+          </Typography>
         </Stack>
-      </Box>
-    </Box>
+
+        {isError && <Alert severity="error">Invalid email or password.</Alert>}
+
+        <TextField
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          required
+          fullWidth
+          autoComplete="email"
+          autoFocus
+        />
+
+        <TextField
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+          fullWidth
+          autoComplete="current-password"
+        />
+
+        <Button
+          type="submit"
+          variant="contained"
+          size="large"
+          disabled={isLoading}
+          fullWidth
+        >
+          {isLoading ? "Signing in..." : "Sign in"}
+        </Button>
+      </Stack>
+    </AuthLayout>
   );
 }
