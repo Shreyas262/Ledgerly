@@ -1,13 +1,31 @@
 import { http, HttpResponse } from "msw";
 
-import { users } from "../data/users";
-import { credentials } from "../data/credentials";
-import { auditLogs } from "../data/auditLogs";
 import {
-  clearMockSession,
-  getMockSession,
-  setMockSession,
-} from "../session";
+  getRecord,
+  listRecords,
+  saveRecord,
+} from "../services/mockDataService";
+import { getSessionCookieHeader } from "../sessionCookie";
+import { createSession, resolveSession, revokeSession } from "../services/sessionService";
+import { buildAuthenticatedPrincipal, resolveAuthenticatedPrincipal } from "../services/authorizationService";
+
+interface MockUser {
+  id: string;
+  organizationId: string;
+  departmentId: string;
+  teamId: string;
+  roleId: string;
+  name: string;
+  email: string;
+  role: string;
+  permissions: string[];
+}
+
+interface MockCredential {
+  userId: string;
+  email: string;
+  password: string;
+}
 
 const API_BASE_URL = "/api";
 
@@ -18,6 +36,9 @@ export const authHandlers = [
       password: string;
     };
 
+    const credentials =
+      await listRecords<MockCredential>("credentials");
+
     const credential = credentials.find(
       (item) =>
         item.email === body.email &&
@@ -26,37 +47,43 @@ export const authHandlers = [
 
     if (!credential) {
       return HttpResponse.json(
-        {
-          message: "Invalid email or password",
-        },
-        {
-          status: 401,
-        },
+        { message: "Invalid email or password" },
+        { status: 401 },
       );
     }
 
-    const user = users.find(
-      (item) => item.id === credential.userId,
+    const user = await getRecord<MockUser>(
+      "users",
+      credential.userId,
     );
 
     if (!user) {
       return HttpResponse.json(
-        {
-          message: "User not found",
-        },
-        {
-          status: 404,
-        },
+        { message: "User not found" },
+        { status: 404 },
       );
     }
 
-    const session = setMockSession(user);
+    const session = await createSession(user);
+    const principal = await buildAuthenticatedPrincipal(user);
 
-    auditLogs.push({
+    if (!principal) {
+      await revokeSession(session.id);
+      return HttpResponse.json(
+        { message: "Unable to resolve authenticated principal.", code: "INVALID_SESSION" },
+        { status: 401 },
+      );
+    }
+
+    const authenticatedUser = {
+      ...user,
+      permissions: principal.effectivePermissions,
+    };
+
+    await saveRecord("auditEvents", {
       id: crypto.randomUUID(),
       organizationId: user.organizationId,
       actorId: user.id,
-      actorName: user.name,
       action: "login",
       resource: "auth",
       resourceId: user.id,
@@ -66,27 +93,28 @@ export const authHandlers = [
 
     return HttpResponse.json({
       data: {
-        user,
-        sessionId: session.sessionId,
+        user: authenticatedUser,
+        sessionId: session.id,
+        expiresAt: session.expiresAt,
         isAuthenticated: true,
       },
     });
   }),
 
-  http.post(`${API_BASE_URL}/auth/logout`, () => {
-    const session = getMockSession();
+  http.post(`${API_BASE_URL}/auth/logout`, async ({ request }) => {
+    const sessionId = getSessionCookieHeader(request);
 
-    if (session) {
-      const user = users.find(
-        (item) => item.id === session.userId,
-      );
+    if (sessionId) {
+      const session = await resolveSession(sessionId);
+      const user = session
+        ? await getRecord<MockUser>("users", session.userId)
+        : undefined;
 
       if (user) {
-        auditLogs.push({
+        await saveRecord("auditEvents", {
           id: crypto.randomUUID(),
           organizationId: user.organizationId,
           actorId: user.id,
-          actorName: user.name,
           action: "logout",
           resource: "auth",
           resourceId: user.id,
@@ -96,44 +124,59 @@ export const authHandlers = [
       }
     }
 
-    clearMockSession();
+    if (sessionId) {
+      await revokeSession(sessionId);
+    }
 
     return HttpResponse.json({
       data: null,
     });
   }),
 
-  http.get(`${API_BASE_URL}/auth/me`, () => {
-    const session = getMockSession();
+  http.get(`${API_BASE_URL}/auth/me`, async ({ request }) => {
+    const sessionId = getSessionCookieHeader(request);
 
-    if (!session) {
+    if (!sessionId) {
       return HttpResponse.json(
-        {
-          message: "No active session.",
-          code: "UNAUTHENTICATED",
-        },
+        { message: "No active session.", code: "UNAUTHENTICATED" },
         { status: 401 },
       );
     }
 
-    const user = users.find(
-      (u) => session.userId === u.id,
-    );
+    const session = await resolveSession(sessionId);
+
+    if (!session) {
+      return HttpResponse.json(
+        { message: "Invalid or expired session.", code: "INVALID_SESSION" },
+        { status: 401 },
+      );
+    }
+
+    const user = await getRecord<MockUser>("users", session.userId);
 
     if (!user) {
-      clearMockSession();
-
+      await revokeSession(sessionId);
       return HttpResponse.json(
-        {
-          message: "Invalid session.",
-          code: "INVALID_SESSION",
-        },
+        { message: "Invalid session.", code: "INVALID_SESSION" },
+        { status: 401 },
+      );
+    }
+
+    const principal = await resolveAuthenticatedPrincipal(request);
+
+    if (!principal) {
+      await revokeSession(sessionId);
+      return HttpResponse.json(
+        { message: "Invalid session.", code: "INVALID_SESSION" },
         { status: 401 },
       );
     }
 
     return HttpResponse.json({
-      data: user,
+      data: {
+        ...user,
+        permissions: principal.effectivePermissions,
+      },
     });
   }),
 ];

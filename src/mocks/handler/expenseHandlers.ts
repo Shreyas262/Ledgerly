@@ -1,227 +1,245 @@
 import { http, HttpResponse } from "msw";
 
-import { expenses } from "../data/expenses";
+import {
+  authorizeCollection,
+  authorizeRequest,
+} from "../services/authorizationService";
+import { authorizationError } from "../services/authorizationHttp";
 
-import type {
-  CreateExpenseRequest,
-  Expense,
-  UpdateExpenseRequest,
-} from "../../types/expense";
+import {
+  getRecord,
+  listRecords,
+  saveRecord,
+} from "../services/mockDataService";
+
+interface MockExpense {
+  id: string;
+  organizationId: string;
+  employeeId: string;
+  title: string;
+  description: string;
+  amount: number;
+  currency: "INR";
+  category: string;
+  status: string;
+  expenseDate: string;
+  createdAt: string;
+  updatedAt: string;
+  rejectionReason?: string;
+  [key: string]: unknown;
+}
 
 export const expensesHandlers = [
-  // ---------------------------------------------------------------------------
-  // GET /api/expenses
-  // ---------------------------------------------------------------------------
+  http.get("/api/expenses", async ({ request }) => {
+    const result = await authorizeCollection(
+      request,
+      await listRecords<MockExpense>("expenses"),
+      {
+        permission: "expenses.read",
+        scope: "ORGANIZATION",
+        getResource: (expense) => ({
+          organizationId: expense.organizationId,
+        }),
+      },
+    );
 
-  http.get("/api/expenses", () => {
-    return HttpResponse.json(expenses);
+    if (!result.allowed) {
+      return authorizationError(result);
+    }
+
+    return HttpResponse.json(result.records);
   }),
 
-  // ---------------------------------------------------------------------------
-  // GET /api/expenses/:id
-  // ---------------------------------------------------------------------------
-
-  http.get("/api/expenses/:id", ({ params }) => {
-    const expenseId = String(params.id);
-
-    const expense = expenses.find(
-      (item) => item.id === expenseId,
+  http.get("/api/expenses/:id", async ({ params, request }) => {
+    const expense = await getRecord<MockExpense>(
+      "expenses",
+      String(params.id),
     );
 
     if (!expense) {
       return HttpResponse.json(
-        {
-          message: "Expense not found.",
-        },
-        {
-          status: 404,
-        },
+        { message: "Expense not found." },
+        { status: 404 },
       );
+    }
+
+    const authorization = await authorizeRequest(request, {
+      permission: "expenses.read",
+      scope: "ORGANIZATION",
+      resource: { organizationId: expense.organizationId },
+    });
+
+    if (!authorization.allowed) {
+      return authorizationError(authorization);
     }
 
     return HttpResponse.json(expense);
   }),
 
-  // ---------------------------------------------------------------------------
-  // POST /api/expenses
-  // ---------------------------------------------------------------------------
+  http.post("/api/expenses", async ({ request }) => {
+    const authorization = await authorizeRequest(request, {
+      permission: "expenses.create",
+      scope: "ORGANIZATION",
+    });
 
-  http.post(
-    "/api/expenses",
-    async ({ request }) => {
-      const body =
-        (await request.json()) as CreateExpenseRequest;
+    if (!authorization.allowed) {
+      return authorizationError(authorization);
+    }
 
-      const now = new Date().toISOString();
+    const body = (await request.json()) as {
+      title: string;
+      description: string;
+      amount: number;
+      category: string;
+      expenseDate: string;
+    };
 
-      const newExpense: Expense = {
-        id: crypto.randomUUID(),
-        organizationId: "org-001",
-        employeeId: "user-001",
+    const now = new Date().toISOString();
 
-        title: body.title,
-        description: body.description,
-        amount: body.amount,
-        currency: "INR",
-        category: body.category,
-        expenseDate: body.expenseDate,
+    const newExpense: MockExpense = {
+      id: crypto.randomUUID(),
+      organizationId: authorization.principal.organizationId,
+      employeeId: authorization.principal.userId,
+      title: body.title,
+      description: body.description,
+      amount: body.amount,
+      currency: "INR",
+      category: body.category,
+      expenseDate: body.expenseDate,
+      status: "draft",
+      createdAt: now,
+      updatedAt: now,
+    };
 
-        status: "draft",
+    await saveRecord("expenses", newExpense);
 
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      expenses.push(newExpense);
-
-      return HttpResponse.json(
-        newExpense,
-        {
-          status: 201,
-        },
-      );
-    },
-  ),
-
-  // ---------------------------------------------------------------------------
-  // PUT /api/expenses/:id
-  // ---------------------------------------------------------------------------
+    return HttpResponse.json(newExpense, { status: 201 });
+  }),
 
   http.put(
     "/api/expenses/:id",
     async ({ params, request }) => {
       const expenseId = String(params.id);
-
-      const expenseIndex = expenses.findIndex(
-        (item) => item.id === expenseId,
+      const existingExpense = await getRecord<MockExpense>(
+        "expenses",
+        expenseId,
       );
 
-      if (expenseIndex === -1) {
+      if (!existingExpense) {
         return HttpResponse.json(
-          {
-            message: "Expense not found.",
-          },
-          {
-            status: 404,
-          },
+          { message: "Expense not found." },
+          { status: 404 },
         );
       }
 
-      const body =
-        (await request.json()) as Omit<
-          UpdateExpenseRequest,
-          "id"
-        >;
+      const authorization = await authorizeRequest(request, {
+        permission: "expenses.update",
+        scope: "ORGANIZATION",
+        resource: { organizationId: existingExpense.organizationId },
+      });
 
-      const existingExpense =
-        expenses[expenseIndex];
+      if (!authorization.allowed) {
+        return authorizationError(authorization);
+      }
 
       if (existingExpense.status !== "draft") {
         return HttpResponse.json(
-          {
-            message:
-              "Only draft expenses can be edited.",
-          },
-          {
-            status: 409,
-          },
+          { message: "Only draft expenses can be edited." },
+          { status: 409 },
         );
       }
 
-      const updatedExpense: Expense = {
+      const body = (await request.json()) as {
+        title: string;
+        description: string;
+        amount: number;
+        category: string;
+        expenseDate: string;
+      };
+
+      const updatedExpense: MockExpense = {
         ...existingExpense,
-
-        title: body.title,
-        description: body.description,
-        amount: body.amount,
+        ...body,
         currency: "INR",
-        category: body.category,
-        expenseDate: body.expenseDate,
-
         updatedAt: new Date().toISOString(),
       };
 
-      expenses[expenseIndex] = updatedExpense;
+      await saveRecord("expenses", updatedExpense);
 
       return HttpResponse.json(updatedExpense);
     },
   ),
 
-  // ---------------------------------------------------------------------------
-  // POST /api/expenses/:id/submit
-  // ---------------------------------------------------------------------------
-
   http.post(
     "/api/expenses/:id/submit",
-    ({ params }) => {
+    async ({ params, request }) => {
       const expenseId = String(params.id);
-
-      const expenseIndex = expenses.findIndex(
-        (item) => item.id === expenseId,
+      const expense = await getRecord<MockExpense>(
+        "expenses",
+        expenseId,
       );
 
-      if (expenseIndex === -1) {
+      if (!expense) {
         return HttpResponse.json(
-          {
-            message: "Expense not found.",
-          },
-          {
-            status: 404,
-          },
+          { message: "Expense not found." },
+          { status: 404 },
         );
       }
 
-      const expense = expenses[expenseIndex];
+      const authorization = await authorizeRequest(request, {
+        permission: "expenses.submit",
+        scope: "ORGANIZATION",
+        resource: { organizationId: expense.organizationId },
+      });
+
+      if (!authorization.allowed) {
+        return authorizationError(authorization);
+      }
 
       if (expense.status !== "draft") {
         return HttpResponse.json(
-          {
-            message:
-              "Only draft expenses can be submitted.",
-          },
-          {
-            status: 409,
-          },
+          { message: "Only draft expenses can be submitted." },
+          { status: 409 },
         );
       }
 
-      const updatedExpense: Expense = {
+      const updatedExpense = {
         ...expense,
         status: "submitted",
         updatedAt: new Date().toISOString(),
       };
 
-      expenses[expenseIndex] = updatedExpense;
+      await saveRecord("expenses", updatedExpense);
 
       return HttpResponse.json(updatedExpense);
     },
   ),
 
-  // ---------------------------------------------------------------------------
-  // POST /api/expenses/:id/review
-  // ---------------------------------------------------------------------------
-
   http.post(
     "/api/expenses/:id/review",
-    ({ params }) => {
+    async ({ params, request }) => {
       const expenseId = String(params.id);
-
-      const expenseIndex = expenses.findIndex(
-        (item) => item.id === expenseId,
+      const expense = await getRecord<MockExpense>(
+        "expenses",
+        expenseId,
       );
 
-      if (expenseIndex === -1) {
+      if (!expense) {
         return HttpResponse.json(
-          {
-            message: "Expense not found.",
-          },
-          {
-            status: 404,
-          },
+          { message: "Expense not found." },
+          { status: 404 },
         );
       }
 
-      const expense = expenses[expenseIndex];
+      const authorization = await authorizeRequest(request, {
+        permission: "expenses.approve",
+        scope: "ORGANIZATION",
+        resource: { organizationId: expense.organizationId },
+      });
+
+      if (!authorization.allowed) {
+        return authorizationError(authorization);
+      }
 
       if (expense.status !== "submitted") {
         return HttpResponse.json(
@@ -229,128 +247,128 @@ export const expensesHandlers = [
             message:
               "Only submitted expenses can enter review.",
           },
-          {
-            status: 409,
-          },
+          { status: 409 },
         );
       }
 
-      const updatedExpense: Expense = {
+      const updatedExpense = {
         ...expense,
         status: "under_review",
         updatedAt: new Date().toISOString(),
       };
 
-      expenses[expenseIndex] = updatedExpense;
+      await saveRecord("expenses", updatedExpense);
 
       return HttpResponse.json(updatedExpense);
     },
   ),
 
-  http.post("/api/expenses/:id/approve", ({ params }) =>
-  {
-    const expenseId = String(params.id);
-
-    const expenseIndex = expenses.findIndex(
-      (item) => item.id === expenseId,
-    );
-
-    if (expenseIndex === -1) {
-      return HttpResponse.json(
-        {
-          message: "Expense not found.",
-        },
-        {
-          status: 404,
-        },
+  http.post(
+    "/api/expenses/:id/approve",
+    async ({ params, request }) => {
+      const expenseId = String(params.id);
+      const expense = await getRecord<MockExpense>(
+        "expenses",
+        expenseId,
       );
-    }
 
-    const expense = expenses[expenseIndex];
+      if (!expense) {
+        return HttpResponse.json(
+          { message: "Expense not found." },
+          { status: 404 },
+        );
+      }
 
-    if (expense.status !== "under_review") {
-      return HttpResponse.json(
-        {
-          message:
-            "Only expenses under review can be approved.",
-        },
-        {
-          status: 409,
-        },
+      const authorization = await authorizeRequest(request, {
+        permission: "expenses.approve",
+        scope: "ORGANIZATION",
+        resource: { organizationId: expense.organizationId },
+      });
+
+      if (!authorization.allowed) {
+        return authorizationError(authorization);
+      }
+
+      if (expense.status !== "under_review") {
+        return HttpResponse.json(
+          {
+            message:
+              "Only expenses under review can be approved.",
+          },
+          { status: 409 },
+        );
+      }
+
+      const updatedExpense = {
+        ...expense,
+        status: "approved",
+        updatedAt: new Date().toISOString(),
+      };
+
+      await saveRecord("expenses", updatedExpense);
+
+      return HttpResponse.json(updatedExpense);
+    },
+  ),
+
+  http.post(
+    "/api/expenses/:id/reject",
+    async ({ params, request }) => {
+      const expenseId = String(params.id);
+      const expense = await getRecord<MockExpense>(
+        "expenses",
+        expenseId,
       );
-    }
 
-    const updatedExpense: Expense = {
-      ...expense,
-      status: "approved",
-      updatedAt: new Date().toISOString(),
-    };
+      if (!expense) {
+        return HttpResponse.json(
+          { message: "Expense not found." },
+          { status: 404 },
+        );
+      }
 
-    expenses[expenseIndex] = updatedExpense;
+      const authorization = await authorizeRequest(request, {
+        permission: "expenses.reject",
+        scope: "ORGANIZATION",
+        resource: { organizationId: expense.organizationId },
+      });
 
-    return HttpResponse.json(updatedExpense);
-  }),
+      if (!authorization.allowed) {
+        return authorizationError(authorization);
+      }
 
-  http.post("/api/expenses/:id/reject", async ({ params, request }) => {
-    const expenseId = String(params.id);
+      if (expense.status !== "under_review") {
+        return HttpResponse.json(
+          {
+            message:
+              "Only expenses under review can be rejected.",
+          },
+          { status: 409 },
+        );
+      }
 
-    const expenseIndex = expenses.findIndex(
-      (item) => item.id === expenseId,
-    );
+      const body = (await request.json()) as {
+        reason: string;
+      };
+      const reason = body.reason.trim();
 
-    if (expenseIndex === -1) {
-      return HttpResponse.json(
-        {
-          message: "Expense not found.",
-        },
-        {
-          status: 404,
-        },
-      );
-    }
+      if (!reason) {
+        return HttpResponse.json(
+          { message: "A rejection reason is required." },
+          { status: 400 },
+        );
+      }
 
-    const expense = expenses[expenseIndex];
+      const updatedExpense = {
+        ...expense,
+        status: "rejected",
+        rejectionReason: reason,
+        updatedAt: new Date().toISOString(),
+      };
 
-    if (expense.status !== "under_review") {
-      return HttpResponse.json(
-        {
-          message:
-            "Only expenses under review can be rejected.",
-        },
-        {
-          status: 409,
-        },
-      );
-    }
+      await saveRecord("expenses", updatedExpense);
 
-    const body = (await request.json()) as {
-      reason: string;
-    };
-
-    const reason = body.reason.trim();
-
-    if (!reason) {
-      return HttpResponse.json(
-        {
-          message:
-            "A rejection reason is required.",
-        },
-        {
-          status: 400,
-        },
-      );
-    }
-
-    const updatedExpense: Expense = {
-      ...expense,
-      status: "rejected",
-      rejectionReason: reason,
-      updatedAt: new Date().toISOString(),
-    };
-
-    expenses[expenseIndex] = updatedExpense;
-
-    return HttpResponse.json(updatedExpense);
-  },
-),
+      return HttpResponse.json(updatedExpense);
+    },
+  ),
 ];

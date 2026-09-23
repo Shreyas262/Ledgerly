@@ -1,95 +1,142 @@
 import { http, HttpResponse } from "msw";
 
-import { policies } from "../data/policies";
+import {
+  authorizeCollection,
+  authorizeRequest,
+} from "../services/authorizationService";
+import { authorizationError } from "../services/authorizationHttp";
 
-import type {
-  CreateExpensePolicyRequest,
-  ExpensePolicy,
-  UpdateExpensePolicyRequest,
-} from "../../types/policy";
+import {
+  getRecord,
+  listRecords,
+  saveRecord,
+} from "../services/mockDataService";
+
+interface MockPolicy {
+  id: string;
+  organizationId: string;
+  name: string;
+  description?: string;
+  approvalLimit: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  [key: string]: unknown;
+}
 
 export const policiesHandlers = [
-  http.get("/api/policies", () => {
-    return HttpResponse.json(policies);
+  http.get("/api/policies", async ({ request }) => {
+    const result = await authorizeCollection(
+      request,
+      await listRecords<MockPolicy>("policies"),
+      {
+        permission: "policies.read",
+        scope: "ORGANIZATION",
+        getResource: (policy) => ({ organizationId: policy.organizationId }),
+      },
+    );
+
+    if (!result.allowed) {
+      return authorizationError(result);
+    }
+
+    return HttpResponse.json(result.records);
   }),
 
-  http.get("/api/policies/:id", ({ params }) => {
-    const policyId = String(params.id);
-
-    const policy = policies.find(
-      (item) => item.id === policyId,
+  http.get("/api/policies/:id", async ({ params, request }) => {
+    const policy = await getRecord<MockPolicy>(
+      "policies",
+      String(params.id),
     );
 
     if (!policy) {
       return HttpResponse.json(
-        {
-          message: "Policy not found.",
-        },
-        {
-          status: 404,
-        },
+        { message: "Policy not found." },
+        { status: 404 },
       );
+    }
+
+    const authorization = await authorizeRequest(request, {
+      permission: "policies.read",
+      scope: "ORGANIZATION",
+      resource: { organizationId: policy.organizationId },
+    });
+
+    if (!authorization.allowed) {
+      return authorizationError(authorization);
     }
 
     return HttpResponse.json(policy);
   }),
 
-  http.post(
-    "/api/policies",
-    async ({ request }) => {
-      const body =
-        (await request.json()) as CreateExpensePolicyRequest;
+  http.post("/api/policies", async ({ request }) => {
+    const authorization = await authorizeRequest(request, {
+      permission: "policies.create",
+      scope: "ORGANIZATION",
+    });
 
-      const now = new Date().toISOString();
+    if (!authorization.allowed) {
+      return authorizationError(authorization);
+    }
+    const body = (await request.json()) as {
+      name: string;
+      description?: string;
+      approvalLimit: number;
+      status: string;
+    };
 
-      const newPolicy: ExpensePolicy = {
-        id: crypto.randomUUID(),
-        organizationId: "org-001",
-        name: body.name,
-        description: body.description,
-        approvalLimit: body.approvalLimit,
-        status: body.status,
-        createdAt: now,
-        updatedAt: now,
-      };
+    const now = new Date().toISOString();
 
-      policies.push(newPolicy);
+    const newPolicy: MockPolicy = {
+      id: crypto.randomUUID(),
+      organizationId: authorization.principal.organizationId,
+      name: body.name,
+      description: body.description,
+      approvalLimit: body.approvalLimit,
+      status: body.status,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-      return HttpResponse.json(newPolicy, {
-        status: 201,
-      });
-    },
-  ),
+    await saveRecord("policies", newPolicy);
+
+    return HttpResponse.json(newPolicy, { status: 201 });
+  }),
 
   http.put(
     "/api/policies/:id",
     async ({ params, request }) => {
       const policyId = String(params.id);
-
-      const policyIndex = policies.findIndex(
-        (item) => item.id === policyId,
+      const existingPolicy = await getRecord<MockPolicy>(
+        "policies",
+        policyId,
       );
 
-      if (policyIndex === -1) {
+      if (!existingPolicy) {
         return HttpResponse.json(
-          {
-            message: "Policy not found.",
-          },
-          {
-            status: 404,
-          },
+          { message: "Policy not found." },
+          { status: 404 },
         );
       }
 
-      const body =
-        (await request.json()) as Omit<
-          UpdateExpensePolicyRequest,
-          "id"
-        >;
+      const authorization = await authorizeRequest(request, {
+        permission: "policies.update",
+        scope: "ORGANIZATION",
+        resource: { organizationId: existingPolicy.organizationId },
+      });
 
-      const existingPolicy = policies[policyIndex];
+      if (!authorization.allowed) {
+        return authorizationError(authorization);
+      }
 
-      const updatedPolicy: ExpensePolicy = {
+      const body = (await request.json()) as {
+        name: string;
+        description?: string;
+        approvalLimit: number;
+        status: string;
+      };
+
+      const updatedPolicy: MockPolicy = {
         ...existingPolicy,
         name: body.name,
         description: body.description,
@@ -98,7 +145,7 @@ export const policiesHandlers = [
         updatedAt: new Date().toISOString(),
       };
 
-      policies[policyIndex] = updatedPolicy;
+      await saveRecord("policies", updatedPolicy);
 
       return HttpResponse.json(updatedPolicy);
     },

@@ -1,9 +1,8 @@
 import { baseApi } from "../../../services/api/baseApi";
-import type {
-  ApiResponse,
-  LoginRequest,
-} from "../../../types/api";
-import type { AuthSession, User } from "../../../types/auth";
+import type { ApiResponse } from "../../../types/api";
+import type { LoginRequest } from "../types/requests";
+import type { AuthSession, AuthUser } from "../types/auth";
+import { clearSessionCookie, setSessionCookie } from "../../../mocks/sessionCookie";
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -13,6 +12,14 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
         body: credentials,
       }),
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          setSessionCookie(data.data.sessionId, data.data.expiresAt);
+        } catch {
+          // Login errors are handled by the mutation state.
+        }
+      },
       invalidatesTags: ["User"],
     }),
 
@@ -21,11 +28,25 @@ export const authApi = baseApi.injectEndpoints({
         url: "/auth/logout",
         method: "POST",
       }),
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+        } finally {
+          clearSessionCookie();
+        }
+      },
     }),
 
-    getCurrentUser: builder.query<ApiResponse<User>, void>({
+    getCurrentUser: builder.query<ApiResponse<AuthUser>, void>({
       query: () => "/auth/me",
       providesTags: ["User"],
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+        } catch {
+          clearSessionCookie();
+        }
+      },
     }),
   }),
 });

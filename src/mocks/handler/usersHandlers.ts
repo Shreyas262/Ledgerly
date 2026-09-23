@@ -1,177 +1,217 @@
 import { http, HttpResponse } from "msw";
-import { credentials } from "../data/credentials";
 
-import type {
-  CreateUserPayload,
-  UpdateUserPayload,
-  User,
-} from "../../types/auth";
+import {
+  authorizeCollection,
+  authorizeRequest,
+} from "../services/authorizationService";
+import { authorizationError } from "../services/authorizationHttp";
 
-import { users } from "../data/users";
+import {
+  deleteRecord,
+  getRecord,
+  listRecords,
+  saveRecord,
+} from "../services/mockDataService";
 
-const API_BASE_URL = "/api"
+interface MockUser {
+  id: string;
+  organizationId: string;
+  departmentId: string;
+  teamId: string;
+  roleId: string;
+  name: string;
+  email: string;
+  role: string;
+  permissions: string[];
+}
+
+interface MockCredential {
+  userId: string;
+  email: string;
+  password: string;
+}
+
+const API_BASE_URL = "/api";
 
 export const usersHandlers = [
-  http.get(`${API_BASE_URL}/users`, () => {
-    return HttpResponse.json(users);
+  http.get(`${API_BASE_URL}/users`, async ({ request }) => {
+    const result = await authorizeCollection(
+      request,
+      await listRecords<MockUser>("users"),
+      {
+        permission: "users.read",
+        scope: "ORGANIZATION",
+        getResource: (user) => ({ organizationId: user.organizationId }),
+      },
+    );
+
+    if (!result.allowed) {
+      return authorizationError(result);
+    }
+
+    return HttpResponse.json(result.records);
   }),
 
   http.post(`${API_BASE_URL}/users`, async ({ request }) => {
-    const body = (await request.json()) as CreateUserPayload;
+    const authorization = await authorizeRequest(request, {
+      permission: "users.create",
+      scope: "ORGANIZATION",
+    });
 
-    const existingUser = users.find(
-      (user) => user.email === body.email,
-    );
+    if (!authorization.allowed) {
+      return authorizationError(authorization);
+    }
+    const body = (await request.json()) as {
+      organizationId: string;
+      departmentId?: string;
+      teamId?: string;
+      roleId?: string;
+      name: string;
+      email: string;
+      role: string;
+      permissions: string[];
+      password: string;
+    };
 
-    if (existingUser) {
+    const users = await listRecords<MockUser>("users");
+
+    if (users.some((user) => user.email === body.email)) {
       return HttpResponse.json(
         {
           message: "A user with this email already exists.",
         },
-        {
-          status: 409,
-        },
+        { status: 409 },
       );
     }
-    
-    const newUser: User = {
+
+    const newUser: MockUser = {
       id: crypto.randomUUID(),
-      organizationId: body.organizationId,
+      organizationId: authorization.principal.organizationId,
+      departmentId: body.departmentId ?? "dept-operations",
+      teamId: body.teamId ?? "team-operations",
+      roleId: body.roleId ?? `role-${body.role}`,
       name: body.name,
       email: body.email,
       role: body.role,
       permissions: body.permissions,
     };
 
-    users.push(newUser);
+    await saveRecord("users", newUser);
 
-    credentials.push({
+    await saveRecord<MockCredential>("credentials", {
       userId: newUser.id,
       email: body.email,
       password: body.password,
     });
 
-    return HttpResponse.json(newUser, {
-      status: 201,
-    });
+    return HttpResponse.json(newUser, { status: 201 });
   }),
 
-  http.put(`${API_BASE_URL}/users/:id`, async ({ params, request }) => {
-    const userId = String(params.id);
-
-    const body = (await request.json()) as UpdateUserPayload;
-
-    const userIndex = users.findIndex(
-      (user) => user.id === userId,
-    );
-
-    if (userIndex === -1) {
-      return HttpResponse.json(
-        {
-          message: "User not found.",
-        },
-        {
-          status: 404,
-        },
-      );
-    }
-
-    const currentUser = users[userIndex];
-    const emailAlreadyExists = users.some(
-      (user) =>
-        user.id !== userId &&
-        user.email === body.email,
-    );
-
-    if (emailAlreadyExists) {
-      return HttpResponse.json(
-        {
-          message: "A user with this email already exists.",
-        },
-        {
-          status: 409,
-        },
-      );
-    }
-
-    const updatedUser: User = {
-      ...currentUser,
-      name: body.name,
-      email: body.email,
-      role: body.role,
-      permissions: body.permissions,
-    };
-
-    users[userIndex] = updatedUser;
-  
-    const credentialIndex = credentials.findIndex(
-      (credential) =>
-        credential.userId === userId,
-    );
-
-    if (credentialIndex !== -1) {
-      credentials[credentialIndex].email = body.email;
-      if (body.password) {
-        credentials[credentialIndex].password =
-          body.password;
-      }
-    }
-
-    return HttpResponse.json(updatedUser);
-    }),
-
-
-  http.delete(`${API_BASE_URL}/users/:id`, ({ params }) => {
-    const userIndex = users.findIndex(
-      (user) => user.id === params.id,
-    );
-
-    if (userIndex === -1) {
-      return new HttpResponse(null, {
-        status: 404,
-      });
-    }
-
-    users.splice(userIndex, 1);
-
-    return new HttpResponse(null, {
-      status: 204,
-    });
-  }),
-  http.delete(`${API_BASE_URL}/users/:id`,
-    ({ params }) => {
+  http.put(
+    `${API_BASE_URL}/users/:id`,
+    async ({ params, request }) => {
       const userId = String(params.id);
+      const body = (await request.json()) as {
+        name: string;
+        email: string;
+        role: string;
+        permissions: string[];
+        departmentId?: string;
+        teamId?: string;
+        roleId?: string;
+        password?: string;
+      };
 
-      const userIndex = users.findIndex(
-        (user) => user.id === userId,
+      const currentUser = await getRecord<MockUser>(
+        "users",
+        userId,
       );
 
-      if (userIndex === -1) {
+      if (!currentUser) {
+        return HttpResponse.json(
+          { message: "User not found." },
+          { status: 404 },
+        );
+      }
+
+      const authorization = await authorizeRequest(request, {
+        permission: "users.update",
+        scope: "ORGANIZATION",
+        resource: { organizationId: currentUser.organizationId },
+      });
+
+      if (!authorization.allowed) {
+        return authorizationError(authorization);
+      }
+
+      const users = await listRecords<MockUser>("users");
+
+      if (
+        users.some(
+          (user) =>
+            user.id !== userId &&
+            user.email === body.email,
+        )
+      ) {
         return HttpResponse.json(
           {
-            message: "User not found.",
+            message: "A user with this email already exists.",
           },
-          {
-            status: 404,
-          },
+          { status: 409 },
         );
       }
 
-      users.splice(userIndex, 1);
+      const updatedUser: MockUser = {
+        ...currentUser,
+        name: body.name,
+        email: body.email,
+        role: body.role,
+        roleId: body.roleId ?? currentUser.roleId ?? `role-${body.role}`,
+        departmentId: body.departmentId ?? currentUser.departmentId,
+        teamId: body.teamId ?? currentUser.teamId,
+        permissions: body.permissions,
+      };
 
-      const credentialIndex =
-        credentials.findIndex(
-          (credential) =>
-            credential.userId === userId,
-        );
+      await saveRecord("users", updatedUser);
 
-      if (credentialIndex !== -1) {
-        credentials.splice(credentialIndex, 1);
+      const credential = await getRecord<MockCredential>(
+        "credentials",
+        userId,
+      );
+
+      if (credential) {
+        await saveRecord("credentials", {
+          ...credential,
+          email: body.email,
+          password: body.password ?? credential.password,
+        });
       }
 
-      return new HttpResponse(null, {
-        status: 204,
-      });
+      return HttpResponse.json(updatedUser);
     },
   ),
+
+  http.delete(`${API_BASE_URL}/users/:id`, async ({ params, request }) => {
+    const userId = String(params.id);
+    const user = await getRecord<MockUser>("users", userId);
+
+    if (!user) {
+      return new HttpResponse(null, { status: 404 });
+    }
+
+    const authorization = await authorizeRequest(request, {
+      permission: "users.delete",
+      scope: "ORGANIZATION",
+      resource: { organizationId: user.organizationId },
+    });
+
+    if (!authorization.allowed) {
+      return authorizationError(authorization);
+    }
+
+    await deleteRecord("users", userId);
+    await deleteRecord("credentials", userId);
+
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];

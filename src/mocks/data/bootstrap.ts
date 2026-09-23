@@ -1,0 +1,237 @@
+export interface BootstrapCredential {
+  userId: string;
+  email: string;
+  password: string;
+}
+
+export const bootstrapOrganizations = [
+  {
+    id: "org-1",
+    name: "Ledgerly Technologies",
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+] as const;
+
+export const bootstrapDepartments = [
+  {
+    id: "dept-engineering",
+    organizationId: "org-1",
+    name: "Engineering",
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "dept-finance",
+    organizationId: "org-1",
+    name: "Finance",
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "dept-operations",
+    organizationId: "org-1",
+    name: "Operations",
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+] as const;
+
+export const bootstrapTeams = [
+  {
+    id: "team-engineering",
+    organizationId: "org-1",
+    departmentId: "dept-engineering",
+    name: "Engineering",
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "team-finance",
+    organizationId: "org-1",
+    departmentId: "dept-finance",
+    name: "Finance Operations",
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "team-operations",
+    organizationId: "org-1",
+    departmentId: "dept-operations",
+    name: "Administration",
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+] as const;
+
+export const bootstrapRoles = [
+  {
+    id: "role-employee",
+    organizationId: "org-1",
+    name: "employee",
+    permissions: [
+      "expenses.read",
+      "expenses.create",
+      "expenses.update",
+      "expenses.submit",
+    ],
+    isSystemRole: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "role-manager",
+    organizationId: "org-1",
+    name: "manager",
+    permissions: [
+      "expenses.read",
+      "expenses.create",
+      "expenses.update",
+      "expenses.submit",
+      "expenses.approve",
+      "expenses.reject",
+    ],
+    isSystemRole: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "role-finance",
+    organizationId: "org-1",
+    name: "finance",
+    permissions: [
+      "expenses.read",
+      "expenses.approve",
+      "expenses.reject",
+      "budgets.read",
+      "budgets.create",
+      "budgets.update",
+      "analytics.read",
+    ],
+    isSystemRole: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "role-admin",
+    organizationId: "org-1",
+    name: "admin",
+    permissions: [
+      "expenses.read",
+      "expenses.create",
+      "expenses.update",
+      "expenses.submit",
+      "expenses.approve",
+      "expenses.reject",
+      "users.read",
+      "users.create",
+      "users.update",
+      "users.delete",
+      "roles.read",
+      "roles.create",
+      "roles.update",
+      "roles.delete",
+      "policies.read",
+      "policies.create",
+      "policies.update",
+      "policies.delete",
+      "budgets.read",
+      "budgets.create",
+      "budgets.update",
+      "analytics.read",
+      "audit.read",
+    ],
+    isSystemRole: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+] as const;
+
+export const bootstrapUsers = [
+  {
+    id: "user-1",
+    organizationId: "org-1",
+    departmentId: "dept-engineering",
+    teamId: "team-engineering",
+    roleId: "role-employee",
+    name: "John Employee",
+    email: "employee@ledgerly.com",
+    role: "employee",
+    permissions: bootstrapRoles[0].permissions,
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "user-2",
+    organizationId: "org-1",
+    departmentId: "dept-engineering",
+    teamId: "team-engineering",
+    roleId: "role-manager",
+    name: "Sarah Manager",
+    email: "manager@ledgerly.com",
+    role: "manager",
+    permissions: bootstrapRoles[1].permissions,
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "user-3",
+    organizationId: "org-1",
+    departmentId: "dept-finance",
+    teamId: "team-finance",
+    roleId: "role-finance",
+    name: "Mike Finance",
+    email: "finance@ledgerly.com",
+    role: "finance",
+    permissions: bootstrapRoles[2].permissions,
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "user-4",
+    organizationId: "org-1",
+    departmentId: "dept-operations",
+    teamId: "team-operations",
+    roleId: "role-admin",
+    name: "Admin User",
+    email: "admin@ledgerly.com",
+    role: "admin",
+    permissions: bootstrapRoles[3].permissions,
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+] as const;
+
+export const bootstrapCredentials: BootstrapCredential[] = [
+  {
+    userId: "user-1",
+    email: "employee@ledgerly.com",
+    password: "employee123",
+  },
+  {
+    userId: "user-2",
+    email: "manager@ledgerly.com",
+    password: "manager123",
+  },
+  {
+    userId: "user-3",
+    email: "finance@ledgerly.com",
+    password: "finance123",
+  },
+  {
+    userId: "user-4",
+    email: "admin@ledgerly.com",
+    password: "admin123",
+  },
+];

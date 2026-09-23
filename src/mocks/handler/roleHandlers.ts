@@ -1,70 +1,148 @@
 import { http, HttpResponse } from "msw";
 
-import type { CreateRolePayload, Role, UpdateRolePayload } from "../../types/auth"; 
-import { roles } from "../data/roles";
+import {
+  authorizeCollection,
+  authorizeRequest,
+} from "../services/authorizationService";
+import { authorizationError } from "../services/authorizationHttp";
+
+import {
+  deleteRecord,
+  getRecord,
+  listRecords,
+  saveRecord,
+} from "../services/mockDataService";
+
+interface MockRole {
+  id: string;
+  organizationId: string;
+  name: string;
+  permissions: string[];
+  isSystemRole?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+interface CreateRoleBody {
+  name: string;
+  permissions: string[];
+  description?: string;
+  isSystemRole?: boolean;
+}
 
 const API_BASE_URL = "/api";
 
 export const roleHandlers = [
-  http.get(`${API_BASE_URL}/roles`, () => {
-    return HttpResponse.json(roles);
+  http.get(`${API_BASE_URL}/roles`, async ({ request }) => {
+    const result = await authorizeCollection(
+      request,
+      await listRecords<MockRole>("roles"),
+      {
+        permission: "roles.read",
+        scope: "ORGANIZATION",
+        getResource: (role) => ({ organizationId: role.organizationId }),
+      },
+    );
+
+    if (!result.allowed) {
+      return authorizationError(result);
+    }
+
+    return HttpResponse.json(result.records);
   }),
-  
+
   http.post(`${API_BASE_URL}/roles`, async ({ request }) => {
-    const body = (await request.json()) as CreateRolePayload;
+    const authorization = await authorizeRequest(request, {
+      permission: "roles.create",
+      scope: "ORGANIZATION",
+    });
 
-    const newRole: Role = {
+    if (!authorization.allowed) {
+      return authorizationError(authorization);
+    }
+
+    const body = (await request.json()) as CreateRoleBody;
+    const now = new Date().toISOString();
+
+    const newRole: MockRole = {
       id: crypto.randomUUID(),
-      ...body,
+      organizationId: authorization.principal.organizationId,
+      name: body.name,
+      permissions: body.permissions,
+      description: body.description,
+      isSystemRole: body.isSystemRole ?? false,
+      createdAt: now,
+      updatedAt: now,
     };
 
-    roles.push(newRole);
+    await saveRecord("roles", newRole);
 
-    return HttpResponse.json(newRole, {
-      status: 201,
-    });
+    return HttpResponse.json(newRole, { status: 201 });
   }),
 
-  http.put(`${API_BASE_URL}/roles/:id`, async ({ params, request }) => {
-    const roleIndex = roles.findIndex(
-      (role) => role.id === params.id
+  http.put(
+    `${API_BASE_URL}/roles/:id`,
+    async ({ params, request }) => {
+      const roleId = String(params.id);
+      const existingRole = await getRecord<MockRole>(
+        "roles",
+        roleId,
+      );
+
+      if (!existingRole) {
+        return new HttpResponse(null, { status: 404 });
+      }
+
+      const authorization = await authorizeRequest(request, {
+        permission: "roles.update",
+        scope: "ORGANIZATION",
+        resource: { organizationId: existingRole.organizationId },
+      });
+
+      if (!authorization.allowed) {
+        return authorizationError(authorization);
+      }
+
+      const body = (await request.json()) as Partial<CreateRoleBody>;
+
+      const updatedRole: MockRole = {
+        ...existingRole,
+        ...body,
+        id: existingRole.id,
+        organizationId: existingRole.organizationId,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await saveRecord("roles", updatedRole);
+
+      return HttpResponse.json(updatedRole);
+    },
+  ),
+
+  http.delete(`${API_BASE_URL}/roles/:id`, async ({ params, request }) => {
+    const roleId = String(params.id);
+    const existingRole = await getRecord<MockRole>(
+      "roles",
+      roleId,
     );
 
-    if (roleIndex === -1) {
-      return new HttpResponse(null, {
-        status: 404,
-      });
+    if (!existingRole) {
+      return new HttpResponse(null, { status: 404 });
     }
 
-    const body = (await request.json()) as UpdateRolePayload;
-
-    const updatedRole: Role = {
-      ...roles[roleIndex],
-      ...body,
-    };
-
-    roles[roleIndex] = updatedRole;
-
-    return HttpResponse.json(updatedRole, {
-      status: 200,
+    const authorization = await authorizeRequest(request, {
+      permission: "roles.delete",
+      scope: "ORGANIZATION",
+      resource: { organizationId: existingRole.organizationId },
     });
-  }),
 
-  http.delete(`${API_BASE_URL}/roles/:id`, ({ params }) => {
-    const roleIndex = roles.findIndex(
-      (role) => role.id === params.id
-    );
-
-    if (roleIndex === -1) {
-      return new HttpResponse(null, {
-        status: 404,
-      });
+    if (!authorization.allowed) {
+      return authorizationError(authorization);
     }
 
-    roles.splice(roleIndex, 1);
+    await deleteRecord("roles", roleId);
 
-    return new HttpResponse(null, {
-      status: 204,
-    });
+    return new HttpResponse(null, { status: 204 });
   }),
 ];

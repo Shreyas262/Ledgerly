@@ -1,37 +1,60 @@
 import { http, HttpResponse } from "msw";
 
-import { auditLogs } from "../data/auditLogs";
+import {
+  authorizeCollection,
+  authorizeRequest,
+} from "../services/authorizationService";
+import { authorizationError } from "../services/authorizationHttp";
 
-const API_BASE_URL = "/api";
+import {
+  getRecord,
+  listRecords,
+} from "../services/mockDataService";
 
 export const auditHandlers = [
-  http.get(`${API_BASE_URL}/audit-logs`, () => {
-    return HttpResponse.json({
-      data: auditLogs,
-    });
+  http.get("/api/audit-logs", async ({ request }) => {
+    const result = await authorizeCollection(
+      request,
+      await listRecords<{ organizationId: string }>("auditEvents"),
+      {
+        permission: "audit.read",
+        scope: "ORGANIZATION",
+        getResource: (event) => ({ organizationId: event.organizationId }),
+      },
+    );
+
+    if (!result.allowed) {
+      return authorizationError(result);
+    }
+
+    return HttpResponse.json({ data: result.records });
   }),
 
-  http.get(
-    `${API_BASE_URL}/audit-logs/:id`,
-    ({ params }) => {
-      const auditLog = auditLogs.find(
-        (item) => item.id === params.id,
+  http.get("/api/audit-logs/:id", async ({ params, request }) => {
+    const auditLog = await getRecord(
+      "auditEvents",
+      String(params.id),
+    );
+
+    if (!auditLog) {
+      return HttpResponse.json(
+        { message: "Audit log not found." },
+        { status: 404 },
       );
+    }
 
-      if (!auditLog) {
-        return HttpResponse.json(
-          {
-            message: "Audit log not found.",
-          },
-          {
-            status: 404,
-          },
-        );
-      }
+    const authorization = await authorizeRequest(request, {
+      permission: "audit.read",
+      scope: "ORGANIZATION",
+      resource: { organizationId: String((auditLog as { organizationId?: string }).organizationId ?? "") },
+    });
 
-      return HttpResponse.json({
-        data: auditLog,
-      });
-    },
-  ),
+    if (!authorization.allowed) {
+      return authorizationError(authorization);
+    }
+
+    return HttpResponse.json({
+      data: auditLog,
+    });
+  }),
 ];
