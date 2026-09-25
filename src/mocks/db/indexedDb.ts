@@ -1,5 +1,5 @@
 const DB_NAME = "ledgerly";
-export const DB_VERSION = 3;
+export const DB_VERSION = 13;
 
 export const MOCK_STORES = [
   "users",
@@ -9,7 +9,10 @@ export const MOCK_STORES = [
   "teams",
   "expenses",
   "policies",
+  "policyEvaluations",
   "budgets",
+  "departmentBudgetAllocations",
+  "expenseTypeBudgets",
   "documents",
   "auditEvents",
   "sessions",
@@ -88,7 +91,264 @@ const migrations: Record<number, Migration> = {
       teams.createIndex("departmentId", "departmentId", { unique: false });
     }
   },
+
+  5: (database, transaction) => {
+    createStoreIfMissing(database, "policyEvaluations");
+
+    const evaluations = transaction.objectStore("policyEvaluations");
+
+    if (!evaluations.indexNames.contains("expenseId")) {
+      evaluations.createIndex("expenseId", "expenseId", { unique: false });
+    }
+    if (!evaluations.indexNames.contains("organizationId")) {
+      evaluations.createIndex("organizationId", "organizationId", { unique: false });
+    }
+    if (!evaluations.indexNames.contains("policyId")) {
+      evaluations.createIndex("policyId", "policyId", { unique: false });
+    }
+  },
+
+  7: (_database, transaction) => {
+    const auditEvents = transaction.objectStore("auditEvents");
+
+    if (!auditEvents.indexNames.contains("organizationId")) {
+      auditEvents.createIndex("organizationId", "organizationId", { unique: false });
+    }
+    if (!auditEvents.indexNames.contains("actorId")) {
+      auditEvents.createIndex("actorId", "actorId", { unique: false });
+    }
+    if (!auditEvents.indexNames.contains("action")) {
+      auditEvents.createIndex("action", "action", { unique: false });
+    }
+    if (!auditEvents.indexNames.contains("entityType")) {
+      auditEvents.createIndex("entityType", "entityType", { unique: false });
+    }
+    if (!auditEvents.indexNames.contains("entityId")) {
+      auditEvents.createIndex("entityId", "entityId", { unique: false });
+    }
+    if (!auditEvents.indexNames.contains("timestamp")) {
+      auditEvents.createIndex("timestamp", "timestamp", { unique: false });
+    }
+  },
+
+  6: (_database, transaction) => {
+    const roles = transaction.objectStore("roles");
+    const roleUpdates: Record<string, string[]> = {
+      manager: [
+        "expenses.read",
+        "expenses.create",
+        "expenses.update",
+        "expenses.submit",
+        "expenses.approve",
+        "expenses.reject",
+      ],
+      finance: [
+        "expenses.read",
+        "reimbursements.manage",
+        "budgets.read",
+        "budgets.create",
+        "budgets.update",
+        "analytics.read",
+      ],
+      admin: [
+        "expenses.read",
+        "expenses.create",
+        "expenses.update",
+        "expenses.submit",
+        "users.read",
+        "users.create",
+        "users.update",
+        "users.delete",
+        "roles.read",
+        "roles.create",
+        "roles.update",
+        "roles.delete",
+        "policies.read",
+        "policies.create",
+        "policies.update",
+        "policies.delete",
+        "budgets.read",
+        "budgets.create",
+        "budgets.update",
+        "analytics.read",
+        "audit.read",
+      ],
+    };
+
+    const request = roles.getAll();
+    request.onsuccess = () => {
+      for (const role of request.result as Array<{
+        id: string;
+        name: string;
+        permissions: string[];
+      }>) {
+        const permissions = roleUpdates[role.name];
+
+        if (!permissions) {
+          continue;
+        }
+
+        roles.put({
+          ...role,
+          permissions,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    };
+  },
+
+
+
+  8: (_database, transaction) => {
+    const roles = transaction.objectStore("roles");
+    const request = roles.getAll();
+    const adminPermissions = [
+      "expenses.read", "expenses.create", "expenses.update", "expenses.submit", "expenses.approve", "expenses.reject", "expenses.delete",
+      "users.read", "users.create", "users.update", "users.delete",
+      "roles.read", "roles.create", "roles.update", "roles.delete",
+      "policies.read", "policies.create", "policies.update", "policies.delete",
+      "budgets.read", "budgets.create", "budgets.update", "budgets.delete",
+      "analytics.read", "audit.read", "reimbursements.manage",
+      "departments.read", "departments.manage", "teams.read", "teams.manage",
+      "documents.read", "documents.create", "documents.update", "documents.delete",
+      "organization.read", "organization.manage",
+    ];
+
+    request.onsuccess = () => {
+      for (const role of request.result as Array<{ id: string; name: string }>) {
+        if (role.name !== "admin") continue;
+        roles.put({ ...role, permissions: adminPermissions, updatedAt: new Date().toISOString() });
+      }
+    };
+  },
+
+  9: (database, transaction) => {
+    createStoreIfMissing(database, "departmentBudgetAllocations");
+    createStoreIfMissing(database, "expenseTypeBudgets");
+
+    const budgets = transaction.objectStore("budgets");
+    if (!budgets.indexNames.contains("organizationId")) {
+      budgets.createIndex("organizationId", "organizationId", { unique: false });
+    }
+    if (!budgets.indexNames.contains("status")) {
+      budgets.createIndex("status", "status", { unique: false });
+    }
+
+    const departmentAllocations = transaction.objectStore("departmentBudgetAllocations");
+    if (!departmentAllocations.indexNames.contains("organizationBudgetId")) {
+      departmentAllocations.createIndex("organizationBudgetId", "organizationBudgetId", { unique: false });
+    }
+    if (!departmentAllocations.indexNames.contains("organizationId")) {
+      departmentAllocations.createIndex("organizationId", "organizationId", { unique: false });
+    }
+    if (!departmentAllocations.indexNames.contains("departmentId")) {
+      departmentAllocations.createIndex("departmentId", "departmentId", { unique: false });
+    }
+
+    const expenseTypeBudgets = transaction.objectStore("expenseTypeBudgets");
+    if (!expenseTypeBudgets.indexNames.contains("organizationBudgetId")) {
+      expenseTypeBudgets.createIndex("organizationBudgetId", "organizationBudgetId", { unique: false });
+    }
+    if (!expenseTypeBudgets.indexNames.contains("departmentAllocationId")) {
+      expenseTypeBudgets.createIndex("departmentAllocationId", "departmentAllocationId", { unique: false });
+    }
+    if (!expenseTypeBudgets.indexNames.contains("departmentId")) {
+      expenseTypeBudgets.createIndex("departmentId", "departmentId", { unique: false });
+    }
+    if (!expenseTypeBudgets.indexNames.contains("expenseType")) {
+      expenseTypeBudgets.createIndex("expenseType", "expenseType", { unique: false });
+    }
+  },
+
+  4: (_database, transaction) => {
+    const expenses = transaction.objectStore("expenses");
+
+    if (!expenses.indexNames.contains("organizationId")) {
+      expenses.createIndex("organizationId", "organizationId", { unique: false });
+    }
+    if (!expenses.indexNames.contains("employeeId")) {
+      expenses.createIndex("employeeId", "employeeId", { unique: false });
+    }
+    if (!expenses.indexNames.contains("teamId")) {
+      expenses.createIndex("teamId", "teamId", { unique: false });
+    }
+    if (!expenses.indexNames.contains("departmentId")) {
+      expenses.createIndex("departmentId", "departmentId", { unique: false });
+    }
+  },
+  11: (_database, transaction) => {
+    const roles = transaction.objectStore("roles");
+    const request = roles.getAll();
+    request.onsuccess = () => {
+      for (const role of request.result as Array<{ id: string; name: string; permissions: string[] }>) {
+        if (role.name !== "manager" || role.permissions.includes("analytics.read")) continue;
+        roles.put({ ...role, permissions: [...role.permissions, "analytics.read"], updatedAt: new Date().toISOString() });
+      }
+    };
+  },
+
+  10: (_database, transaction) => {
+    grantDocumentPermissions(transaction);
+
+    const documents = transaction.objectStore("documents");
+    if (!documents.indexNames.contains("organizationId")) {
+      documents.createIndex("organizationId", "organizationId", { unique: false });
+    }
+    if (!documents.indexNames.contains("expenseId")) {
+      documents.createIndex("expenseId", "expenseId", { unique: false });
+    }
+    if (!documents.indexNames.contains("uploadedBy")) {
+      documents.createIndex("uploadedBy", "uploadedBy", { unique: false });
+    }
+    if (!documents.indexNames.contains("status")) {
+      documents.createIndex("status", "status", { unique: false });
+    }
+  },
+
+  12: (_database, transaction) => {
+    // Databases first created at v10/v11 were seeded after migration 10 ran,
+    // so their system roles never received the document permissions.
+    grantDocumentPermissions(transaction);
+  },
+
+  13: (_database, transaction) => {
+    // The seeded Finance user is the only finance user and is authorized for
+    // every seeded department; other users keep their own department.
+    const users = transaction.objectStore("users");
+    const request = users.get("user-3");
+    request.onsuccess = () => {
+      const user = request.result as { role?: string; financeDepartmentIds?: string[] } | undefined;
+      if (!user || user.role !== "finance" || user.financeDepartmentIds?.length) return;
+      users.put({
+        ...user,
+        financeDepartmentIds: ["dept-engineering", "dept-finance", "dept-operations"],
+        updatedAt: new Date().toISOString(),
+      });
+    };
+  },
 };
+
+function grantDocumentPermissions(transaction: IDBTransaction): void {
+  const roles = transaction.objectStore("roles");
+  const rolePermissions: Record<string, string[]> = {
+    employee: ["documents.read", "documents.create", "documents.update", "documents.delete"],
+    manager: ["documents.read", "documents.create", "documents.update", "documents.delete"],
+    finance: ["documents.read"],
+    admin: ["documents.read", "documents.create", "documents.update", "documents.delete"],
+  };
+  const roleRequest = roles.getAll();
+  roleRequest.onsuccess = () => {
+    for (const role of roleRequest.result as Array<{ id: string; name: string; permissions: string[] }>) {
+      const documentPermissions = rolePermissions[role.name];
+      if (!documentPermissions || documentPermissions.every((permission) => role.permissions.includes(permission))) continue;
+      roles.put({
+        ...role,
+        permissions: Array.from(new Set([...role.permissions, ...documentPermissions])),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  };
+}
 
 function runMigrations(
   database: IDBDatabase,
@@ -176,6 +436,27 @@ export async function readAll<T>(
   });
 }
 
+export async function readAllByIndex<T>(
+  storeName: MockStoreName,
+  indexName: string,
+  value: IDBValidKey,
+): Promise<T[]> {
+  const database = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, "readonly");
+    const store = transaction.objectStore(storeName);
+    if (!store.indexNames.contains(indexName)) {
+      reject(new Error(`IndexedDB index ${indexName} is not defined on ${storeName}.`));
+      return;
+    }
+
+    const request = store.index(indexName).getAll(IDBKeyRange.only(value));
+    request.onsuccess = () => resolve(request.result as T[]);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 export async function readByKey<T>(
   storeName: MockStoreName,
   key: IDBValidKey,
@@ -222,3 +503,48 @@ export async function remove(
 }
 
 export { DB_NAME };
+
+
+export async function runTransaction<T>(
+  storeNames: MockStoreName[],
+  callback: (transaction: IDBTransaction) => Promise<T> | T,
+): Promise<T> {
+  const database = await openDatabase();
+
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeNames, "readwrite");
+    let callbackResult: T;
+
+    transaction.oncomplete = () => resolve(callbackResult);
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("IndexedDB transaction failed."));
+    transaction.onabort = () =>
+      reject(transaction.error ?? new Error("IndexedDB transaction aborted."));
+
+    const abort = (error: unknown) => {
+      try {
+        transaction.abort();
+      } catch {
+        // The transaction already finished; nothing further to roll back.
+      }
+      reject(error);
+    };
+
+    let callbackPromise: Promise<T>;
+    try {
+      callbackPromise = Promise.resolve(callback(transaction));
+    } catch (error) {
+      // A synchronous failure must roll back any writes already queued so the
+      // entity change and its audit event are never persisted partially.
+      abort(error);
+      return;
+    }
+
+    callbackPromise.then(
+      (result) => {
+        callbackResult = result;
+      },
+      abort,
+    );
+  });
+}

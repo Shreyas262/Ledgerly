@@ -1,4 +1,4 @@
-import type { Expense } from "../../../types/expense";
+import type { Expense } from "../../expenses/types/expense";
 
 export interface DimensionSpending {
   name: string;

@@ -6,15 +6,19 @@ import {
   Card,
   CardContent,
   Divider,
+  Grid,
   Stack,
   Typography,
 } from "@mui/material";
 
-import { useGetCurrentUserQuery } from "../../auth/api/authApi";
-import { useUpdateUserMutation } from "../../users/api/usersApi";
+import {
+  useGetCurrentUserQuery,
+  useUpdateCurrentUserMutation,
+} from "../../auth/api/authApi";
 import { UserProfileForm } from "../components/UserProfileForm";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 
 export function UserProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -22,19 +26,13 @@ export function UserProfilePage() {
 
   const { data, isLoading, isError } = useGetCurrentUserQuery();
 
-  const [updateUser, { isLoading: isUpdating, isError: isUpdateError }] =
-    useUpdateUserMutation();
+  const [updateCurrentUser, { isLoading: isUpdating, error: updateError }] =
+    useUpdateCurrentUserMutation();
 
-  if (isLoading) {
-    return <LoadingState />;
-  }
-
-  if (isError) {
-    return <ErrorState message="Unable to load your profile." />;
-  }
+  if (isLoading) return <LoadingState />;
+  if (isError) return <ErrorState message="Unable to load your profile." />;
 
   const user = data?.data;
-
   if (!user) {
     return <Alert severity="warning">User profile could not be found.</Alert>;
   }
@@ -48,16 +46,7 @@ export function UserProfilePage() {
 
   const handleUpdate = async (name: string, email: string) => {
     try {
-      await updateUser({
-        id: user.id,
-        body: {
-          name,
-          email,
-          role: user.role,
-          permissions: user.permissions,
-        },
-      }).unwrap();
-
+      await updateCurrentUser({ name, email }).unwrap();
       setIsEditing(false);
       setShowSuccess(true);
     } catch {
@@ -70,19 +59,10 @@ export function UserProfilePage() {
       <Stack
         direction="row"
         spacing={2}
-        sx={{
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
+        sx={{ justifyContent: "space-between", alignItems: "center" }}
       >
-        {showSuccess && (
-          <Alert severity="success" onClose={() => setShowSuccess(false)}>
-            Your profile has been updated successfully.
-          </Alert>
-        )}
         <div>
           <Typography variant="h4">My Profile</Typography>
-
           <Typography color="text.secondary">
             View and manage your Ledgerly account.
           </Typography>
@@ -95,11 +75,13 @@ export function UserProfilePage() {
         )}
       </Stack>
 
-      {isUpdateError && (
-        <Alert severity="error">
-          Unable to update your profile. Please try again.
+      {showSuccess && (
+        <Alert severity="success" onClose={() => setShowSuccess(false)}>
+          Your profile has been updated successfully.
         </Alert>
       )}
+
+      {updateError && <ApiFeedback error={updateError} />}
 
       {isEditing ? (
         <Stack spacing={2}>
@@ -108,7 +90,6 @@ export function UserProfilePage() {
             onSubmit={handleUpdate}
             isSubmitting={isUpdating}
           />
-
           <Button
             variant="outlined"
             onClick={() => setIsEditing(false)}
@@ -118,57 +99,75 @@ export function UserProfilePage() {
           </Button>
         </Stack>
       ) : (
-        <Card>
-          <CardContent>
-            <Stack spacing={3}>
-              <Stack
-                direction="row"
-                spacing={2}
-                sx={{
-                  alignItems: "center",
-                }}
-              >
-                <Avatar
-                  sx={{
-                    width: 64,
-                    height: 64,
-                  }}
-                >
-                  {initials}
-                </Avatar>
+        <Stack spacing={3}>
+          <Card>
+            <CardContent>
+              <Stack spacing={3}>
+                <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
+                  <Avatar sx={{ width: 64, height: 64 }}>{initials}</Avatar>
+                  <Stack spacing={0.5}>
+                    <Typography variant="h5">{user.name}</Typography>
+                    <Typography color="text.secondary">{user.email}</Typography>
+                  </Stack>
+                </Stack>
 
-                <Stack spacing={0.5}>
-                  <Typography variant="h5">{user.name}</Typography>
+                <Divider />
 
-                  <Typography color="text.secondary">{user.email}</Typography>
+                <Stack spacing={2}>
+                  <Typography variant="h6">Personal Information</Typography>
+                  <Stack spacing={0.5}>
+                    <Typography variant="body2" color="text.secondary">Name</Typography>
+                    <Typography>{user.name}</Typography>
+                  </Stack>
+                  <Stack spacing={0.5}>
+                    <Typography variant="body2" color="text.secondary">Email</Typography>
+                    <Typography>{user.email}</Typography>
+                  </Stack>
                 </Stack>
               </Stack>
+            </CardContent>
+          </Card>
 
-              <Divider />
-
+          <Card>
+            <CardContent>
               <Stack spacing={2}>
-                <Typography variant="h6">Personal Information</Typography>
-
                 <Stack spacing={0.5}>
+                  <Typography variant="h6">Organization Context</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Name
+                    This context is resolved from the authenticated principal and is used by authorization and scoped application features.
                   </Typography>
-
-                  <Typography>{user.name}</Typography>
                 </Stack>
 
-                <Stack spacing={0.5}>
-                  <Typography variant="body2" color="text.secondary">
-                    Email
-                  </Typography>
-
-                  <Typography>{user.email}</Typography>
-                </Stack>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <ContextField label="Organization" value={user.organizationId} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <ContextField label="Department" value={user.departmentId} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <ContextField label="Team" value={user.teamId} />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <ContextField label="Role" value={user.role} />
+                  </Grid>
+                </Grid>
               </Stack>
-            </Stack>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Stack>
       )}
+    </Stack>
+  );
+}
+
+function ContextField({ label, value }: { label: string; value: string }) {
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography sx={{ overflowWrap: "anywhere" }}>{value}</Typography>
     </Stack>
   );
 }

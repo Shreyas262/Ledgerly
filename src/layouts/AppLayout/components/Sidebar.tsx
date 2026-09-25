@@ -7,7 +7,9 @@ import {
   ReceiptLongOutlined,
   RequestQuoteOutlined,
   SecurityOutlined,
+  PaymentsOutlined,
   SettingsOutlined,
+  AdminPanelSettingsOutlined,
 } from "@mui/icons-material";
 
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
@@ -23,9 +25,9 @@ import {
   Typography,
 } from "@mui/material";
 import { NavLink } from "react-router-dom";
-import type { Permission } from "../../../types/auth";
-import { useAuth } from "../../../features/auth/context/AuthContext";
-import { hasPermission } from "../../../features/auth/utils/permissions";
+
+import type { Permission } from "../../../features/roles/types/role";
+import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 
 interface SidebarProps {
   isMobile: boolean;
@@ -41,81 +43,27 @@ interface NavigationItem {
 }
 
 const navigationItems: NavigationItem[] = [
-  {
-    label: "Dashboard",
-    path: "/dashboard",
-    icon: <DashboardOutlined />,
-  },
-  {
-    label: "Expenses",
-    path: "/expenses",
-    icon: <ReceiptLongOutlined />,
-    permission: "expenses.read",
-  },
-  {
-    label: "Approvals",
-    path: "/approvals",
-    icon: <RequestQuoteOutlined />,
-    permission: "expenses.approve",
-  },
-  {
-    label: "Budgets",
-    path: "/budgets",
-    icon: <AccountBalanceOutlined />,
-    permission: "budgets.read",
-  },
-  {
-    label: "Analytics",
-    path: "/analytics",
-    icon: <AssessmentOutlined />,
-    permission: "analytics.read",
-  },
-  {
-    label: "Users",
-    path: "/users",
-    icon: <PeopleOutlined />,
-    permission: "users.read",
-  },
-  {
-    label: "Roles & Permissions",
-    path: "/roles",
-    icon: <SecurityOutlined />,
-    permission: "roles.read",
-  },
-  {
-    label: "Policies",
-    path: "/policies",
-    icon: <PolicyOutlined />,
-    permission: "policies.read",
-  },
-  {
-    label: "Audit Log",
-    path: "/audit",
-    icon: <AssignmentTurnedInIcon />,
-    permission: "audit.read",
-  },
-  {
-    label: "Activity",
-    path: "/security",
-    icon: <HistoryIcon />,
-  },
-  {
-    label: "Settings",
-    path: "/settings",
-    icon: <SettingsOutlined />,
-  },
+  { label: "Dashboard", path: "/dashboard", icon: <DashboardOutlined /> },
+  { label: "Expenses", path: "/expenses", icon: <ReceiptLongOutlined />, permission: "expenses.read" },
+  { label: "Approvals", path: "/approvals", icon: <RequestQuoteOutlined />, permission: "expenses.approve" },
+  { label: "Reimbursements", path: "/reimbursements", icon: <PaymentsOutlined />, permission: "reimbursements.manage" },
+  { label: "Budgets", path: "/budgets", icon: <AccountBalanceOutlined />, permission: "budgets.read" },
+  { label: "Analytics", path: "/analytics", icon: <AssessmentOutlined />, permission: "analytics.read" },
+  { label: "Users", path: "/users", icon: <PeopleOutlined />, permission: "users.read" },
+  { label: "Roles & Permissions", path: "/roles", icon: <SecurityOutlined />, permission: "roles.read" },
+  { label: "Policies", path: "/policies", icon: <PolicyOutlined />, permission: "policies.read" },
+  { label: "Audit Log", path: "/audit", icon: <AssignmentTurnedInIcon />, permission: "audit.read" },
+  { label: "Activity", path: "/security", icon: <HistoryIcon /> },
+  { label: "Administration", path: "/admin", icon: <AdminPanelSettingsOutlined />, permission: "organization.read" },
+  { label: "Settings", path: "/settings", icon: <SettingsOutlined /> },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { user } = useAuth();
+  const { can } = usePermissions();
 
-  const visibleNavigationItems = navigationItems.filter((item) => {
-    if (!item.permission) {
-      return true;
-    }
-
-    return hasPermission(user, item.permission);
-  });
+  const visibleNavigationItems = navigationItems.filter(
+    (item) => !item.permission || can(item.permission),
+  );
 
   return (
     <Box sx={{ width: 260 }}>
@@ -123,7 +71,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           Ledgerly
         </Typography>
-
         <Typography variant="body2" color="text.secondary">
           Expense Management
         </Typography>
@@ -152,7 +99,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               }}
             >
               <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-
               <ListItemText primary={item.label} />
             </ListItemButton>
           ))}
@@ -169,9 +115,7 @@ export function Sidebar({ isMobile, mobileOpen, onMobileClose }: SidebarProps) {
         variant="temporary"
         open={mobileOpen}
         onClose={onMobileClose}
-        ModalProps={{
-          keepMounted: true,
-        }}
+        ModalProps={{ keepMounted: true }}
       >
         <SidebarContent onNavigate={onMobileClose} />
       </Drawer>

@@ -11,7 +11,7 @@ import {
   bootstrapTeams,
   bootstrapUsers,
 } from "../data/bootstrap";
-import type { RoleName } from "../../features/roles/types/role";
+import { hashPassword } from "./passwordService";
 
 let initializationPromise: Promise<void> | null = null;
 
@@ -32,8 +32,8 @@ async function seedIfEmpty<T extends object>(
 
 async function migrateUserOrganizationContext(): Promise<void> {
   const users = await indexedDbRepository.getAll<Record<string, unknown>>("users");
-  const roleByName = new Map(
-    bootstrapRoles.map((role) => [role.name, role.id]),
+  const roleByName = new Map<string, string>(
+    bootstrapRoles.map((role) => [String(role.name), role.id]),
   );
   const defaultsByUserId: Record<
     string,
@@ -62,7 +62,7 @@ async function migrateUserOrganizationContext(): Promise<void> {
     const roleId =
       typeof user.roleId === "string"
         ? user.roleId
-        : roleByName.get(user.role as RoleName);
+        : roleByName.get(String(user.role));
 
     if (!defaults && typeof user.departmentId === "string" && typeof user.teamId === "string" && typeof roleId === "string") {
       continue;
@@ -88,6 +88,21 @@ async function migrateUserOrganizationContext(): Promise<void> {
   }
 }
 
+
+async function seedCredentials(): Promise<void> {
+  const existing = await readAll<{ userId: string }>("credentials");
+  if (existing.length > 0) {
+    return;
+  }
+
+  for (const credential of bootstrapCredentials) {
+    await indexedDbRepository.save("credentials", {
+      ...credential,
+      password: await hashPassword(credential.password),
+    });
+  }
+}
+
 export function initializeMockDatabase(): Promise<void> {
   if (!initializationPromise) {
     initializationPromise = Promise.all([
@@ -96,7 +111,7 @@ export function initializeMockDatabase(): Promise<void> {
       seedIfEmpty("teams", [...bootstrapTeams]),
       seedIfEmpty("users", [...bootstrapUsers]),
       seedIfEmpty("roles", [...bootstrapRoles]),
-      seedIfEmpty("credentials", bootstrapCredentials),
+      seedCredentials(),
     ])
       .then(() => migrateUserOrganizationContext())
       .then(() => undefined);
@@ -110,6 +125,15 @@ export async function listRecords<T>(
 ): Promise<T[]> {
   await initializeMockDatabase();
   return indexedDbRepository.getAll<T>(storeName);
+}
+
+export async function listRecordsByIndex<T>(
+  storeName: MockStoreName,
+  indexName: string,
+  value: IDBValidKey,
+): Promise<T[]> {
+  await initializeMockDatabase();
+  return indexedDbRepository.getAllByIndex<T>(storeName, indexName, value);
 }
 
 export async function getRecord<T>(

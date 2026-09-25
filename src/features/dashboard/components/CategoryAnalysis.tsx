@@ -5,11 +5,12 @@ import {
   Typography,
 } from "@mui/material";
 
-import type { CategorySpending } from "../utils/calculateCategorySpending";
+import type { DashboardExpenseTypeSpending } from "../types/dashboard";
+import { EXPENSE_TYPE_LABELS } from "../../expenses/types/expense";
 import { ChartState } from "./ChartState";
 
 interface CategoryAnalysisProps {
-  data: CategorySpending[];
+  data: DashboardExpenseTypeSpending[];
 }
 
 export function CategoryAnalysis({
@@ -26,21 +27,21 @@ export function CategoryAnalysis({
         <Stack spacing={3}>
           <Stack spacing={0.5}>
             <Typography variant="h6">
-              Spending by Category
+              Spending by Expense Type
             </Typography>
 
             <Typography
               variant="body2"
               color="text.secondary"
             >
-              Breakdown of expenses by category
+              Breakdown of expenses by expense type
             </Typography>
           </Stack>
 
           {data.length === 0 ? (
             <ChartState
-              title="No category data"
-              message="There are no categorized expenses in the selected date range."
+              title="No expense type data"
+              message="There are no expenses in the selected date range."
             />
           ) : (
             <Stack spacing={2}>
@@ -52,7 +53,7 @@ export function CategoryAnalysis({
 
                 return (
                   <Stack
-                    key={item.category}
+                    key={item.expenseType}
                     spacing={1}
                   >
                     <Stack
@@ -63,7 +64,7 @@ export function CategoryAnalysis({
                       }}
                     >
                       <Typography variant="body2">
-                        {item.category}
+                        {EXPENSE_TYPE_LABELS[item.expenseType] ?? item.expenseType}
                       </Typography>
 
                       <Typography

@@ -8,10 +8,11 @@ import {
 } from "@mui/material";
 import type { ChipProps } from "@mui/material";
 
-import type { ExpenseStatus } from "../../../types/common";
-import type { Expense } from "../../../types/expense";
+import { EXPENSE_TYPE_LABELS, type ExpenseStatus } from "../types/expense";
+import type { Expense } from "../types/expense";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
+import { useAuth } from "../../../features/auth/context/AuthContext";
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -83,16 +84,19 @@ export function ExpenseCard({
   isStartingReview = false,
 }: ExpenseCardProps) {
   const { can } = usePermissions();
+  const { user } = useAuth();
 
   const status = statusConfig[expense.status];
 
   const canSubmit =
     variant === "default" &&
     expense.status === "draft" &&
+    expense.employeeId === user?.id &&
     can("expenses.submit");
 
   const canStartReview =
     variant === "approval" &&
+    (expense.employeeId !== user?.id || user?.role === "admin") &&
     expense.status === "submitted" &&
     can("expenses.approve");
 
@@ -119,8 +123,17 @@ export function ExpenseCard({
               variant="body2"
               color="text.secondary"
             >
-              {expense.category}
+              {EXPENSE_TYPE_LABELS[expense.type] ?? expense.type}
             </Typography>
+
+            {expense.employeeId !== user?.id && expense.employeeName && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                Submitted by {expense.employeeName}
+              </Typography>
+            )}
 
             <Typography
               variant="body2"

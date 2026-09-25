@@ -6,7 +6,7 @@ import { AuthProvider } from "../../features/auth/context/AuthContext";
 import { store } from "../../store/store";
 import { createAppTheme } from "../../theme/theme";
 import { getSettings } from "../../features/settings/utils/settingsStorage";
-import type { ThemePreference } from "../../types/settings";
+import type { ThemePreference } from "../../features/settings/types/settings";
 
 function resolveTheme(preference: ThemePreference): "light" | "dark" {
   if (preference === "light") {

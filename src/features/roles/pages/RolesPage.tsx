@@ -7,6 +7,8 @@ import {
   Chip,
   Dialog,
   Divider,
+  DialogTitle,
+  DialogContent,
   Stack,
   Typography,
 } from "@mui/material";
@@ -21,11 +23,12 @@ import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
 
 import { EditRoleForm } from "../components/EditRoleForm";
+import { CreateRoleForm } from "../components/CreateRoleForm";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 
 import type { ID } from "../../../types/common";
-import type { Role, RoleName } from "../../../types/auth";
+import type { Role, RoleName } from "../types/role";
 
 function formatRoleName(roleName: RoleName): string {
   return roleName.charAt(0).toUpperCase() + roleName.slice(1);
@@ -50,6 +53,7 @@ export function RolesPage() {
 
   const [editingRole, setEditingRole] =
     useState<Role | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   async function handleDelete(roleId: ID) {
     if (!window.confirm("Are you sure to delete this Role?")) {
@@ -93,11 +97,13 @@ export function RolesPage() {
           <Typography variant="h4">
             Roles & Permissions
           </Typography>
+          {can("roles.create") && (
+            <Button variant="contained" onClick={() => setCreateDialogOpen(true)}>
+              Create Role
+            </Button>
+          )}
         </Stack>
 
-        {/* {can("roles.create") && (
-          <CreateRoleForm />
-        )} */}
 
         <Stack spacing={2}>
           {roles.map((role) => (
@@ -181,6 +187,13 @@ export function RolesPage() {
           ))}
         </Stack>
       </Stack>
+
+      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>Create Role</DialogTitle>
+        <DialogContent dividers>
+          <CreateRoleForm onSuccess={() => setCreateDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={editingRole !== null}

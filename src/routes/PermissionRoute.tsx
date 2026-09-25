@@ -1,7 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 
 import { useAuth } from "../features/auth/context/AuthContext";
-import { hasPermission } from "../features/auth/utils/permissions";
+import { usePermissions } from "../features/auth/hooks/usePermissions";
 import type { Permission } from "../features/roles/types/role";
 import { ForbiddenPage } from "../features/auth/pages/ForbiddenPage";
 
@@ -10,13 +10,18 @@ interface PermissionRouteProps {
 }
 
 export function PermissionRoute({ permission }: PermissionRouteProps) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  const { can } = usePermissions();
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  if (isLoading) {
+    return null;
   }
 
-  if (!hasPermission(user, permission)) {
+  if (!user) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  if (!can(permission)) {
     return <ForbiddenPage />;
   }
 

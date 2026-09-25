@@ -1,14 +1,25 @@
+import type { CollectionQuery, CollectionQueryResult } from "../../../types/api";
+import { buildCollectionQuery } from "../../../services/api/queryParams";
 import { baseApi } from "../../../services/api/baseApi";
-import type { CreateExpenseRequest, Expense, UpdateExpenseRequest } from "../../../types/expense";
+import type { CreateExpenseRequest, Expense, ExpenseScope, UpdateExpenseRequest } from "../types/expense";
+
+export interface GetExpensesArgs {
+  scope: ExpenseScope;
+  query?: CollectionQuery;
+}
 
 export const expensesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getExpenses: builder.query<Expense[], void>({
-      query: () => "/expenses",
+    getExpenses: builder.query<CollectionQueryResult<Expense>, GetExpensesArgs>({
+      query: ({ scope, query }) => {
+        const queryString = buildCollectionQuery(query);
+        return `/expenses${queryString}${queryString ? "&" : "?"}scope=${scope}`;
+      },
+      transformResponse: (response: CollectionQueryResult<Expense>) => response,
       providesTags: (result) =>
         result
           ? [
-              ...result.map(({ id }) => ({
+              ...result.data.map(({ id }) => ({
                 type: "Expense" as const,
                 id,
               })),
@@ -43,7 +54,11 @@ export const expensesApi = baseApi.injectEndpoints({
         body: expense,
       }),
 
-      invalidatesTags: [{ type: "Expense", id: "LIST" }],
+      invalidatesTags: [
+        { type: "Expense", id: "LIST" },
+        { type: "Dashboard", id: "SUMMARY" },
+        { type: "Analytics", id: "SUMMARY" },
+      ],
     }),
 
     updateExpense: builder.mutation<Expense, UpdateExpenseRequest>({
@@ -56,6 +71,10 @@ export const expensesApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: "Expense", id },
         { type: "Expense", id: "LIST" },
+        { type: "Expense", id: "APPROVAL_QUEUE" },
+        { type: "Expense", id: "REIMBURSEMENT_QUEUE" },
+        { type: "Dashboard", id: "SUMMARY" },
+        { type: "Analytics", id: "SUMMARY" },
       ],
     }),
 
@@ -74,6 +93,16 @@ export const expensesApi = baseApi.injectEndpoints({
           type: "Expense",
           id: "LIST",
         },
+        {
+          type: "Expense",
+          id: "APPROVAL_QUEUE",
+        },
+        {
+          type: "Expense",
+          id: "REIMBURSEMENT_QUEUE",
+        },
+        { type: "Dashboard", id: "SUMMARY" },
+        { type: "Analytics", id: "SUMMARY" },
       ],
     }),
 
@@ -92,6 +121,16 @@ export const expensesApi = baseApi.injectEndpoints({
           type: "Expense",
           id: "LIST",
         },
+        {
+          type: "Expense",
+          id: "APPROVAL_QUEUE",
+        },
+        {
+          type: "Expense",
+          id: "REIMBURSEMENT_QUEUE",
+        },
+        { type: "Dashboard", id: "SUMMARY" },
+        { type: "Analytics", id: "SUMMARY" },
       ],
     }),
     
@@ -110,6 +149,80 @@ export const expensesApi = baseApi.injectEndpoints({
           type: "Expense",
           id: "LIST",
         },
+        {
+          type: "Expense",
+          id: "APPROVAL_QUEUE",
+        },
+        {
+          type: "Expense",
+          id: "REIMBURSEMENT_QUEUE",
+        },
+        { type: "Dashboard", id: "SUMMARY" },
+        { type: "Analytics", id: "SUMMARY" },
+        "Budgets",
+      ],
+    }),
+
+    restoreExpense: builder.mutation<Expense, string>({
+      query: (id) => ({
+        url: `/expenses/${id}/restore`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: "Expense", id },
+        { type: "Expense", id: "LIST" },
+        { type: "Expense", id: "APPROVAL_QUEUE" },
+        { type: "Expense", id: "REIMBURSEMENT_QUEUE" },
+        { type: "Dashboard", id: "SUMMARY" },
+        { type: "Analytics", id: "SUMMARY" },
+      ],
+    }),
+
+    startReimbursement: builder.mutation<Expense, string>({
+      query: (id) => ({
+        url: `/expenses/${id}/start-reimbursement`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: "Expense", id },
+        { type: "Expense", id: "LIST" },
+        { type: "Expense", id: "APPROVAL_QUEUE" },
+        { type: "Expense", id: "REIMBURSEMENT_QUEUE" },
+        { type: "Dashboard", id: "SUMMARY" },
+        { type: "Analytics", id: "SUMMARY" },
+        "Budgets",
+      ],
+    }),
+
+    reimburseExpense: builder.mutation<Expense, string>({
+      query: (id) => ({
+        url: `/expenses/${id}/reimburse`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: "Expense", id },
+        { type: "Expense", id: "LIST" },
+        { type: "Expense", id: "APPROVAL_QUEUE" },
+        { type: "Expense", id: "REIMBURSEMENT_QUEUE" },
+        { type: "Dashboard", id: "SUMMARY" },
+        { type: "Analytics", id: "SUMMARY" },
+        "Budgets",
+      ],
+    }),
+
+    cancelExpense: builder.mutation<Expense, string>({
+      query: (id) => ({
+        url: `/expenses/${id}/cancel`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: "Expense", id },
+        { type: "Expense", id: "LIST" },
+        { type: "Expense", id: "APPROVAL_QUEUE" },
+        { type: "Expense", id: "REIMBURSEMENT_QUEUE" },
+        { type: "Dashboard", id: "SUMMARY" },
+        { type: "Analytics", id: "SUMMARY" },
+        "Budgets",
       ],
     }),
 
@@ -131,6 +244,16 @@ export const expensesApi = baseApi.injectEndpoints({
           type: "Expense",
           id: "LIST",
         },
+        {
+          type: "Expense",
+          id: "APPROVAL_QUEUE",
+        },
+        {
+          type: "Expense",
+          id: "REIMBURSEMENT_QUEUE",
+        },
+        { type: "Dashboard", id: "SUMMARY" },
+        { type: "Analytics", id: "SUMMARY" },
       ],
     }),
   }),
@@ -143,6 +266,10 @@ export const {
   useUpdateExpenseMutation,
   useSubmitExpenseMutation,
   useStartExpenseReviewMutation,
+  useRestoreExpenseMutation,
+  useStartReimbursementMutation,
+  useReimburseExpenseMutation,
+  useCancelExpenseMutation,
   useApproveExpenseMutation,
   useRejectExpenseMutation,
 } = expensesApi;

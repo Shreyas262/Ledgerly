@@ -9,12 +9,14 @@ import {
   Typography,
 } from "@mui/material";
 
-import { allPermissions } from "../../../mocks/data/permissions";
+import { allPermissions } from "../constants/permissions";
 
-import type { Permission, RoleName } from "../../../types/auth";
+import type { Permission, RoleName } from "../types/role";
 import { useCreateRoleMutation } from "../../roles/api/rolesApi";
 
-export function CreateRoleForm() {
+interface CreateRoleFormProps { onSuccess?: () => void; }
+
+export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
   const [name, setName] = useState<RoleName>("employee");
   const [permissions, setPermissions] = useState<Permission[]>([]);
 
@@ -42,6 +44,9 @@ export function CreateRoleForm() {
       name,
       permissions,
     }).unwrap();
+    setName("employee");
+    setPermissions([]);
+    onSuccess?.();
   }
 
   return (

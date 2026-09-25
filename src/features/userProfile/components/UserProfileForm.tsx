@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Button, Card, CardContent, Stack, TextField } from "@mui/material";
 
-import type { User } from "../../../types/auth";
+import type { AuthUser } from "../../auth/types/auth";
 
 interface ProfileFormProps {
-  user: User;
+  user: AuthUser;
   onSubmit: (name: string, email: string) => void;
   isSubmitting?: boolean;
 }

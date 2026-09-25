@@ -15,7 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import type { ThemePreference, UserSettings } from "../../../types/settings";
+import type { ThemePreference, UserSettings } from "../types/settings";
 import {
   getSettings,
   resetSettings,

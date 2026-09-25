@@ -10,12 +10,16 @@ import {
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 
-import type { ExpenseFilter as ExpenseFiltersState } from "../../../types/expense";
-import type { ExpenseStatus } from "../../../types/common";
+import type { ExpenseFilter as ExpenseFiltersState } from "../types/expense";
+import {
+  EXPENSE_TYPES,
+  EXPENSE_TYPE_LABELS,
+  type ExpenseStatus,
+  type ExpenseType,
+} from "../types/expense";
 
 interface ExpenseFiltersProps {
   filters: ExpenseFiltersState;
-  categories: string[];
   onChange: (filters: ExpenseFiltersState) => void;
   onReset: () => void;
 }
@@ -37,7 +41,6 @@ const statusOptions: {
 
 export function ExpenseFilters({
   filters,
-  categories,
   onChange,
   onReset,
 }: ExpenseFiltersProps) {
@@ -59,13 +62,7 @@ export function ExpenseFilters({
     });
   };
 
-  // Fixed: Uses SelectChangeEvent instead of React.ChangeEvent<HTMLInputElement>
-  const handleCategoryChange = (event: SelectChangeEvent<string>) => {
-    onChange({
-      ...filters,
-      category: event.target.value,
-    });
-  };
+
 
   return (
     <Stack
@@ -99,16 +96,21 @@ export function ExpenseFilters({
       </FormControl>
 
       <FormControl fullWidth>
-        <InputLabel>Category</InputLabel>
+        <InputLabel>Expense Type</InputLabel>
         <Select
-          label="Category"
-          value={filters.category}
-          onChange={handleCategoryChange}
+          label="Expense Type"
+          value={filters.type}
+          onChange={(event: SelectChangeEvent<string>) =>
+            onChange({
+              ...filters,
+              type: event.target.value as ExpenseType | "all",
+            })
+          }
         >
-          <MenuItem value="all">All categories</MenuItem>
-          {categories.map((category) => (
-            <MenuItem key={category} value={category}>
-              {category}
+          <MenuItem value="all">All expense types</MenuItem>
+          {EXPENSE_TYPES.map((type) => (
+            <MenuItem key={type} value={type}>
+              {EXPENSE_TYPE_LABELS[type]}
             </MenuItem>
           ))}
         </Select>

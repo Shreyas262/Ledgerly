@@ -8,11 +8,11 @@ interface SessionUser {
   organizationId: string;
 }
 
-export async function createSession(user: SessionUser): Promise<Session> {
+export function buildSession(user: SessionUser): Session {
   const createdAt = new Date();
   const expiresAt = new Date(createdAt.getTime() + SESSION_TTL_MS);
 
-  const session: Session = {
+  return {
     id: crypto.randomUUID(),
     userId: user.id,
     organizationId: user.organizationId,
@@ -20,30 +20,25 @@ export async function createSession(user: SessionUser): Promise<Session> {
     expiresAt: expiresAt.toISOString(),
     status: "active",
   };
+}
 
+export async function createSession(user: SessionUser): Promise<Session> {
+  const session = buildSession(user);
   await saveRecord("sessions", session);
   return session;
 }
 
-export async function resolveSession(
-  sessionId: string,
-): Promise<Session | null> {
+export async function resolveSession(sessionId: string): Promise<Session | null> {
   const session = await getRecord<Session>("sessions", sessionId);
+  if (!session) return null;
 
-  if (!session) {
-    return null;
-  }
-
-  if (session.status !== "active") {
-    return null;
-  }
+  if (session.status !== "active") return null;
 
   if (new Date(session.expiresAt).getTime() <= Date.now()) {
     const expiredSession: Session = {
       ...session,
       status: "expired" as SessionStatus,
     };
-
     await saveRecord("sessions", expiredSession);
     return null;
   }
@@ -53,10 +48,7 @@ export async function resolveSession(
 
 export async function revokeSession(sessionId: string): Promise<Session | null> {
   const session = await getRecord<Session>("sessions", sessionId);
-
-  if (!session) {
-    return null;
-  }
+  if (!session) return null;
 
   const revokedSession: Session = {
     ...session,
@@ -66,4 +58,25 @@ export async function revokeSession(sessionId: string): Promise<Session | null> 
 
   await saveRecord("sessions", revokedSession);
   return revokedSession;
+}
+
+export async function revokeSessionInTransaction(
+  transaction: IDBTransaction,
+  session: Session,
+): Promise<Session> {
+  const revokedSession: Session = {
+    ...session,
+    status: "revoked",
+    revokedAt: new Date().toISOString(),
+  };
+  transaction.objectStore("sessions").put(revokedSession);
+  return revokedSession;
+}
+
+export async function saveSessionInTransaction(
+  transaction: IDBTransaction,
+  session: Session,
+): Promise<Session> {
+  transaction.objectStore("sessions").put(session);
+  return session;
 }

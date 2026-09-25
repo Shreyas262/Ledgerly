@@ -13,6 +13,7 @@ interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  loadingLabel?: string;
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -24,6 +25,7 @@ export function ConfirmDialog({
   message,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
+  loadingLabel = "Deleting...",
   loading = false,
   onConfirm,
   onCancel,
@@ -60,7 +62,7 @@ export function ConfirmDialog({
           disabled={loading}
         >
           {loading
-            ? "Deleting..."
+            ? loadingLabel
             : confirmLabel}
         </Button>
       </DialogActions>

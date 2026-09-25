@@ -1,6 +1,6 @@
-import type { EntityId, ResourceTimestamps } from "../../../types/common";
+import type { EntityId, ISODateString } from "../../../types/common";
 
-export interface Document extends ResourceTimestamps {
+export interface Document {
   id: EntityId;
   organizationId: EntityId;
   expenseId: EntityId;
@@ -10,6 +10,12 @@ export interface Document extends ResourceTimestamps {
   size: number;
   storageKey: string;
   status: DocumentStatus;
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
 }
 
-export type DocumentStatus = "ACTIVE" | "REPLACED" | "REMOVED";
+export type DocumentStatus = "UPLOADED" | "ACTIVE" | "REMOVED";
+
+export interface DocumentListItem extends Omit<Document, "storageKey"> {
+  downloadUrl: string;
+}

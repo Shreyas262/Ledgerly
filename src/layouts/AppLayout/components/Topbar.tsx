@@ -72,7 +72,7 @@ export function Topbar({
       await logout().unwrap();
     } finally {
       dispatch(baseApi.util.resetApiState());
-      navigate("/login", { replace: true });
+      navigate("/auth/login", { replace: true });
     }
   };
 

@@ -8,6 +8,7 @@ import {
   CardContent,
   Chip,
   FormControl,
+  FormHelperText,
   InputLabel,
   MenuItem,
   Select,
@@ -16,18 +17,18 @@ import {
   Typography,
 } from "@mui/material";
 
-import type { RoleName } from "../../../types/auth";
+import type { RoleName } from "../../roles/types/role";
 
 import { useCreateUserMutation } from "../api/usersApi";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useGetRolesQuery } from "../../../features/roles/api/rolesApi";
 
-import { permissionGroups } from "../../../mocks/data/permissions";
+import { permissionGroups } from "../../roles/constants/permissions";
+import { useGetDepartmentsQuery, useGetTeamsQuery } from "../../organizations/api/organizationApi";
 
 interface CreateUserFormProps {
   onSuccess?: () => void;
 }
-
-const ORGANIZATION_ID = "org-1";
 
 export function CreateUserForm({
   onSuccess,
@@ -36,6 +37,9 @@ export function CreateUserForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<RoleName>("employee");
+  const [departmentId, setDepartmentId] = useState("");
+  const [teamId, setTeamId] = useState("");
+  const [financeDepartmentIds, setFinanceDepartmentIds] = useState<string[]>([]);
 
   const {
     data: roles,
@@ -43,11 +47,14 @@ export function CreateUserForm({
     isError: rolesError,
   } = useGetRolesQuery();
 
+  const { data: departments } = useGetDepartmentsQuery();
+  const { data: teams } = useGetTeamsQuery();
+
   const [
     createUser,
     {
       isLoading: isCreating,
-      isError: createUserError,
+      error: createUserError,
     },
   ] = useCreateUserMutation();
 
@@ -63,20 +70,29 @@ export function CreateUserForm({
   ) {
     event.preventDefault();
 
+    if (!departmentId || !teamId) {
+      return;
+    }
+
     try {
       await createUser({
-        organizationId: ORGANIZATION_ID,
         name,
         email,
         password,
         role,
         permissions: selectedPermissions,
+        departmentId,
+        teamId,
+        ...(role === "finance" ? { financeDepartmentIds } : {}),
       }).unwrap();
 
       setName("");
       setEmail("");
       setPassword("");
       setRole("employee");
+      setFinanceDepartmentIds([]);
+      setDepartmentId("");
+      setTeamId("");
 
       onSuccess?.();
     } catch {
@@ -153,6 +169,50 @@ export function CreateUserForm({
         </Select>
       </FormControl>
 
+      <FormControl fullWidth required>
+        <InputLabel id="user-department-label">Department</InputLabel>
+        <Select labelId="user-department-label" value={departmentId} label="Department" onChange={(event) => { setDepartmentId(event.target.value); setTeamId(""); }}>
+          {departments?.map((department) => <MenuItem key={department.id} value={department.id}>{department.name}</MenuItem>)}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth required>
+        <InputLabel id="user-team-label">Team</InputLabel>
+        <Select labelId="user-team-label" value={teamId} label="Team" disabled={!departmentId} onChange={(event) => setTeamId(event.target.value)}>
+          {teams?.filter((team) => team.departmentId === departmentId).map((team) => <MenuItem key={team.id} value={team.id}>{team.name}</MenuItem>)}
+        </Select>
+      </FormControl>
+
+      {role === "finance" && (
+        <FormControl fullWidth>
+          <InputLabel id="finance-departments-label">Authorized departments</InputLabel>
+          <Select
+            labelId="finance-departments-label"
+            label="Authorized departments"
+            multiple
+            value={financeDepartmentIds}
+            onChange={(event) => {
+              const value = event.target.value;
+              setFinanceDepartmentIds(typeof value === "string" ? value.split(",") : value);
+            }}
+            renderValue={(selected) =>
+              selected
+                .map((id) => departments?.find((department) => department.id === id)?.name ?? id)
+                .join(", ")
+            }
+          >
+            {departments?.map((department) => (
+              <MenuItem key={department.id} value={department.id}>
+                {department.name}
+              </MenuItem>
+            ))}
+          </Select>
+          <FormHelperText>
+            Departments whose approved expenses this Finance user may reimburse. Leave empty to use the user's own department.
+          </FormHelperText>
+        </FormControl>
+      )}
+
       {/* Permissions */}
       <Stack spacing={2}>
         <Stack spacing={0.5}>
@@ -226,11 +286,7 @@ export function CreateUserForm({
         </Typography>
       )}
 
-      {createUserError && (
-        <Typography color="error">
-          Failed to create user.
-        </Typography>
-      )}
+      {createUserError && <ApiFeedback error={createUserError} />}
 
       {/* Submit */}
       <Button

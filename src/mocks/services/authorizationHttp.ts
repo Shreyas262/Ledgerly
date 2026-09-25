@@ -1,14 +1,11 @@
-import { HttpResponse } from "msw";
 import type { AuthorizationResult } from "./authorizationService";
+import { apiError } from "./apiError";
 
-export function authorizationError(
-  result: Exclude<AuthorizationResult, { allowed: true }>,
-) {
-  return HttpResponse.json(
-    {
-      message: result.message,
-      code: result.code,
-    },
-    { status: result.status },
-  );
+export function authorizationError(result: AuthorizationResult) {
+  if (result.allowed) {
+    throw new Error("authorizationError requires a failed authorization result.");
+  }
+
+  const failure = result as Extract<AuthorizationResult, { allowed: false }>;
+  return apiError(failure.status, failure.message, failure.code);
 }

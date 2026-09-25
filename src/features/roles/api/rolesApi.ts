@@ -1,12 +1,14 @@
+import type { CollectionQuery } from "../../../types/api";
+import { buildCollectionQuery } from "../../../services/api/queryParams";
 import { baseApi } from "../../../services/api/baseApi";
 
-import type { Role, CreateRolePayload, UpdateRolePayload } from "../../../types/auth";
+import type { Role, CreateRolePayload, UpdateRolePayload } from "../types/role";
 import type { ID } from "../../../types/common";
 
 export const rolesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getRoles: builder.query<Role[], void>({
-      query: () => "/roles",
+    getRoles: builder.query<Role[], CollectionQuery | void>({
+      query: (query) => `/roles${buildCollectionQuery(query ?? undefined)}`,
       providesTags: ["Roles"],
     }),
     createRole: builder.mutation<Role, CreateRolePayload>({
@@ -23,14 +25,15 @@ export const rolesApi = baseApi.injectEndpoints({
         method: "PUT",
         body: data,
       }),
-      invalidatesTags: ["Roles"],
+      // Role permissions are the users' effective permissions.
+      invalidatesTags: ["Roles", "Users", "User"],
     }),
     deleteRole: builder.mutation<void, ID>({
       query: (id) => ({
         url: `/roles/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Roles"],
+      invalidatesTags: ["Roles", "Users"],
     }),
   }),
 });

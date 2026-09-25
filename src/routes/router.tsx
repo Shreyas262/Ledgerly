@@ -1,36 +1,143 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
-import { DashboardPage } from "../features/dashboard/pages/DashboardPage";
+import { lazy } from "react";
+
 import { AppLayout } from "../layouts/AppLayout/AppLayout";
-import { LoginPage } from "../features/auth/pages/LoginPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { PermissionRoute } from "./PermissionRoute";
-import { ExpensesPage } from "../features/expenses/pages/ExpensesPage";
-import { ExpenseDetailsPage } from "../features/expenses/pages/ExpenseDetailsPage";
-import { RolesPage } from "../features/roles/pages/RolesPage";
-import { NotFound } from "../pages/NotFound";
-import { UsersPage } from "../features/users/pages/UsersPage";
-import { CreateExpensePage } from "../features/expenses/pages/CreateExpensePage";
-import { EditExpensePage } from "../features/expenses/pages/EditExpensePage";
-import { ApprovalsPage } from "../features/approvals/pages/ApprovalPage";
-import { BudgetsPage } from "../features/budgets/pages/BudgetsPage";
-import { BudgetDetailsPage } from "../features/budgets/pages/BudgetDetailsPage";
-import { EditBudgetPage } from "../features/budgets/pages/EditBudgetPage";
-import { CreateBudgetPage } from "../features/budgets/pages/CreateBudgetPage";
-import { AnalyticsPage } from "../features/analytics/pages/AnalyticsPage";
-import { PolicyDetailsPage } from "../features/policies/pages/PolicyDetailsPage";
-import { CreatePolicyPage } from "../features/policies/pages/CreatePolicyPage";
-import { EditPolicyPage } from "../features/policies/pages/EditPolicyPage";
-import { PoliciesPage } from "../features/policies/pages/PoliciesPage";
-import { UserProfilePage } from "../features/userProfile/pages/UserProfilePage";
-import { SettingsPage } from "../features/settings/pages/SettingsPage";
-import AuditPage from "../features/audit/pages/AuditPage";
-import AuditDetailsPage from "../features/audit/pages/AuditDetailsPage";
-import { SecurityPage } from "../features/security/pages/SecurityPage";
 
+const DashboardPage = lazy(() =>
+  import("../features/dashboard/pages/DashboardPage").then((module) => ({
+    default: module.DashboardPage,
+  })),
+);
+const LoginPage = lazy(() =>
+  import("../features/auth/pages/LoginPage").then((module) => ({
+    default: module.LoginPage,
+  })),
+);
+const ExpensesPage = lazy(() =>
+  import("../features/expenses/pages/ExpensesPage").then((module) => ({
+    default: module.ExpensesPage,
+  })),
+);
+const ExpenseDetailsPage = lazy(() =>
+  import("../features/expenses/pages/ExpenseDetailsPage").then((module) => ({
+    default: module.ExpenseDetailsPage,
+  })),
+);
+const RolesPage = lazy(() =>
+  import("../features/roles/pages/RolesPage").then((module) => ({
+    default: module.RolesPage,
+  })),
+);
+const NotFound = lazy(() =>
+  import("../pages/NotFound").then((module) => ({ default: module.NotFound })),
+);
+const UsersPage = lazy(() =>
+  import("../features/users/pages/UsersPage").then((module) => ({
+    default: module.UsersPage,
+  })),
+);
+const CreateExpensePage = lazy(() =>
+  import("../features/expenses/pages/CreateExpensePage").then((module) => ({
+    default: module.CreateExpensePage,
+  })),
+);
+const EditExpensePage = lazy(() =>
+  import("../features/expenses/pages/EditExpensePage").then((module) => ({
+    default: module.EditExpensePage,
+  })),
+);
+const ApprovalsPage = lazy(() =>
+  import("../features/approvals/pages/ApprovalPage").then((module) => ({
+    default: module.ApprovalsPage,
+  })),
+);
+const ReimbursementPage = lazy(() =>
+  import("../features/reimbursements/pages/ReimbursementPage").then(
+    (module) => ({ default: module.ReimbursementPage }),
+  ),
+);
+const BudgetsPage = lazy(() =>
+  import("../features/budgets/pages/BudgetsPage").then((module) => ({
+    default: module.BudgetsPage,
+  })),
+);
+const BudgetDetailsPage = lazy(() =>
+  import("../features/budgets/pages/BudgetDetailsPage").then((module) => ({
+    default: module.BudgetDetailsPage,
+  })),
+);
+const EditBudgetPage = lazy(() =>
+  import("../features/budgets/pages/EditBudgetPage").then((module) => ({
+    default: module.EditBudgetPage,
+  })),
+);
+const CreateBudgetPage = lazy(() =>
+  import("../features/budgets/pages/CreateBudgetPage").then((module) => ({
+    default: module.CreateBudgetPage,
+  })),
+);
+const AnalyticsPage = lazy(() =>
+  import("../features/analytics/pages/AnalyticsPage").then((module) => ({
+    default: module.AnalyticsPage,
+  })),
+);
+const PolicyDetailsPage = lazy(() =>
+  import("../features/policies/pages/PolicyDetailsPage").then((module) => ({
+    default: module.PolicyDetailsPage,
+  })),
+);
+const CreatePolicyPage = lazy(() =>
+  import("../features/policies/pages/CreatePolicyPage").then((module) => ({
+    default: module.CreatePolicyPage,
+  })),
+);
+const EditPolicyPage = lazy(() =>
+  import("../features/policies/pages/EditPolicyPage").then((module) => ({
+    default: module.EditPolicyPage,
+  })),
+);
+const PoliciesPage = lazy(() =>
+  import("../features/policies/pages/PoliciesPage").then((module) => ({
+    default: module.PoliciesPage,
+  })),
+);
+const UserProfilePage = lazy(() =>
+  import("../features/userProfile/pages/UserProfilePage").then((module) => ({
+    default: module.UserProfilePage,
+  })),
+);
+const SettingsPage = lazy(() =>
+  import("../features/settings/pages/SettingsPage").then((module) => ({
+    default: module.SettingsPage,
+  })),
+);
+const AuditPage = lazy(() => import("../features/audit/pages/AuditPage"));
+const AuditDetailsPage = lazy(() =>
+  import("../features/audit/pages/AuditDetailsPage").then((module) => ({
+    default: module.default,
+  })),
+);
+const ActivityPage = lazy(() =>
+  import("../features/activity/pages/ActivityPage").then((module) => ({
+    default: module.ActivityPage,
+  })),
+);
+const AdminPage = lazy(() =>
+  import("../features/organizations/pages/AdminPage").then((module) => ({
+    default: module.AdminPage,
+  })),
+);
+const OrganizationAdminPage = lazy(() =>
+  import("../features/organizations/pages/OrganizationAdminPage").then(
+    (module) => ({ default: module.OrganizationAdminPage }),
+  ),
+);
 export const router = createBrowserRouter([
   {
-    path: "/login",
+    path: "/auth/login",
     element: <LoginPage />,
   },
 
@@ -76,18 +183,28 @@ export const router = createBrowserRouter([
                 },
               },
               {
-                path: "/expenses/new",
-                element: <CreateExpensePage />,
-                handle: {
-                  title: "Create Expense",
-                },
+                element: <PermissionRoute permission="expenses.create" />,
+                children: [
+                  {
+                    path: "/expenses/new",
+                    element: <CreateExpensePage />,
+                    handle: {
+                      title: "Create Expense",
+                    },
+                  },
+                ],
               },
               {
-                path: "/expenses/:id/edit",
-                element: <EditExpensePage />,
-                handle: {
-                  title: "Edit Expense",
-                },
+                element: <PermissionRoute permission="expenses.update" />,
+                children: [
+                  {
+                    path: "/expenses/:id/edit",
+                    element: <EditExpensePage />,
+                    handle: {
+                      title: "Edit Expense",
+                    },
+                  },
+                ],
               },
             ],
           },
@@ -111,6 +228,18 @@ export const router = createBrowserRouter([
             ],
           },
           {
+            element: <PermissionRoute permission="reimbursements.manage" />,
+            children: [
+              {
+                path: "/reimbursements",
+                element: <ReimbursementPage />,
+                handle: {
+                  title: "Reimbursement Queue",
+                },
+              },
+            ],
+          },
+          {
             element: <PermissionRoute permission="budgets.read" />,
             children: [
               {
@@ -128,18 +257,28 @@ export const router = createBrowserRouter([
                 },
               },
               {
-                path: "/budgets/:id/edit",
-                element: <EditBudgetPage />,
-                handle: {
-                  title: "Edit Budget",
-                },
+                element: <PermissionRoute permission="budgets.update" />,
+                children: [
+                  {
+                    path: "/budgets/:id/edit",
+                    element: <EditBudgetPage />,
+                    handle: {
+                      title: "Edit Budget",
+                    },
+                  },
+                ],
               },
               {
-                path: "/budgets/new",
-                element: <CreateBudgetPage />,
-                handle: {
-                  title: "Create Budget",
-                },
+                element: <PermissionRoute permission="budgets.create" />,
+                children: [
+                  {
+                    path: "/budgets/new",
+                    element: <CreateBudgetPage />,
+                    handle: {
+                      title: "Create Budget",
+                    },
+                  },
+                ],
               },
             ],
           },
@@ -152,6 +291,26 @@ export const router = createBrowserRouter([
                 handle: {
                   title: "Analytics",
                 },
+              },
+            ],
+          },
+          {
+            element: <PermissionRoute permission="organization.read" />,
+            children: [
+              {
+                path: "/admin",
+                element: <AdminPage />,
+                handle: { title: "Administration" },
+              },
+              {
+                element: <PermissionRoute permission="organization.manage" />,
+                children: [
+                  {
+                    path: "/admin/organization",
+                    element: <OrganizationAdminPage />,
+                    handle: { title: "Organization Administration" },
+                  },
+                ],
               },
             ],
           },
@@ -197,18 +356,28 @@ export const router = createBrowserRouter([
                 },
               },
               {
-                path: "/policies/new",
-                element: <CreatePolicyPage />,
-                handle: {
-                  title: "Create Policy",
-                },
+                element: <PermissionRoute permission="policies.create" />,
+                children: [
+                  {
+                    path: "/policies/new",
+                    element: <CreatePolicyPage />,
+                    handle: {
+                      title: "Create Policy",
+                    },
+                  },
+                ],
               },
               {
-                path: "/policies/:id/edit",
-                element: <EditPolicyPage />,
-                handle: {
-                  title: "Edit Policy",
-                },
+                element: <PermissionRoute permission="policies.update" />,
+                children: [
+                  {
+                    path: "/policies/:id/edit",
+                    element: <EditPolicyPage />,
+                    handle: {
+                      title: "Edit Policy",
+                    },
+                  },
+                ],
               },
             ],
           },
@@ -240,7 +409,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "/security",
-            element: <SecurityPage />,
+            element: <ActivityPage />,
             handle: {
               title: "Activity",
             },

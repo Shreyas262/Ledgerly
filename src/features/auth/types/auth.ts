@@ -23,6 +23,8 @@ export interface AuthUser {
   email: string;
   role: RoleName | string;
   permissions: Permission[];
+  /** Departments whose financial records the user may process (§22.7). */
+  authorizedDepartmentIds?: EntityId[];
 }
 
 export interface AuthSession {
@@ -40,4 +42,9 @@ export interface AuthenticatedPrincipal {
   roleId: EntityId;
   role: RoleName | string;
   effectivePermissions: Permission[];
+  /**
+   * Departments within DEPARTMENT scope. Finance authority is an explicit
+   * assignment (§22.7); otherwise it is the user's own department.
+   */
+  authorizedDepartmentIds: EntityId[];
 }

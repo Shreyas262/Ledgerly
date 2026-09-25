@@ -4,69 +4,35 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   Divider,
   Stack,
   Typography,
 } from "@mui/material";
 
-import { useGetAuditLogByIdQuery } from "../api/auditApi";
+import { useGetAuditEventByIdQuery } from "../api/auditApi";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
-
-const actionLabels = {
-  create: "Created",
-  update: "Updated",
-  delete: "Deleted",
-  submit: "Submitted",
-  approve: "Approved",
-  reject: "Rejected",
-  login: "Login",
-  logout: "Logout",
-} as const;
 
 function AuditDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-
-  const {
-    data: auditLog,
-    isLoading,
-    isError,
-  } = useGetAuditLogByIdQuery(id ?? "", {
+  const { data: event, isLoading, isError } = useGetAuditEventByIdQuery(id ?? "", {
     skip: !id,
   });
 
-  if (isLoading) {
-    return <LoadingState />;
-  }
-
-  if (isError) {
-    return <ErrorState message="Unable to load audit log." />;
-  }
-
-  if (!auditLog) {
-    return <Alert severity="warning">Audit log not found.</Alert>;
-  }
+  if (isLoading) return <LoadingState />;
+  if (isError) return <ErrorState message="Unable to load audit event." />;
+  if (!event) return <Alert severity="warning">Audit event not found.</Alert>;
 
   return (
     <Stack spacing={3}>
-      <Stack
-        direction="row"
-        spacing={2}
-        sx={{
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      <Stack direction="row" spacing={2} sx={{ justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <Typography variant="h4">Audit Details</Typography>
-
           <Typography color="text.secondary">
-            Review the details of this activity.
+            Audit records are read-only and cannot be edited or deleted.
           </Typography>
         </div>
-
         <Button variant="outlined" onClick={() => navigate("/audit")}>
           Back to Audit Log
         </Button>
@@ -75,65 +41,30 @@ function AuditDetailsPage() {
       <Card>
         <CardContent>
           <Stack spacing={3}>
-            <Stack spacing={1}>
-              <Typography variant="body2" color="text.secondary">
-                Action
-              </Typography>
+            {[
+              ["Action", event.action],
+              ["Entity", `${event.entityType} / ${event.entityId}`],
+              ["Actor", event.actorId],
+              ["Organization", event.organizationId],
+              ["State", `${event.previousState ?? "—"} → ${event.newState ?? "—"}`],
+              ["Timestamp", new Date(event.timestamp).toLocaleString("en-IN")],
+              ["Description", event.description ?? "—"],
+            ].map(([label, value]) => (
+              <Stack spacing={1} key={label}>
+                <Typography variant="body2" color="text.secondary">{label}</Typography>
+                <Typography>{value}</Typography>
+                <Divider />
+              </Stack>
+            ))}
 
-              <div>
-                <Chip label={actionLabels[auditLog.action]} size="small" />
-              </div>
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={1}>
-              <Typography variant="body2" color="text.secondary">
-                Actor
-              </Typography>
-
-              <Typography>{auditLog.actorName}</Typography>
-
-              <Typography variant="body2" color="text.secondary">
-                Actor ID: {auditLog.actorId}
-              </Typography>
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={1}>
-              <Typography variant="body2" color="text.secondary">
-                Resource
-              </Typography>
-
-              <Typography>{auditLog.resource}</Typography>
-
-              <Typography variant="body2" color="text.secondary">
-                Resource ID: {auditLog.resourceId}
-              </Typography>
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={1}>
-              <Typography variant="body2" color="text.secondary">
-                Description
-              </Typography>
-
-              <Typography>{auditLog.description}</Typography>
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={1}>
-              <Typography variant="body2" color="text.secondary">
-                Timestamp
-              </Typography>
-
-              <Typography>
-                {new Date(auditLog.createdAt).toLocaleString("en-IN")}
-              </Typography>
-            </Stack>
+            {event.metadata && Object.keys(event.metadata).length > 0 && (
+              <Stack spacing={1}>
+                <Typography variant="body2" color="text.secondary">Metadata</Typography>
+                <Typography component="pre" sx={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+                  {JSON.stringify(event.metadata, null, 2)}
+                </Typography>
+              </Stack>
+            )}
           </Stack>
         </CardContent>
       </Card>

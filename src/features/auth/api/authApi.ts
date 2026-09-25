@@ -1,8 +1,8 @@
 import { baseApi } from "../../../services/api/baseApi";
 import type { ApiResponse } from "../../../types/api";
-import type { LoginRequest } from "../types/requests";
+import type { LoginRequest, UpdateProfileRequest } from "../types/requests";
 import type { AuthSession, AuthUser } from "../types/auth";
-import { clearSessionCookie, setSessionCookie } from "../../../mocks/sessionCookie";
+import { clearSessionCookie, setSessionCookie } from "../../../services/auth/sessionCookie";
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -35,6 +35,7 @@ export const authApi = baseApi.injectEndpoints({
           clearSessionCookie();
         }
       },
+      invalidatesTags: ["User"],
     }),
 
     getCurrentUser: builder.query<ApiResponse<AuthUser>, void>({
@@ -48,6 +49,15 @@ export const authApi = baseApi.injectEndpoints({
         }
       },
     }),
+
+    updateCurrentUser: builder.mutation<ApiResponse<AuthUser>, UpdateProfileRequest>({
+      query: (body) => ({
+        url: "/auth/me",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["User", "Users", "Activity"],
+    }),
   }),
 });
 
@@ -55,4 +65,5 @@ export const {
   useLoginMutation,
   useLogoutMutation,
   useGetCurrentUserQuery,
+  useUpdateCurrentUserMutation,
 } = authApi;

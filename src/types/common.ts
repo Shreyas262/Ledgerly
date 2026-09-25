@@ -1,4 +1,5 @@
 export type EntityId = string;
+export type ID = EntityId;
 export type ISODateString = string;
 export type CurrencyCode = "INR";
 

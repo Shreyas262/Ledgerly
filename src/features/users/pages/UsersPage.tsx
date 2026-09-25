@@ -1,4 +1,5 @@
 import {
+  Box,
   Button,
   Card,
   CardContent,
@@ -8,6 +9,7 @@ import {
   DialogTitle,
   Stack,
   Typography,
+  Pagination,
 } from "@mui/material";
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
@@ -23,11 +25,13 @@ import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { CreateUserForm } from "../components/CreateUserForm";
 import { EditUserDialog } from "../components/EditUserDialog";
 import { ConfirmDialog } from "../../../components/common/ConfirmDialog";
-import { useDeleteUserMutation } from "../api/usersApi";
-import type { User } from "../../../types/auth";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
+import { useDeleteUserMutation, useUpdateUserStatusMutation } from "../api/usersApi";
+import type { User } from "../types/user";
 
 export function UsersPage() {
   const { can } = usePermissions();
+  const [page, setPage] = useState(1);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
@@ -39,13 +43,15 @@ export function UsersPage() {
     data: users,
     isLoading,
     isError,
-  } = useGetUsersQuery();
+  } = useGetUsersQuery({ page, pageSize: 25 });
   
+  const [updateUserStatus] = useUpdateUserStatusMutation();
+
   const [
     deleteUser,
     {
       isLoading: isDeleting,
-      isError: deleteError,
+      error: deleteError,
     },
   ] = useDeleteUserMutation();
 
@@ -65,7 +71,8 @@ export function UsersPage() {
 
       setDeletingUser(null);
     } catch {
-      // Error is exposed through deleteError.
+      // Close the dialog so the reason (exposed through deleteError) is visible.
+      setDeletingUser(null);
     }
   }
 
@@ -106,11 +113,11 @@ export function UsersPage() {
         </Stack>
 
         {/* Users */}
-        {!users?.length ? (
+        {!users?.data.length ? (
           <EmptyState />
         ) : (
           <Stack spacing={2}>
-            {users.map((user) => (
+            {users.data.map((user) => (
               <Card key={user.id}>
                 <CardContent>
                   <Stack spacing={2}>
@@ -143,7 +150,9 @@ export function UsersPage() {
                         </Typography>
                       </Stack>
 
-                      <Chip
+                      <Stack direction="row" spacing={1}>
+                        <Chip label={user.status === "inactive" ? "Inactive" : "Active"} color={user.status === "inactive" ? "default" : "success"} size="small" />
+                        <Chip
                         label={
                           user.role
                             .charAt(0)
@@ -152,6 +161,7 @@ export function UsersPage() {
                         }
                         variant="outlined"
                       />
+                      </Stack>
                     </Stack>
 
                     {/* Permissions */}
@@ -191,6 +201,16 @@ export function UsersPage() {
                         </Button>
                       </Stack>
                     )}
+                    {can("users.update") && (
+                      <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
+                        <Button
+                          variant="text"
+                          onClick={() => updateUserStatus({ id: user.id, status: user.status === "inactive" ? "active" : "inactive" })}
+                        >
+                          {user.status === "inactive" ? "Activate" : "Deactivate"}
+                        </Button>
+                      </Stack>
+                    )}
                     {can("users.delete") && (
                     <Stack
                         direction="row"
@@ -214,6 +234,17 @@ export function UsersPage() {
                 </CardContent>
               </Card>
             ))}
+          </Stack>
+        )}
+
+        {users && users.total > users.pageSize && (
+          <Stack sx={{ alignItems: "center" }}>
+            <Pagination
+              page={users.page}
+              count={Math.ceil(users.total / users.pageSize)}
+              onChange={(_event, nextPage) => setPage(nextPage)}
+              color="primary"
+            />
           </Stack>
         )}
       </Stack>
@@ -267,12 +298,9 @@ export function UsersPage() {
         }
       />
       {deleteError && (
-        <Typography
-          color="error"
-          sx={{ mt: 2 }}
-        >
-          Failed to delete user.
-        </Typography>
+        <Box sx={{ mt: 2 }}>
+          <ApiFeedback error={deleteError} />
+        </Box>
       )}
     </>
   );

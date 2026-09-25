@@ -10,8 +10,9 @@ import {
   useGetPolicyByIdQuery,
   useUpdatePolicyMutation,
 } from "../api/policiesApi";
-import type { CreateExpensePolicyRequest } from "../../../types/policy";
+import type { CreateExpensePolicyRequest } from "../types/policy";
 import {LoadingState} from "../../../components/common/LoadingState";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import {ErrorState} from "../../../components/common/ErrorState";
 
 export function EditPolicyPage() {
@@ -30,7 +31,7 @@ export function EditPolicyPage() {
     updatePolicy,
     {
       isLoading: isUpdating,
-      isError: isUpdateError,
+      error: updateError,
     },
   ] = useUpdatePolicyMutation();
 
@@ -50,6 +51,8 @@ export function EditPolicyPage() {
     name: policy.name,
     description: policy.description,
     approvalLimit: policy.approvalLimit,
+    expenseType: policy.expenseType,
+    rule: policy.rule,
     status: policy.status,
   };
 
@@ -80,11 +83,7 @@ export function EditPolicyPage() {
         </Typography>
       </div>
 
-      {isUpdateError && (
-        <Alert severity="error">
-          Unable to update policy. Please try again.
-        </Alert>
-      )}
+      {updateError && <ApiFeedback error={updateError} />}
 
       <PolicyForm
         initialValues={initialValues}

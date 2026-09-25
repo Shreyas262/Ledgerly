@@ -11,24 +11,13 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import type { AuditAction, AuditLog } from "../../../types/audit";
+import type { AuditEvent } from "../types/audit";
 
 interface AuditTableProps {
-  auditLogs: AuditLog[];
+  auditEvents: AuditEvent[];
 }
 
-const actionLabels: Record<AuditAction, string> = {
-  create: "Created",
-  update: "Updated",
-  delete: "Deleted",
-  submit: "Submitted",
-  approve: "Approved",
-  reject: "Rejected",
-  login: "Login",
-  logout: "Logout",
-};
-
-export function AuditTable({ auditLogs }: AuditTableProps) {
+export function AuditTable({ auditEvents }: AuditTableProps) {
   const navigate = useNavigate();
 
   return (
@@ -36,39 +25,39 @@ export function AuditTable({ auditLogs }: AuditTableProps) {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Actor</TableCell>
             <TableCell>Action</TableCell>
-            <TableCell>Resource</TableCell>
+            <TableCell>Entity</TableCell>
+            <TableCell>Actor ID</TableCell>
+            <TableCell>State</TableCell>
             <TableCell>Description</TableCell>
             <TableCell>Timestamp</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
-
         <TableBody>
-          {auditLogs.map((auditLog) => (
-            <TableRow key={auditLog.id}>
+          {auditEvents.map((event) => (
+            <TableRow key={event.id}>
+              <TableCell><Chip label={event.action} size="small" /></TableCell>
               <TableCell>
-                <Typography variant="body2">{auditLog.actorName}</Typography>
+                <Typography variant="body2">{event.entityType}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {event.entityId}
+                </Typography>
               </TableCell>
-
+              <TableCell>{event.actorId}</TableCell>
               <TableCell>
-                <Chip label={actionLabels[auditLog.action]} size="small" />
+                {event.previousState || event.newState ? (
+                  <Typography variant="body2">
+                    {event.previousState ?? "—"} → {event.newState ?? "—"}
+                  </Typography>
+                ) : "—"}
               </TableCell>
-
-              <TableCell>{auditLog.resource}</TableCell>
-
-              <TableCell>{auditLog.description}</TableCell>
-
+              <TableCell>{event.description ?? "—"}</TableCell>
               <TableCell>
-                {new Date(auditLog.createdAt).toLocaleString("en-IN")}
+                {new Date(event.timestamp).toLocaleString("en-IN")}
               </TableCell>
-
               <TableCell>
-                <Button
-                  size="small"
-                  onClick={() => navigate(`/audit/${auditLog.id}`)}
-                >
+                <Button size="small" onClick={() => navigate(`/audit/${event.id}`)}>
                   View
                 </Button>
               </TableCell>

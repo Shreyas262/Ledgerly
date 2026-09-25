@@ -1,6 +1,5 @@
 import { Chip } from "@mui/material";
-
-import type { ExpenseStatus } from "../../types/common";
+import type { ExpenseStatus } from "../../features/expenses/types/expense";
 
 interface StatusBadgeProps {
   status: ExpenseStatus;
@@ -54,16 +53,8 @@ const statusConfig: Record<
   },
 };
 
-export function StatusBadge({
-  status,
-}: StatusBadgeProps) {
+export function StatusBadge({ status }: StatusBadgeProps) {
   const config = statusConfig[status];
 
-  return (
-    <Chip
-      label={config.label}
-      color={config.color}
-      size="small"
-    />
-  );
+  return <Chip label={config.label} color={config.color} size="small" />;
 }

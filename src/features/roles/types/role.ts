@@ -1,6 +1,6 @@
 import type { EntityId, ResourceTimestamps } from "../../../types/common";
 
-export type RoleName = "employee" | "manager" | "finance" | "admin";
+export type RoleName = "employee" | "manager" | "finance" | "admin" | (string & {});
 
 export type Permission =
   | "expenses.read"
@@ -60,4 +60,19 @@ export interface Role extends ResourceTimestamps {
   description?: string;
   permissions: Permission[];
   isSystemRole: boolean;
+}
+
+
+export interface CreateRolePayload {
+  name: RoleName;
+  permissions: Permission[];
+  description?: string;
+  isSystemRole?: boolean;
+}
+
+export interface UpdateRolePayload {
+  name?: RoleName;
+  permissions?: Permission[];
+  description?: string;
+  isSystemRole?: boolean;
 }

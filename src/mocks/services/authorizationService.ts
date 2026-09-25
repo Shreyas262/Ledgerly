@@ -37,6 +37,8 @@ interface AuthorizationUser {
   roleId: string;
   role?: string;
   permissions?: string[];
+  status?: "active" | "inactive";
+  financeDepartmentIds?: string[];
 }
 
 interface AuthorizationRole {
@@ -45,14 +47,16 @@ interface AuthorizationRole {
   permissions: string[];
 }
 
+export interface AuthorizationFailure {
+  allowed: false;
+  status: 401 | 403;
+  code: "UNAUTHENTICATED" | "FORBIDDEN";
+  message: string;
+}
+
 export type AuthorizationResult =
   | { allowed: true; principal: AuthenticatedPrincipal }
-  | {
-      allowed: false;
-      status: 401 | 403;
-      code: "UNAUTHENTICATED" | "FORBIDDEN";
-      message: string;
-    };
+  | AuthorizationFailure;
 
 export async function buildAuthenticatedPrincipal(
   user: AuthorizationUser,
@@ -60,7 +64,7 @@ export async function buildAuthenticatedPrincipal(
 {
   const role = await getRecord<AuthorizationRole>("roles", user.roleId);
 
-  if (!role || role.organizationId !== user.organizationId) {
+  if (user.status !== "active" || !role || role.organizationId !== user.organizationId) {
     return null;
   }
 
@@ -72,6 +76,9 @@ export async function buildAuthenticatedPrincipal(
     roleId: user.roleId,
     role: user.role ?? "",
     effectivePermissions: role.permissions as Permission[],
+    authorizedDepartmentIds: user.financeDepartmentIds?.length
+      ? [...user.financeDepartmentIds]
+      : [user.departmentId],
   };
 }
 
@@ -176,6 +183,33 @@ export async function authorizeRequest(
   return { allowed: true, principal };
 }
 
+
+export function resolveExpenseScope(
+  principal: AuthenticatedPrincipal,
+): AuthorizationScope {
+  switch (principal.role) {
+    case "admin":
+      return "ORGANIZATION";
+    case "finance":
+      return "DEPARTMENT";
+    case "manager":
+      return "TEAM";
+    default:
+      return "OWN";
+  }
+}
+
+/**
+ * Draft expenses are private to their owner (§12.1). No permission or scope
+ * grants another principal access to a draft, including organization scope.
+ */
+export function isExpenseVisibleToPrincipal(
+  principal: AuthenticatedPrincipal,
+  expense: { employeeId: string; status: string },
+): boolean {
+  return expense.status !== "draft" || expense.employeeId === principal.userId;
+}
+
 export function isWithinScope(
   principal: AuthenticatedPrincipal,
   resource: AuthorizationResource,
@@ -191,7 +225,8 @@ export function isWithinScope(
     case "TEAM":
       return resource.teamId === principal.teamId;
     case "DEPARTMENT":
-      return resource.departmentId === principal.departmentId;
+      return Boolean(resource.departmentId) &&
+        principal.authorizedDepartmentIds.includes(resource.departmentId!);
     case "ORGANIZATION":
       return true;
     default:
@@ -214,7 +249,7 @@ export async function authorizeCollection<T>(
     scope: options.scope,
   });
 
-  if (!result.allowed) {
+  if (result.allowed === false) {
     return result;
   }
 

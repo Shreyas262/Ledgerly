@@ -4,23 +4,18 @@ import { LoadingState } from "../components/common/LoadingState";
 import { useAuth } from "../features/auth/context/AuthContext";
 
 export function ProtectedRoute() {
-  const {
-    isAuthenticated,
-    isLoading,
-  } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   const location = useLocation();
 
   if (isLoading) {
-    return (
-      <LoadingState message="Checking your session..." />
-    );
+    return <LoadingState message="Checking your session..." />;
   }
 
   if (!isAuthenticated) {
     return (
       <Navigate
-        to="/login"
+        to="/auth/login"
         replace
         state={{
           from: location,

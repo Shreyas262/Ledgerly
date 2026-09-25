@@ -1,219 +1,127 @@
 import { useMemo, useState } from "react";
-import {
-  Alert,
-  Grid,
-  Stack,
-  Typography,
-} from "@mui/material";
-
-import { useGetExpensesQuery } from "../../expenses/api/expenseApi";
-import { LoadingState } from "../../../components/common/LoadingState";
+import { Alert, Grid, MenuItem, Stack, TextField, Typography } from "@mui/material";
 import { ErrorState } from "../../../components/common/ErrorState";
-
+import { LoadingState } from "../../../components/common/LoadingState";
+import { RefreshingState } from "../../../components/common/RefreshingState";
 import { DashboardDateFilter } from "../../dashboard/components/DashboardDateFilter";
-
 import { SpendingTrend } from "../../dashboard/components/SpendingTrend";
 import { CategoryAnalysis } from "../../dashboard/components/CategoryAnalysis";
 import { DimensionAnalysis } from "../../dashboard/components/DimensionAnalysis";
 import { ApprovalMetrics } from "../../dashboard/components/ApprovalMetrics";
-
-import { calculateMonthlySpending } from "../../dashboard/utils/calculateMonthlySpending";
-import { calculateCategorySpending } from "../../dashboard/utils/calculateCategorySpending";
-import { calculateDimensionSpending } from "../../dashboard/utils/calculateDimensionSpending";
-import { calculateApprovalMetrics } from "../../dashboard/utils/calculateApprovalMetrics";
-import { filterExpensesByDate } from "../../dashboard/utils/filterExpensesByDate";
 import { KpiCard } from "../../dashboard/components/KpiCard";
-import { calculateAnalyticsKpis } from "../utils/calculateAnalyticsKpis";
+import { useGetAnalyticsSummaryQuery } from "../api/analyticsApi";
+import type { AnalyticsQuery } from "../types/analytics";
+import { EXPENSE_TYPES, EXPENSE_TYPE_LABELS, type ExpenseType } from "../../expenses/types/expense";
 
-export interface DashboardDateRange {
+interface DateRange {
   startDate: string;
   endDate: string;
 }
 
 export function AnalyticsPage() {
-  const {
-    data: expenses,
-    isLoading,
-    isError,
-  } = useGetExpensesQuery();
+  const [dateRange, setDateRange] = useState<DateRange>({ startDate: "", endDate: "" });
+  const [expenseType, setExpenseType] = useState<ExpenseType | "">("");
+  const [status, setStatus] = useState("");
 
-  const [dateRange, setDateRange] =
-    useState<DashboardDateRange>({
-      startDate: "",
-      endDate: "",
-    });
+  const isInvalidRange = Boolean(dateRange.startDate && dateRange.endDate && dateRange.startDate > dateRange.endDate);
+  const query = useMemo<AnalyticsQuery>(() => ({
+    from: dateRange.startDate || undefined,
+    to: dateRange.endDate || undefined,
+    type: expenseType || undefined,
+    status: status.trim() || undefined,
+  }), [dateRange, expenseType, status]);
 
-  const filteredExpenses = useMemo(
-    () =>
-      filterExpensesByDate(
-        expenses ?? [],
-        dateRange,
-      ),
-    [expenses, dateRange],
-  );
+  const { data: summary, isLoading, isFetching, isError } = useGetAnalyticsSummaryQuery(query, {
+    skip: isInvalidRange,
+  });
 
-  const monthlySpending = useMemo(
-    () =>
-      calculateMonthlySpending(
-        filteredExpenses,
-      ),
-    [filteredExpenses],
-  );
-
-  const categorySpending = useMemo(
-    () =>
-      calculateCategorySpending(
-        filteredExpenses,
-      ),
-    [filteredExpenses],
-  );
-
-  const departmentSpending = useMemo(
-    () =>
-      calculateDimensionSpending(
-        filteredExpenses,
-        (expense) => expense.department,
-      ),
-    [filteredExpenses],
-  );
-
-  const projectSpending = useMemo(
-    () =>
-      calculateDimensionSpending(
-        filteredExpenses,
-        (expense) => expense.project,
-      ),
-    [filteredExpenses],
-  );
-
-  const approvalMetrics = useMemo(
-    () =>
-      calculateApprovalMetrics(
-        filteredExpenses,
-      ),
-    [filteredExpenses],
-  );
-  
-  const analyticsKpis = useMemo(
-    () =>
-        calculateAnalyticsKpis(
-        filteredExpenses,
-        ),
-    [filteredExpenses],
-  );
-
-  if (isLoading) {
-    return <LoadingState />;
-  }
-
-  if (isError) {
-    return <ErrorState />;
-  }
+  if (isLoading) return <LoadingState />;
+  if (isError || !summary) return <ErrorState />;
 
   return (
     <Stack spacing={3}>
+      {isFetching && <RefreshingState />}
       <Stack spacing={0.5}>
-        <Typography variant="h4">
-          Analytics
-        </Typography>
-
-        <Typography
-          color="text.secondary"
-        >
-          Analyze expense spending and approval activity.
+        <Typography variant="h4">Analytics</Typography>
+        <Typography color="text.secondary">
+          Analyze expense spending and approval activity across your authorized {summary.scope.toLowerCase()} scope.
         </Typography>
       </Stack>
 
-      <DashboardDateFilter
-        value={dateRange}
-        onChange={setDateRange}
-      />
-      
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <KpiCard
-            label="Average Expense"
-            value={`₹${analyticsKpis.averageExpense.toLocaleString(
-                "en-IN",
-                {
-                maximumFractionDigits: 0,
-                },
-            )}`}
-            description="Average expense amount"
-            />
-        </Grid>
+      <Stack spacing={2}>
+        <DashboardDateFilter value={dateRange} onChange={setDateRange} />
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <TextField
+            select
+            label="Expense Type"
+            value={expenseType}
+            onChange={(event) => setExpenseType(event.target.value as ExpenseType | "")}
+            sx={{ minWidth: 200 }}
+          >
+            <MenuItem value="">All expense types</MenuItem>
+            {EXPENSE_TYPES.map((type) => (
+              <MenuItem key={type} value={type}>{EXPENSE_TYPE_LABELS[type]}</MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Status"
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+            placeholder="Optional status filter"
+          />
+        </Stack>
+      </Stack>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <KpiCard
-            label="Largest Expense"
-            value={`₹${analyticsKpis.largestExpense.toLocaleString(
-                "en-IN",
-            )}`}
-            description="Highest individual expense"
-            />
-        </Grid>
-
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <KpiCard
-            label="Approved Spend"
-            value={`₹${analyticsKpis.approvedSpend.toLocaleString(
-                "en-IN",
-            )}`}
-            description="Approved and reimbursed"
-            />
-        </Grid>
-
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <KpiCard
-            label="Pending Spend"
-            value={`₹${analyticsKpis.pendingSpend.toLocaleString(
-                "en-IN",
-            )}`}
-            description="Awaiting approval"
-            />
-        </Grid>
-      </Grid>
-
-      {filteredExpenses.length === 0 && (
-        <Alert severity="info">
-            No expenses were found for the selected filters.
-        </Alert>
+      {isInvalidRange && <Alert severity="warning">Start date must be before or equal to end date.</Alert>}
+      {!isInvalidRange && summary.kpis.expenseCount === 0 && (
+        <Alert severity="info">No expenses were found for the selected analytics filters.</Alert>
       )}
 
       <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <KpiCard label="Total Spend" value={`₹${summary.kpis.totalSpend.toLocaleString("en-IN")}`} description="Authorized analytical spend" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <KpiCard label="Average Expense" value={`₹${summary.kpis.averageExpense.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`} description="Average expense amount" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <KpiCard label="Largest Expense" value={`₹${summary.kpis.largestExpense.toLocaleString("en-IN")}`} description="Highest individual expense" />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <KpiCard label="Pending Spend" value={`₹${summary.kpis.pendingSpend.toLocaleString("en-IN")}`} description="Awaiting approval" />
+        </Grid>
+
         <Grid size={{ xs: 12 }}>
-          <SpendingTrend
-            data={monthlySpending}
-          />
+          <SpendingTrend data={summary.spendingTrend.map((item) => ({ month: item.period, amount: item.amount }))} />
         </Grid>
-
         <Grid size={{ xs: 12, md: 6 }}>
-          <CategoryAnalysis
-            data={categorySpending}
-          />
+          <CategoryAnalysis data={summary.expenseTypeSpending} />
         </Grid>
-
         <Grid size={{ xs: 12, md: 6 }}>
-          <ApprovalMetrics
-            metrics={approvalMetrics}
-          />
+          <ApprovalMetrics metrics={summary.approvalMetrics} />
         </Grid>
-
         <Grid size={{ xs: 12, md: 6 }}>
           <DimensionAnalysis
             title="Spending by Department"
-            description="Expense spending across departments"
-            data={departmentSpending}
-            emptyMessage="There are no department assignments in the selected date range."
+            description="Expense spending across authorized departments"
+            data={summary.departmentSpending.map((item) => ({ name: item.dimensionName, amount: item.amount }))}
+            emptyMessage="There is no department spending data in the selected range."
           />
         </Grid>
-
         <Grid size={{ xs: 12, md: 6 }}>
           <DimensionAnalysis
+            title="Spending by Team"
+            description="Expense spending across authorized teams"
+            data={summary.teamSpending.map((item) => ({ name: item.dimensionName, amount: item.amount }))}
+            emptyMessage="There is no team spending data in the selected range."
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <DimensionAnalysis
             title="Spending by Project"
-            description="Expense spending across projects"
-            data={projectSpending}
-            emptyMessage="There are no project assignments in the selected date range."
+            description="Expense spending across authorized projects"
+            data={summary.projectSpending.map((item) => ({ name: item.dimensionName, amount: item.amount }))}
+            emptyMessage="There is no project spending data in the selected range."
           />
         </Grid>
       </Grid>

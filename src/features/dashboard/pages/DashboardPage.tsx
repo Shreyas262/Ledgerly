@@ -1,124 +1,109 @@
+import { useMemo, useState } from "react";
 import {
   Alert,
   Grid,
   Stack,
   Typography,
- } from "@mui/material";
+} from "@mui/material";
 
-import { useGetExpensesQuery } from "../../expenses/api/expenseApi";
-import { calculateExpenseKpis } from "../utils/calculateExpenseKpis";
-
-import { KpiCard } from "../components/KpiCard";
-import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
-import { calculateMonthlySpending } from "../utils/calculateMonthlySpending";
+import { LoadingState } from "../../../components/common/LoadingState";
+import { RefreshingState } from "../../../components/common/RefreshingState";
+import { DashboardDateFilter } from "../components/DashboardDateFilter";
+import { KpiCard } from "../components/KpiCard";
 import { SpendingTrend } from "../components/SpendingTrend";
 import { CategoryAnalysis } from "../components/CategoryAnalysis";
-import { calculateCategorySpending } from "../utils/calculateCategorySpending";
 import { ApprovalMetrics } from "../components/ApprovalMetrics";
-import { calculateApprovalMetrics } from "../utils/calculateApprovalMetrics";
-import { useMemo, useState } from "react";
-import { DashboardDateFilter } from "../components/DashboardDateFilter";
-import { filterExpensesByDate } from "../utils/filterExpensesByDate";
+import { useGetDashboardSummaryQuery } from "../api/dashboardApi";
 
-interface DashboardDateRange{
-  startDate: string,
-  endDate: string,
+interface DashboardDateRange {
+  startDate: string;
+  endDate: string;
 }
 
 export function DashboardPage() {
+  const [dateRange, setDateRange] = useState<DashboardDateRange>({
+    startDate: "",
+    endDate: "",
+  });
 
-  const [dateRange, setDateRange] =
-    useState<DashboardDateRange>({
-      startDate: "",
-      endDate: "",
-    });
+  const isInvalidRange =
+    Boolean(dateRange.startDate) &&
+    Boolean(dateRange.endDate) &&
+    dateRange.startDate > dateRange.endDate;
+
+  const query = useMemo(
+    () => ({
+      from: dateRange.startDate || undefined,
+      to: dateRange.endDate || undefined,
+    }),
+    [dateRange],
+  );
 
   const {
-    data: expenses,
+    data: summary,
     isLoading,
+    isFetching,
     isError,
-  } = useGetExpensesQuery();
+  } = useGetDashboardSummaryQuery(query, {
+    skip: isInvalidRange,
+  });
 
-  if (isLoading) {
-    return <LoadingState />;
-  }
+  if (isLoading) return <LoadingState />;
+  if (isError || !summary) return <ErrorState />;
 
-  if (isError) {
-    return <ErrorState />;
-  }
-
-  const filteredExpenses = useMemo(
-    () =>
-      filterExpensesByDate(
-        expenses ?? [],
-        dateRange,
-      ),
-    [expenses, dateRange],
-  );
-  const hasFilteredExpenses = filteredExpenses.length > 0;
-
-  const kpis = calculateExpenseKpis(
-    filteredExpenses,
-  );
-
-  const monthlySpending = calculateMonthlySpending(
-    filteredExpenses,
-  );
-
-  const categorySpending =
-    calculateCategorySpending(
-      filteredExpenses,
-    );
-
-  const approvalMetrics =
-    calculateApprovalMetrics(
-      filteredExpenses,
-    );
+  const hasData = summary.kpis.totalSpending > 0 ||
+    summary.kpis.pendingApproval > 0 ||
+    summary.kpis.approvedExpenses > 0 ||
+    summary.kpis.rejectedExpenses > 0;
 
   return (
     <Stack spacing={2}>
+      {isFetching && <RefreshingState />}
+      <Stack spacing={0.5}>
+        <Typography variant="h4">My Expenses Overview</Typography>
+        <Typography color="text.secondary">
+          Summary of the expenses you have created.
+        </Typography>
+      </Stack>
 
       <Stack
         direction={{ xs: "column", sm: "row" }}
-        sx={{ display: "flex", justifyContent: "flex-start", }}
+        sx={{ display: "flex", justifyContent: "flex-start" }}
         spacing={2}
       >
-        <Typography
-        >
-          Filters: 
-        </Typography>
-
+        <Typography>Filters:</Typography>
         <DashboardDateFilter
           value={dateRange}
           onChange={setDateRange}
         />
       </Stack>
 
-      {!hasFilteredExpenses && (
+      {isInvalidRange && (
+        <Alert severity="warning">
+          Start date must be before or equal to end date.
+        </Alert>
+      )}
+
+      {!isInvalidRange && !hasData && (
         <Alert severity="info">
           No expenses were found for the selected date range.
         </Alert>
       )}
 
-      <Grid
-        container
-        spacing={2}
-      >
+      <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KpiCard
             label="Total Spending"
-            value={`₹${kpis.totalSpending.toLocaleString(
-              "en-IN",
-            )}`}
-            description="Across all expenses"
+            value={`₹${summary.kpis.totalSpending.toLocaleString("en-IN")}`}
+            description="Across your expenses"
           />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KpiCard
             label="Pending Approval"
-            value={kpis.pendingApproval}
+            value={summary.kpis.pendingApproval}
             description="Submitted or under review"
           />
         </Grid>
@@ -126,7 +111,7 @@ export function DashboardPage() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KpiCard
             label="Approved Expenses"
-            value={kpis.approvedExpenses}
+            value={summary.kpis.approvedExpenses}
             description="Approved expenses"
           />
         </Grid>
@@ -134,23 +119,23 @@ export function DashboardPage() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KpiCard
             label="Rejected Expenses"
-            value={kpis.rejectedExpenses}
+            value={summary.kpis.rejectedExpenses}
             description="Rejected expenses"
           />
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          <SpendingTrend data={monthlySpending} />
+          <SpendingTrend data={summary.spendingTrend} />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <CategoryAnalysis data={categorySpending} />
+          <CategoryAnalysis data={summary.expenseTypeSpending} />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <ApprovalMetrics metrics={approvalMetrics} />
+          <ApprovalMetrics metrics={summary.approvalMetrics} />
         </Grid>
-        
       </Grid>
     </Stack>
-)}
+  );
+}

@@ -91,12 +91,44 @@ export function PolicyDetailsPage() {
 
             <Stack spacing={1}>
               <Typography variant="subtitle2" color="text.secondary">
+                Expense Type
+              </Typography>
+              <Typography>
+                {policy.expenseType
+                  ? policy.expenseType.replaceAll("_", " ")
+                  : "All Expense Types"}
+              </Typography>
+            </Stack>
+
+            <Divider />
+
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" color="text.secondary">
                 Approval Limit
               </Typography>
 
               <Typography variant="h5">
                 ₹{policy.approvalLimit.toLocaleString("en-IN")}
               </Typography>
+            </Stack>
+
+            <Divider />
+
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" color="text.secondary">
+                Policy Rules
+              </Typography>
+              <Typography variant="body2">
+                Approval threshold: ₹{(policy.rule?.approvalThreshold ?? policy.approvalLimit).toLocaleString("en-IN")}
+              </Typography>
+              {policy.rule?.maximumAmount !== undefined && (
+                <Typography variant="body2">
+                  Maximum amount: ₹{policy.rule.maximumAmount.toLocaleString("en-IN")}
+                </Typography>
+              )}
+              {policy.rule?.requiresReceipt && (
+                <Typography variant="body2">Receipt required</Typography>
+              )}
             </Stack>
 
             <Divider />
@@ -111,12 +143,16 @@ export function PolicyDetailsPage() {
                   label={
                     policy.status === "active"
                       ? "Active"
-                      : "Inactive"
+                      : policy.status === "draft"
+                        ? "Draft"
+                        : "Inactive"
                   }
                   color={
                     policy.status === "active"
                       ? "success"
-                      : "default"
+                      : policy.status === "draft"
+                        ? "warning"
+                        : "default"
                   }
                 />
               </div>

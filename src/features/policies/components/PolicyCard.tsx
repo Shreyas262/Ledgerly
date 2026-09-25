@@ -6,7 +6,7 @@ import {
   Typography,
 } from "@mui/material";
 
-import type { ExpensePolicy } from "../../../types/policy";
+import type { ExpensePolicy } from "../types/policy";
 
 interface PolicyCardProps {
   policy: ExpensePolicy;

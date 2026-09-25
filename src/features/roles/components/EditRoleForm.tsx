@@ -9,8 +9,7 @@ import {
   DialogTitle,
   FormControlLabel,
   FormGroup,
-  MenuItem,
-  Select,
+  TextField,
   Stack,
   Typography,
 } from "@mui/material";
@@ -19,9 +18,9 @@ import type {
   Permission,
   Role,
   RoleName,
-} from "../../../types/auth";
+} from "../types/role";
 
-import { allPermissions } from "../../../mocks/data/permissions";
+import { allPermissions } from "../constants/permissions";
 
 import { useUpdateRoleMutation } from "../api/rolesApi";
 
@@ -30,13 +29,6 @@ interface EditRoleFormProps {
   onSuccess: () => void;
   onCancel: () => void;
 }
-
-const roleNames: RoleName[] = [
-  "employee",
-  "manager",
-  "finance",
-  "admin",
-];
 
 export function EditRoleForm({
   role,
@@ -96,23 +88,13 @@ export function EditRoleForm({
 
       <DialogContent>
         <Stack spacing={3} sx={{ pt: 1 }}>
-          <Select
+          <TextField
+            label="Role name"
             value={name}
-            onChange={(event) =>
-              setName(event.target.value as RoleName)
-            }
+            onChange={(event) => setName(event.target.value as RoleName)}
             fullWidth
-          >
-            {roleNames.map((roleName) => (
-              <MenuItem
-                key={roleName}
-                value={roleName}
-              >
-                {roleName.charAt(0).toUpperCase() +
-                  roleName.slice(1)}
-              </MenuItem>
-            ))}
-          </Select>
+            required
+          />
 
           <Stack spacing={1}>
             <Typography variant="subtitle1">

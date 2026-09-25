@@ -1,4 +1,4 @@
-import type { UserSettings } from "../../../types/settings";
+import type { UserSettings } from "../types/settings";
 
 const SETTINGS_STORAGE_KEY = "ledgerly.settings";
 

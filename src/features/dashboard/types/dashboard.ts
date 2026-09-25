@@ -1,39 +1,35 @@
-import type { EntityId } from "../../../types/common";
+import type { ExpenseType } from "../../expenses/types/expense";
 
 export interface DashboardKpis {
-  totalSpend: number;
+  totalSpending: number;
   pendingApproval: number;
-  approvedAmount: number;
-  reimbursedAmount: number;
-  budgetUtilization: number;
+  approvedExpenses: number;
+  rejectedExpenses: number;
 }
 
 export interface DashboardSpendingPoint {
-  period: string;
+  month: string;
   amount: number;
 }
 
-export interface DashboardCategorySpending {
-  category: string;
-  amount: number;
-}
-
-export interface DashboardDimensionSpending {
-  dimensionId: EntityId | string;
-  dimensionName: string;
+export interface DashboardExpenseTypeSpending {
+  expenseType: ExpenseType;
   amount: number;
 }
 
 export interface DashboardApprovalMetrics {
-  pending: number;
-  approved: number;
-  rejected: number;
+  approvalRate: number;
+  rejectionRate: number;
+  pendingReview: number;
+  totalReviewed: number;
 }
 
+export type DashboardScope = "OWN" | "TEAM" | "DEPARTMENT" | "ORGANIZATION";
+
 export interface DashboardSummary {
+  scope: DashboardScope;
   kpis: DashboardKpis;
   spendingTrend: DashboardSpendingPoint[];
-  categorySpending: DashboardCategorySpending[];
-  dimensionSpending: DashboardDimensionSpending[];
+  expenseTypeSpending: DashboardExpenseTypeSpending[];
   approvalMetrics: DashboardApprovalMetrics;
 }

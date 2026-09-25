@@ -1,3 +1,5 @@
+import { apiError } from "../services/apiError";
+import { applyCollectionQuery, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
 
 import {
@@ -5,12 +7,12 @@ import {
   authorizeRequest,
 } from "../services/authorizationService";
 import { authorizationError } from "../services/authorizationHttp";
+import { runAuditedTransaction } from "../services/auditService";
+import { allPermissions } from "../../features/roles/constants/permissions";
 
 import {
-  deleteRecord,
   getRecord,
   listRecords,
-  saveRecord,
 } from "../services/mockDataService";
 
 interface MockRole {
@@ -49,7 +51,7 @@ export const roleHandlers = [
       return authorizationError(result);
     }
 
-    return HttpResponse.json(result.records);
+    return HttpResponse.json(applyCollectionQuery(result.records, parseCollectionQuery(request)));
   }),
 
   http.post(`${API_BASE_URL}/roles`, async ({ request }) => {
@@ -65,10 +67,19 @@ export const roleHandlers = [
     const body = (await request.json()) as CreateRoleBody;
     const now = new Date().toISOString();
 
+    if (!body.name.trim() || body.permissions.some((permission) => !allPermissions.includes(permission as (typeof allPermissions)[number]))) {
+      return apiError(400, "Invalid role or permission assignment.");
+    }
+
+    const existingRoles = await listRecords<MockRole>("roles");
+    if (existingRoles.some((role) => role.organizationId === authorization.principal.organizationId && role.name.toLowerCase() === body.name.trim().toLowerCase())) {
+      return apiError(409, "A role with this name already exists.");
+    }
+
     const newRole: MockRole = {
       id: crypto.randomUUID(),
       organizationId: authorization.principal.organizationId,
-      name: body.name,
+      name: body.name.trim(),
       permissions: body.permissions,
       description: body.description,
       isSystemRole: body.isSystemRole ?? false,
@@ -76,7 +87,22 @@ export const roleHandlers = [
       updatedAt: now,
     };
 
-    await saveRecord("roles", newRole);
+    await runAuditedTransaction(
+      ["roles"],
+      {
+        organizationId: newRole.organizationId,
+        actorId: authorization.principal.userId,
+        action: "ROLE_CREATED",
+        entityType: "ROLE",
+        entityId: newRole.id,
+        newState: "active",
+        metadata: { permissions: newRole.permissions },
+        description: `Created role ${newRole.name}.`,
+      },
+      (transaction) => {
+        transaction.objectStore("roles").put(newRole);
+      },
+    );
 
     return HttpResponse.json(newRole, { status: 201 });
   }),
@@ -91,7 +117,7 @@ export const roleHandlers = [
       );
 
       if (!existingRole) {
-        return new HttpResponse(null, { status: 404 });
+        return apiError(404, "Resource not found.");
       }
 
       const authorization = await authorizeRequest(request, {
@@ -105,16 +131,62 @@ export const roleHandlers = [
       }
 
       const body = (await request.json()) as Partial<CreateRoleBody>;
+      const permissions = body.permissions ?? existingRole.permissions;
+      const name = body.name?.trim() ?? existingRole.name;
+
+      if (!name || permissions.some((permission) => !allPermissions.includes(permission as (typeof allPermissions)[number]))) {
+        return apiError(400, "Invalid role or permission assignment.");
+      }
+
+      const roles = await listRecords<MockRole>("roles");
+      if (roles.some((role) => role.id !== existingRole.id && role.organizationId === existingRole.organizationId && role.name.toLowerCase() === name.toLowerCase())) {
+        return apiError(409, "A role with this name already exists.");
+      }
+
+      const users = await listRecords<{ roleId: string; status?: string; organizationId: string }>("users");
+      if (existingRole.name === "admin" && name === "admin") {
+        const required = ["users.read", "users.update", "roles.read", "roles.update", "organization.read", "organization.manage"];
+        if (required.some((permission) => !permissions.includes(permission))) {
+          return apiError(409, "The Admin role must retain the permissions required for continued administration.");
+        }
+      }
+      if (existingRole.name === "admin" && name !== "admin" && !users.some((user) => user.organizationId === existingRole.organizationId && user.status !== "inactive" && user.roleId !== existingRole.id && user.roleId === "role-admin")) {
+        return apiError(409, "The final Admin role cannot be renamed without another active Admin.");
+      }
 
       const updatedRole: MockRole = {
         ...existingRole,
         ...body,
+        name,
+        permissions,
         id: existingRole.id,
         organizationId: existingRole.organizationId,
         updatedAt: new Date().toISOString(),
       };
 
-      await saveRecord("roles", updatedRole);
+      const action =
+        JSON.stringify(existingRole.permissions) === JSON.stringify(updatedRole.permissions)
+          ? "ROLE_UPDATED"
+          : "ROLE_PERMISSIONS_UPDATED";
+
+      await runAuditedTransaction(
+        ["roles"],
+        {
+          organizationId: updatedRole.organizationId,
+          actorId: authorization.principal.userId,
+          action,
+          entityType: "ROLE",
+          entityId: updatedRole.id,
+          metadata: {
+            previousPermissions: existingRole.permissions,
+            newPermissions: updatedRole.permissions,
+          },
+          description: `Updated role ${updatedRole.name}.`,
+        },
+        (transaction) => {
+          transaction.objectStore("roles").put(updatedRole);
+        },
+      );
 
       return HttpResponse.json(updatedRole);
     },
@@ -128,7 +200,7 @@ export const roleHandlers = [
     );
 
     if (!existingRole) {
-      return new HttpResponse(null, { status: 404 });
+      return apiError(404, "Resource not found.");
     }
 
     const authorization = await authorizeRequest(request, {
@@ -141,7 +213,27 @@ export const roleHandlers = [
       return authorizationError(authorization);
     }
 
-    await deleteRecord("roles", roleId);
+    const assignedUsers = await listRecords<{ roleId: string; organizationId: string }>("users");
+    if (assignedUsers.some((user) => user.organizationId === existingRole.organizationId && user.roleId === existingRole.id)) {
+      return apiError(409, "Role cannot be deleted while it is assigned to users.");
+    }
+
+    await runAuditedTransaction(
+      ["roles"],
+      {
+        organizationId: existingRole.organizationId,
+        actorId: authorization.principal.userId,
+        action: "ROLE_DELETED",
+        entityType: "ROLE",
+        entityId: existingRole.id,
+        previousState: "active",
+        newState: "deleted",
+        description: `Deleted role ${existingRole.name}.`,
+      },
+      (transaction) => {
+        transaction.objectStore("roles").delete(roleId);
+      },
+    );
 
     return new HttpResponse(null, { status: 204 });
   }),

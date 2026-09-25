@@ -1,22 +1,22 @@
 import { useNavigate } from "react-router-dom";
 import {
-  Alert,
   Stack,
   Typography,
 } from "@mui/material";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 
 import PolicyForm from "../components/PolicyForm";
 import {
   useCreatePolicyMutation,
 } from "../api/policiesApi";
-import type { CreateExpensePolicyRequest } from "../../../types/policy";
+import type { CreateExpensePolicyRequest } from "../types/policy";
 
 export function CreatePolicyPage() {
   const navigate = useNavigate();
 
   const [
     createPolicy,
-    { isLoading, isError },
+    { isLoading, error },
   ] = useCreatePolicyMutation();
 
   const handleSubmit = async (
@@ -43,11 +43,7 @@ export function CreatePolicyPage() {
         </Typography>
       </div>
 
-      {isError && (
-        <Alert severity="error">
-          Unable to create policy. Please try again.
-        </Alert>
-      )}
+      {error && <ApiFeedback error={error} />}
 
       <PolicyForm
         onSubmit={handleSubmit}

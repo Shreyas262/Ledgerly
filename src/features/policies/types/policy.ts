@@ -1,4 +1,8 @@
-import type { EntityId, ISODateString, ResourceTimestamps } from "../../../types/common";
+import type {
+  EntityId,
+  ISODateString,
+  ResourceTimestamps,
+} from "../../../types/common";
 import type { ExpenseType } from "../../expenses/types/expense";
 
 export interface Policy extends ResourceTimestamps {
@@ -6,13 +10,16 @@ export interface Policy extends ResourceTimestamps {
   organizationId: EntityId;
   name: string;
   description?: string;
-  expenseType: ExpenseType;
-  rule: PolicyRule;
+  expenseType?: ExpenseType;
+  approvalLimit: number;
+  rule?: PolicyRule;
   status: PolicyStatus;
-  createdBy: EntityId;
+  createdBy?: EntityId;
 }
 
-export type PolicyStatus = "DRAFT" | "ACTIVE" | "INACTIVE";
+export type ExpensePolicy = Policy;
+
+export type PolicyStatus = "draft" | "active" | "inactive";
 
 export interface PolicyRule {
   maximumAmount?: number;
@@ -46,9 +53,21 @@ export interface PolicyEvaluation {
   details: PolicyEvaluationDetails;
 }
 
-export interface PolicyEvaluationSnapshot {
-  policyId?: EntityId;
-  result: PolicyEvaluationResult;
-  evaluatedAt: ISODateString;
-  details: PolicyEvaluationDetails;
+export interface PolicyEvaluationSnapshot extends PolicyEvaluation {
+  id: EntityId;
+  expenseId: EntityId;
+  organizationId: EntityId;
+}
+
+export interface CreateExpensePolicyRequest {
+  name: string;
+  description?: string;
+  expenseType?: ExpenseType;
+  approvalLimit: number;
+  rule?: PolicyRule;
+  status: PolicyStatus;
+}
+
+export interface UpdateExpensePolicyRequest extends CreateExpensePolicyRequest {
+  id: EntityId;
 }

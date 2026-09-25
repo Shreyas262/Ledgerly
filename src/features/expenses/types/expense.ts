@@ -17,15 +17,33 @@ export type ExpenseType =
   | "TRAINING"
   | "OTHER";
 
+/** Display labels for the controlled expense-type values (§21.2). */
+export const EXPENSE_TYPE_LABELS: Record<ExpenseType, string> = {
+  MEALS: "Meals",
+  TRAVEL: "Travel",
+  ACCOMMODATION: "Accommodation",
+  TRANSPORTATION: "Transportation",
+  ENTERTAINMENT: "Entertainment",
+  OFFICE_SUPPLIES: "Office Supplies",
+  COMMUNICATION: "Communication",
+  TRAINING: "Training",
+  OTHER: "Other",
+};
+
+export const EXPENSE_TYPES = Object.keys(EXPENSE_TYPE_LABELS) as ExpenseType[];
+
+/** Resource scope an expense collection is requested for. */
+export type ExpenseScope = "OWN" | "TEAM" | "DEPARTMENT" | "ORGANIZATION";
+
 export type ExpenseStatus =
-  | "DRAFT"
-  | "SUBMITTED"
-  | "UNDER_REVIEW"
-  | "REJECTED"
-  | "APPROVED"
-  | "REIMBURSEMENT_PENDING"
-  | "REIMBURSED"
-  | "CANCELLED";
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "rejected"
+  | "approved"
+  | "reimbursement_pending"
+  | "reimbursed"
+  | "cancelled";
 
 export type ReimbursementStatus =
   | "NOT_APPLICABLE"
@@ -49,7 +67,10 @@ export interface Expense extends ResourceTimestamps {
   departmentId: EntityId;
   teamId: EntityId;
   employeeId: EntityId;
+  /** Owner display name, resolved by the API for read responses. */
+  employeeName?: string;
   type: ExpenseType;
+  title: string;
   amount: number;
   currency: CurrencyCode;
   merchant: string;
@@ -70,3 +91,39 @@ export interface Expense extends ResourceTimestamps {
   cancelledAt?: ISODateString;
   cancelledBy?: EntityId;
 }
+
+
+export interface CreateExpenseRequest {
+  type: ExpenseType;
+  title: string;
+  description: string;
+  amount: number;
+  currency: CurrencyCode;
+  expenseDate: ISODateString;
+}
+
+export interface UpdateExpenseRequest {
+  id: EntityId;
+  type: ExpenseType;
+  title: string;
+  description: string;
+  amount: number;
+  currency: CurrencyCode;
+  expenseDate: ISODateString;
+}
+
+export interface ExpenseFilter {
+  search: string;
+  status: ExpenseStatus | "all";
+  type: ExpenseType | "all";
+  dateFrom: string;
+  dateTo: string;
+}
+
+export const initialExpenseFilters: ExpenseFilter = {
+  search: "",
+  status: "all",
+  type: "all",
+  dateFrom: "",
+  dateTo: "",
+};

@@ -1,18 +1,20 @@
+import type { CollectionQuery } from "../../../types/api";
+import { buildCollectionQuery } from "../../../services/api/queryParams";
 import { baseApi } from "../../../services/api/baseApi";
 
 import type {
   CreateExpensePolicyRequest,
   ExpensePolicy,
   UpdateExpensePolicyRequest,
-} from "../../../types/policy";
+} from "../types/policy";
 
 export const policiesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getPolicies: builder.query<
       ExpensePolicy[],
-      void
+      CollectionQuery | void
     >({
-      query: () => "/policies",
+      query: (query) => `/policies${buildCollectionQuery(query ?? undefined)}`,
       providesTags: (result) =>
         result
           ? [

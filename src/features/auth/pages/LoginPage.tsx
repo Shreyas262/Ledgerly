@@ -1,14 +1,19 @@
 import { Alert, Button, Stack, TextField, Typography } from "@mui/material";
 import { useState, type SyntheticEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, type Location } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLoginMutation } from "../api/authApi";
 import AuthLayout from "../../../layouts/AuthLayout/AuthLayout";
+import { getApiErrorMessage } from "../../../services/api/apiErrors";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo =
+    (location.state as { from?: Location } | null)?.from?.pathname ??
+    "/dashboard";
 
-  const [login, { isLoading, isError }] = useLoginMutation();
+  const [login, { isLoading, isError, error }] = useLoginMutation();
   const { refetchUser } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -25,7 +30,7 @@ export function LoginPage() {
 
       await refetchUser().unwrap();
 
-      navigate("/dashboard", { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch {
       // Error state is rendered below.
     }
@@ -44,7 +49,11 @@ export function LoginPage() {
           </Typography>
         </Stack>
 
-        {isError && <Alert severity="error">Invalid email or password.</Alert>}
+        {isError && (
+          <Alert severity="error">
+            {getApiErrorMessage(error, "Invalid email or password.")}
+          </Alert>
+        )}
 
         <TextField
           label="Email"
