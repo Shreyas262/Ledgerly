@@ -42,6 +42,7 @@ import { BudgetProgress } from "../components/BudgetProgress";
 import { formatCurrency } from "../../../utils/currency";
 import type { DepartmentBudgetView, OrganizationBudgetView } from "../types/budget";
 import { useConfirm, type ConfirmOptions } from "../../../components/common/ConfirmProvider";
+import { PageHeader } from "../../../components/common/PageHeader";
 
 type Runner = (
   action: () => Promise<unknown>,
@@ -132,53 +133,53 @@ export function BudgetDetailsPage() {
     <Stack spacing={3}>
       <BackLink to="/budgets" label="Budgets" />
 
-      <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "center" }, gap: 2 }}>
-        <Stack spacing={0.5}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-            <Typography variant="h4">{budget.name}</Typography>
-            <Chip size="small" label={budget.status.toUpperCase()} color={budget.status === "active" ? "success" : "default"} />
-          </Stack>
-          <Typography color="text.secondary">{formatDate(budget.startDate)} – {formatDate(budget.endDate)}</Typography>
-        </Stack>
-        {isAdmin && editable && (
-          <Stack direction="row" spacing={1}>
-            {budget.status === "draft" && (
-              <Button
-                variant="contained"
-                disabled={activating}
-                onClick={() => run(() => activateBudget(budget.id).unwrap(), "Budget activated.", "Unable to activate the budget.", {
-                  title: "Activate budget",
-                  message: `Activate "${budget.name}"? Spend will be tracked against it and employees can create expenses dated ${formatDate(budget.startDate)} – ${formatDate(budget.endDate)}.`,
-                  confirmLabel: "Activate",
-                })}
-              >
-                Activate
-              </Button>
+      <PageHeader
+        title={budget.name}
+        chips={<Chip size="small" label={budget.status.toUpperCase()} color={budget.status === "active" ? "success" : "default"} />}
+        description={`${formatDate(budget.startDate)} – ${formatDate(budget.endDate)}`}
+        actions={isAdmin && (editable || budget.status === "closed") ? (
+          <>
+            {isAdmin && editable && (
+              <Stack direction="row" spacing={1}>
+                {budget.status === "draft" && (
+                  <Button
+                    variant="contained"
+                    disabled={activating}
+                    onClick={() => run(() => activateBudget(budget.id).unwrap(), "Budget activated.", "Unable to activate the budget.", {
+                      title: "Activate budget",
+                      message: `Activate "${budget.name}"? Spend will be tracked against it and employees can create expenses dated ${formatDate(budget.startDate)} – ${formatDate(budget.endDate)}.`,
+                      confirmLabel: "Activate",
+                    })}
+                  >
+                    Activate
+                  </Button>
+                )}
+                {budget.status === "active" && (
+                  <Button variant="outlined" disabled={closing} onClick={handleClose}>Close</Button>
+                )}
+                <Button onClick={() => navigate(`/budgets/${budget.id}/edit`)}>Edit</Button>
+                <Button onClick={openRollover}>Start next period</Button>
+              </Stack>
             )}
-            {budget.status === "active" && (
-              <Button variant="outlined" disabled={closing} onClick={handleClose}>Close</Button>
+            {isAdmin && budget.status === "closed" && (
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  disabled={reopening}
+                  onClick={() => run(() => reopenBudget(budget.id).unwrap(), "Budget reopened.", "Unable to reopen the budget.", {
+                    title: "Reopen budget",
+                    message: `Reopen "${budget.name}"? It becomes active again, as long as no other active budget covers the same period.`,
+                    confirmLabel: "Reopen",
+                  })}
+                >
+                  Reopen
+                </Button>
+                <Button variant="contained" onClick={openRollover}>Start next period</Button>
+              </Stack>
             )}
-            <Button onClick={() => navigate(`/budgets/${budget.id}/edit`)}>Edit</Button>
-            <Button onClick={openRollover}>Start next period</Button>
-          </Stack>
-        )}
-        {isAdmin && budget.status === "closed" && (
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              disabled={reopening}
-              onClick={() => run(() => reopenBudget(budget.id).unwrap(), "Budget reopened.", "Unable to reopen the budget.", {
-                title: "Reopen budget",
-                message: `Reopen "${budget.name}"? It becomes active again, as long as no other active budget covers the same period.`,
-                confirmLabel: "Reopen",
-              })}
-            >
-              Reopen
-            </Button>
-            <Button variant="contained" onClick={openRollover}>Start next period</Button>
-          </Stack>
-        )}
-      </Stack>
+          </>
+        ) : undefined}
+      />
 
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
       {notice && <Alert severity="success" onClose={() => setNotice("")}>{notice}</Alert>}

@@ -7,12 +7,13 @@ import type {
 } from "../../features/analytics/types/analytics";
 import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import { EXPENSE_TYPE_LABELS, type ExpenseType } from "../../features/expenses/types/expense";
-import { listRecords } from "../services/mockDataService";
+import { listRecords, listRecordsByIndex } from "../services/mockDataService";
+import type { Expense } from "../../features/expenses/types/expense";
 import { authorizeRequest } from "../services/authorizationService";
 import { authorizationError } from "../services/authorizationHttp";
 import { apiError } from "../services/apiError";
 import { getAuthorizedExpenseRecords } from "../services/authorizedExpenseRecords";
-import { buildAnalyticsSummary, validateAnalyticsQuery } from "../services/analyticsService";
+import { buildAnalyticsSummary, validateAnalyticsQuery, type AnalyticsPolicySnapshot } from "../services/analyticsService";
 import { buildBudgetView, findActiveBudgetForDate, todayDate } from "../services/budgetService";
 
 interface StructureRecord {
@@ -171,11 +172,34 @@ export const analyticsHandlers = [
       }
     }
 
-    const records = await getAuthorizedExpenseRecords(principal);
+    const [records, storedChecks, organizationExpenses] = await Promise.all([
+      getAuthorizedExpenseRecords(principal),
+      listRecords<Omit<AnalyticsPolicySnapshot, "expense"> & { organizationId: string }>("policyEvaluations"),
+      listRecordsByIndex<Expense>("expenses", "organizationId", principal.organizationId),
+    ]);
+    // Blocked submission attempts belong to drafts, which are private: resolve
+    // only the fields needed for aggregate counts, within the viewer's scope.
+    const expenseById = new Map(organizationExpenses.map((expense) => [expense.id, expense]));
+    const inScope = (expense: Expense) =>
+      scope === "ORGANIZATION" ||
+      (scope === "DEPARTMENT" && principal.authorizedDepartmentIds.includes(expense.departmentId)) ||
+      (scope === "TEAM" && expense.teamId === principal.teamId);
+    const policySnapshots: AnalyticsPolicySnapshot[] = storedChecks.flatMap((check) => {
+      const expense = expenseById.get(check.expenseId);
+      if (check.organizationId !== organizationId || !expense || !inScope(expense)) return [];
+      const { amount, type, status, expenseDate, departmentId, teamId } = expense;
+      return [{ expenseId: check.expenseId, result: check.result, details: check.details, expense: { amount, type, status, expenseDate, departmentId, teamId } }];
+    });
     const namesOf = (items: StructureRecord[]) => new Map(items.map((item) => [item.id, item.name]));
 
     return Response.json({
-      ...buildAnalyticsSummary(records, query, scope, { departments: namesOf(departments), teams: namesOf(teams) }),
+      ...buildAnalyticsSummary(
+        records,
+        query,
+        scope,
+        { departments: namesOf(departments), teams: namesOf(teams) },
+        policySnapshots,
+      ),
       filterOptions: buildFilterOptions(scope, principal, departments, teams),
       budgetComparison: await buildBudgetComparison(scope, principal, query),
     });

@@ -1,5 +1,5 @@
 import { AddOutlined } from "@mui/icons-material";
-import { Alert, Button, Grid, Stack, Typography } from "@mui/material";
+import { Alert, Button, Grid, Stack } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useGetBudgetsQuery } from "../api/budgetsApi";
 import { BudgetCard } from "../components/BudgetCard";
@@ -11,6 +11,7 @@ import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { usePermissions } from "../../auth/hooks/usePermissions";
 import { useAuth } from "../../auth/context/AuthContext";
+import { PageHeader } from "../../../components/common/PageHeader";
 
 const scopeCopy = {
   ORGANIZATION: { subtitle: "Organization budgets and their department allocations.", budget: "Organization budget", allocated: "Allocated to departments" },
@@ -36,17 +37,15 @@ export function BudgetsPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "center" }, gap: 2 }}>
-        <Stack spacing={0.5}>
-          <Typography variant="h4">Budgets</Typography>
-          <Typography color="text.secondary">{copy.subtitle}</Typography>
-        </Stack>
-        {canCreate && (
+      <PageHeader
+        title="Budgets"
+        description={copy.subtitle}
+        actions={canCreate && (
           <Button variant="contained" startIcon={<AddOutlined />} onClick={() => navigate("/budgets/new")}>
             Create organization budget
           </Button>
         )}
-      </Stack>
+      />
 
       {canCreate && endedBudgets.map((budget) => (
         <Alert

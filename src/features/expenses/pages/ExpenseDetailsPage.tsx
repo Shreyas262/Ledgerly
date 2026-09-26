@@ -1,3 +1,4 @@
+import { PolicyEvaluationPanel } from "../../policies/components/PolicyEvaluationPanel";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import {
   Alert,
@@ -14,7 +15,6 @@ import {
   TextField,
 } from "@mui/material";
 
-import { ArrowBackOutlined } from "@mui/icons-material";
 
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -45,6 +45,8 @@ import { EXPENSE_TYPE_LABELS, type ExpenseStatus } from "../types/expense";
 import { isStatus } from "../../../services/api/apiErrors";
 import { DocumentPanel } from "../../documents/components/DocumentPanel";
 import { Amount } from "../../../components/common/Amount";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
 const reimbursementStatusLabels: Record<string, string> = {
   PENDING: "Pending",
@@ -326,16 +328,13 @@ export function ExpenseDetailsPage({
 
   return (
     <Stack spacing={3}>
-      <Button
-        variant="text"
-        startIcon={<ArrowBackOutlined />}
-        onClick={() => navigate(-1)}
-        sx={{
-          alignSelf: "flex-start",
-        }}
-      >
-        Back
-      </Button>
+      {isReviewMode ? (
+        <BackLink to="/approvals" label="Approvals" />
+      ) : (
+        <BackLink to="/expenses" label="Expenses" />
+      )}
+
+      <PageHeader title={isReviewMode ? "Expense Review" : "Expense Details"} />
 
       {mutationError && <ApiFeedback error={mutationError} />}
 
@@ -408,6 +407,14 @@ export function ExpenseDetailsPage({
             <Chip label={statusLabels[expense.status]} size="small" />
           </Stack>
 
+          {/* Policy check (§21.10) */}
+          {policyResult && expense.status !== "cancelled" && (
+            <PolicyEvaluationPanel
+              evaluation={policyResult}
+              note={expense.status === "draft" ? "Preliminary check. The rules are checked again when the expense is submitted." : undefined}
+            />
+          )}
+
           {/* Actions */}
           {(canEdit ||
             canSubmit ||
@@ -425,36 +432,6 @@ export function ExpenseDetailsPage({
               }}
               spacing={2}
             >
-              {isReviewMode &&
-                expense.status === "under_review" &&
-                policyResult && (
-                  <Alert
-                    severity={
-                      policyResult.result === "COMPLIANT" ||
-                      policyResult.result === "REQUIRES_APPROVAL" ||
-                      policyResult.result === "NO_APPLICABLE_POLICY"
-                        ? "success"
-                        : "warning"
-                    }
-                  >
-                    <Stack spacing={0.5}>
-                      <Typography variant="body2">
-                        Policy result:{" "}
-                        {policyResult.result.replaceAll("_", " ")}
-                      </Typography>
-                      {policyResult.details.violatedRules?.map((rule) => (
-                        <Typography key={rule} variant="body2">
-                          {rule}
-                        </Typography>
-                      ))}
-                      {policyResult.details.missingInformation?.map((item) => (
-                        <Typography key={item} variant="body2">
-                          {item}
-                        </Typography>
-                      ))}
-                    </Stack>
-                  </Alert>
-                )}
 
               {canEdit && (
                 <Button

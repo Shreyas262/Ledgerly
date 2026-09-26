@@ -1,5 +1,6 @@
 import type { AnalyticsSummary } from "../types/analytics";
 import { EXPENSE_TYPE_LABELS } from "../../expenses/types/expense";
+import { RULE_LABELS } from "../../policies/utils/policyText";
 
 const cell = (value: string | number) => {
   const text = String(value);
@@ -37,6 +38,17 @@ export function exportAnalyticsCsv(summary: AnalyticsSummary, filterDescription:
     const budget = summary.budgetComparison;
     section(`Budget vs actual: ${budget.budgetName} (${budget.startDate} to ${budget.endDate})`, ["Name", "Allocated (INR)", "Reimbursed (INR)"],
       budget.rows.map((row) => [row.name, row.allocated, row.spent]));
+  }
+  const compliance = summary.policyCompliance;
+  section("Policy compliance", ["Metric", "Count"], [
+    ["Checked against a policy", compliance.checked],
+    ["Above approval threshold", compliance.escalated],
+    ["Submitted with warnings", compliance.withWarnings],
+    ["Blocked submission attempts", compliance.blockedAttempts],
+  ]);
+  if (compliance.byRule.length) {
+    section("Policy findings by rule", ["Rule", "Warnings", "Blocked"],
+      compliance.byRule.map((row) => [RULE_LABELS[row.rule], row.warnings, row.blocked]));
   }
 
   const csv = rows.map((row) => row.map(cell).join(",")).join("\r\n");

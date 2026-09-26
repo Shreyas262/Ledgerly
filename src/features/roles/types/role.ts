@@ -60,6 +60,8 @@ export interface Role extends ResourceTimestamps {
   description?: string;
   permissions: Permission[];
   isSystemRole: boolean;
+  /** Users currently holding the role (list responses only). */
+  userCount?: number;
 }
 
 

@@ -1,18 +1,20 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useEffect, useState } from "react";
-import { Button, Card, CardContent, Stack, TextField } from "@mui/material";
+import { Button, Stack, TextField } from "@mui/material";
 
 import type { AuthUser } from "../../auth/types/auth";
 
 interface ProfileFormProps {
   user: AuthUser;
   onSubmit: (name: string, email: string) => void;
+  onCancel: () => void;
   isSubmitting?: boolean;
 }
 
 export function UserProfileForm({
   user,
   onSubmit,
+  onCancel,
   isSubmitting = false,
 }: ProfileFormProps) {
   const confirm = useConfirm();
@@ -65,35 +67,38 @@ export function UserProfileForm({
   };
 
   return (
-    <Card>
-      <CardContent>
-        <Stack component="form" onSubmit={handleSubmit} spacing={3}>
-          <TextField
-            label="Name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            error={Boolean(errors.name)}
-            helperText={errors.name}
-            fullWidth
-            required
-          />
+    <Stack component="form" onSubmit={handleSubmit} spacing={3}>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        <TextField
+          label="Name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          error={Boolean(errors.name)}
+          helperText={errors.name}
+          fullWidth
+          required
+        />
 
-          <TextField
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            error={Boolean(errors.email)}
-            helperText={errors.email}
-            fullWidth
-            required
-          />
+        <TextField
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          error={Boolean(errors.email)}
+          helperText={errors.email}
+          fullWidth
+          required
+        />
+      </Stack>
 
-          <Button type="submit" variant="contained" loading={isSubmitting}>
-            Save Changes
-          </Button>
-        </Stack>
-      </CardContent>
-    </Card>
+      <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
+        <Button variant="outlined" onClick={onCancel} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="contained" loading={isSubmitting}>
+          Save changes
+        </Button>
+      </Stack>
+    </Stack>
   );
 }

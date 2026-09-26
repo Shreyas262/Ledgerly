@@ -10,6 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { PageHeader } from "../common/PageHeader";
 
 export interface SectionHubItem {
   label: string;
@@ -29,10 +30,7 @@ interface SectionHubProps {
 export function SectionHub({ title, description, items }: SectionHubProps) {
   return (
     <Stack spacing={3}>
-      <Stack spacing={0.5}>
-        <Typography variant="h4">{title}</Typography>
-        <Typography color="text.secondary">{description}</Typography>
-      </Stack>
+      <PageHeader title={title} description={description} />
 
       <Grid container spacing={2}>
         {items.map((item) => (

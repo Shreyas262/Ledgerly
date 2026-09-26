@@ -25,6 +25,11 @@ export interface AuthUser {
   permissions: Permission[];
   /** Departments whose financial records the user may process (§22.7). */
   authorizedDepartmentIds?: EntityId[];
+  /** Display names resolved by the API for the IDs above. */
+  organizationName?: string;
+  departmentName?: string;
+  teamName?: string;
+  authorizedDepartmentNames?: string[];
 }
 
 export interface AuthSession {

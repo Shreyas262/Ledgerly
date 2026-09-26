@@ -2,7 +2,6 @@ import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useNavigate } from "react-router-dom";
 import {
   Stack,
-  Typography,
 } from "@mui/material";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 
@@ -11,6 +10,8 @@ import {
   useCreatePolicyMutation,
 } from "../api/policiesApi";
 import type { CreateExpensePolicyRequest } from "../types/policy";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
 export function CreatePolicyPage() {
   const navigate = useNavigate();
@@ -36,15 +37,11 @@ export function CreatePolicyPage() {
 
   return (
     <Stack spacing={3}>
-      <div>
-        <Typography variant="h4">
-          Create Policy
-        </Typography>
-
-        <Typography color="text.secondary">
-          Define an expense approval policy.
-        </Typography>
-      </div>
+      <BackLink to="/policies" label="Policies" />
+      <PageHeader
+        title="Create Policy"
+        description="Define spending rules for an expense type, for the whole organization or specific departments."
+      />
 
       {error && <ApiFeedback error={error} />}
 

@@ -36,12 +36,6 @@ export function getApiErrorDetails(error: unknown): ApiErrorDetails {
     : {};
 }
 
-export function getFieldError(error: unknown, field: string): string | undefined {
-  const value = getApiErrorDetails(error).fieldErrors?.[field];
-  if (Array.isArray(value)) return value[0];
-  return typeof value === "string" ? value : undefined;
-}
-
 export function getApiErrorMessage(
   error: unknown,
   fallback = "The request could not be completed.",

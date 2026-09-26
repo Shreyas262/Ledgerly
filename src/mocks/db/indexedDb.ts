@@ -1,5 +1,5 @@
 const DB_NAME = "ledgerly";
-export const DB_VERSION = 19;
+export const DB_VERSION = 20;
 
 export const MOCK_STORES = [
   "users",
@@ -368,6 +368,34 @@ const migrations: Record<number, Migration> = {
     // Intentionally empty. This version once carried a one-time reset of
     // expense data; it has been removed so no data is ever reset again. The
     // version is kept because databases already at 19 cannot downgrade.
+  },
+
+  20: (_database, transaction) => {
+    // Policy model v2 (§21.4): one approval threshold, rules with Block/Warn
+    // enforcement, and department scope. The old maximum amount becomes a
+    // blocking rule; allowed departments become the policy's scope; the
+    // receipt flag (always enforced), roles, projects and cost centers are
+    // dropped.
+    const policies = transaction.objectStore("policies");
+    const request = policies.getAll();
+    request.onsuccess = () => {
+      for (const policy of request.result as Array<Record<string, unknown>>) {
+        if (policy.rules) continue;
+        const rule = (policy.rule ?? {}) as Record<string, unknown>;
+        const threshold = typeof rule.approvalThreshold === "number" ? rule.approvalThreshold : policy.approvalLimit;
+        const rules: Record<string, unknown> = {};
+        if (typeof threshold === "number" && threshold > 0) rules.approvalThreshold = threshold;
+        if (typeof rule.maximumAmount === "number" && rule.maximumAmount > 0) {
+          rules.maximumAmount = { amount: rule.maximumAmount, enforcement: "BLOCK" };
+        }
+        const { rule: _rule, approvalLimit: _approvalLimit, ...rest } = policy;
+        policies.put({
+          ...rest,
+          departmentIds: Array.isArray(rule.allowedDepartments) ? rule.allowedDepartments : [],
+          rules,
+        });
+      }
+    };
   },
 };
 

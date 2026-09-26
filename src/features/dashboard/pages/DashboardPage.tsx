@@ -3,7 +3,6 @@ import {
   Alert,
   Grid,
   Stack,
-  Typography,
 } from "@mui/material";
 
 import { ErrorState } from "../../../components/common/ErrorState";
@@ -16,6 +15,7 @@ import { CategoryAnalysis } from "../components/CategoryAnalysis";
 import { ApprovalMetrics } from "../components/ApprovalMetrics";
 import { useGetDashboardSummaryQuery } from "../api/dashboardApi";
 import { formatCurrency } from "../../../utils/currency";
+import { PageHeader } from "../../../components/common/PageHeader";
 
 interface DashboardDateRange {
   startDate: string;
@@ -63,12 +63,10 @@ export function DashboardPage() {
   return (
     <Stack spacing={2}>
       {isFetching && <RefreshingState />}
-      <Stack spacing={0.5}>
-        <Typography variant="h4">My Expenses Overview</Typography>
-        <Typography color="text.secondary">
-          Summary of the expenses you have created.
-        </Typography>
-      </Stack>
+      <PageHeader
+        title="My Expenses Overview"
+        description="Summary of the expenses you have created."
+      />
 
       <DashboardDateFilter
         value={dateRange}

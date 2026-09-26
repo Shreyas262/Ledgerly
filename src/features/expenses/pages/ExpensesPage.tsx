@@ -25,6 +25,7 @@ import {
 } from "../types/expense";
 import { ExpenseFilters } from "../components/ExpenseFilters";
 import { useGetActiveBudgetPeriodQuery } from "../../budgets/api/budgetsApi";
+import { PageHeader } from "../../../components/common/PageHeader";
 
 /**
  * The wider view a role is authorized for. The API enforces this scope; the
@@ -148,25 +149,9 @@ export function ExpensesPage() {
 
   return (
     <Stack spacing={3}>
-      {/* Header */}
-      <Stack
-        sx={{
-          display: "flex",
-          flexDirection: {
-            xs: "column",
-            sm: "row",
-          },
-          justifyContent: "space-between",
-          alignItems: {
-            xs: "flex-start",
-            sm: "center",
-          },
-          gap: 2,
-        }}
-      >
-        <Typography variant="h4">Expenses</Typography>
-
-        {can("expenses.create") && (
+      <PageHeader
+        title="Expenses"
+        actions={can("expenses.create") && (
           <Button
             variant="contained"
             startIcon={<AddOutlinedIcon />}
@@ -176,7 +161,7 @@ export function ExpensesPage() {
             Create Expense
           </Button>
         )}
-      </Stack>
+      />
 
       {can("expenses.create") && creationBlocked && (
         <Alert severity="info">

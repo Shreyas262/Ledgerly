@@ -1,5 +1,5 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
-import { Stack, Typography } from "@mui/material";
+import { Stack } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGetBudgetByIdQuery, useUpdateBudgetMutation } from "../api/budgetsApi";
 import { BudgetForm } from "../components/BudgetForm";
@@ -7,6 +7,8 @@ import type { CreateOrganizationBudgetRequest } from "../types/budget";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
 export function EditBudgetPage() {
   const navigate = useNavigate();
@@ -25,5 +27,5 @@ export function EditBudgetPage() {
       // Error is exposed through the mutation state; form input is preserved.
     }
   };
-  return <Stack spacing={3}><Stack spacing={0.5}><Typography variant="h4">Edit Organization Budget</Typography><Typography color="text.secondary">Department allocations must remain within the organization budget.</Typography></Stack>{updateError && <ApiFeedback error={updateError} onReconcile={() => navigate(`/budgets/${data.id}`)} />}<BudgetForm budget={data} onSubmit={handleSubmit} isSubmitting={isUpdating} onCancel={() => navigate(`/budgets/${data.id}`)} /></Stack>;
+  return <Stack spacing={3}><BackLink to={`/budgets/${data.id}`} label="Budget" /><PageHeader title="Edit Organization Budget" description="Department allocations must remain within the organization budget." />{updateError && <ApiFeedback error={updateError} onReconcile={() => navigate(`/budgets/${data.id}`)} />}<BudgetForm budget={data} onSubmit={handleSubmit} isSubmitting={isUpdating} onCancel={() => navigate(`/budgets/${data.id}`)} /></Stack>;
 }

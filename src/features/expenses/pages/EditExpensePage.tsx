@@ -1,3 +1,4 @@
+import { ExpensePolicyPreview } from "../../policies/components/ExpensePolicyPreview";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import {
   useEffect,
@@ -16,12 +17,7 @@ import {
   Select,
   Stack,
   TextField,
-  Typography,
 } from "@mui/material";
-
-import {
-  ArrowBackOutlined,
-} from "@mui/icons-material";
 
 import {
   useNavigate,
@@ -42,6 +38,8 @@ import { getApiErrorDetails, isStatus } from "../../../services/api/apiErrors";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { EXPENSE_TYPES, EXPENSE_TYPE_LABELS, type ExpenseType } from "../types/expense";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
 interface ExpenseFormData {
   type: ExpenseType;
@@ -132,15 +130,7 @@ export function EditExpensePage() {
   if (expense.status !== "draft") {
     return (
       <Stack spacing={3}>
-        <Button
-          variant="text"
-          startIcon={<ArrowBackOutlined />}
-          onClick={() =>
-            navigate(`/expenses/${expense.id}`)
-          }
-        >
-          Back to Expense
-        </Button>
+        <BackLink to={`/expenses/${expense.id}`} label="Expense" />
 
         <Alert severity="warning">
           Only draft expenses can be edited.
@@ -186,21 +176,9 @@ export function EditExpensePage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" sx={{justifyContent: "flex-start"}}>
-      <Button
-        variant="text"
-        startIcon={<ArrowBackOutlined />}
-        onClick={() =>
-          navigate(`/expenses/${expense.id}`)
-        }
-      >
-        Back to Expense
-      </Button>
-      </Stack>
+      <BackLink to={`/expenses/${expense.id}`} label="Expense" />
 
-      <Typography variant="h4">
-        Edit Expense
-      </Typography>
+      <PageHeader title="Edit Expense" />
 
       <Paper sx={{ p: 3 }}>
         <Stack
@@ -288,6 +266,14 @@ export function EditExpensePage() {
                 shrink: true,
               },
             }}
+          />
+
+          <ExpensePolicyPreview
+            type={formData.type}
+            amount={formData.amount}
+            expenseDate={formData.expenseDate}
+            description={formData.description}
+            expenseId={expense.id}
           />
 
           <Stack

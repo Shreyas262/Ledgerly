@@ -85,6 +85,10 @@ export function ExpenseCard({
   isSubmitting = false,
   isStartingReview = false,
 }: ExpenseCardProps) {
+  const policyFlags = {
+    escalated: expense.policyEvaluation?.details.escalated === true,
+    warnings: expense.policyEvaluation?.details.warnings?.length ?? 0,
+  };
   const { can } = usePermissions();
   const { user } = useAuth();
 
@@ -174,6 +178,16 @@ export function ExpenseCard({
               color={status.color}
               size="small"
             />
+
+            {/* Policy flags for reviewers (§21.10, §22.3). */}
+            {variant === "approval" && (policyFlags.escalated || policyFlags.warnings > 0) && (
+              <Stack direction="row" spacing={0.75}>
+                {policyFlags.escalated && <Chip size="small" color="info" variant="outlined" label="Above policy threshold" />}
+                {policyFlags.warnings > 0 && (
+                  <Chip size="small" color="warning" variant="outlined" label={`${policyFlags.warnings} policy ${policyFlags.warnings === 1 ? "warning" : "warnings"}`} />
+                )}
+              </Stack>
+            )}
           </Box>
         </Box>
 

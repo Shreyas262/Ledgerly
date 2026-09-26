@@ -293,6 +293,11 @@ export const usersHandlers = [
         });
       }
 
+      if (currentUser.id === authorization.principal.userId) {
+        if (role.id !== currentUser.roleId) return apiError(409, "You can't change your own role.", "SELF_MODIFICATION");
+        if (body.status === "inactive") return apiError(409, "You can't deactivate your own account.", "SELF_MODIFICATION");
+      }
+
       if (role.name.toLowerCase() === "manager" && (body.status ?? currentUser.status) !== "inactive") {
         const conflict = await teamManagerConflict(team.id, currentUser.id);
         if (conflict) return conflict;
@@ -367,6 +372,9 @@ export const usersHandlers = [
     if (!authorization.allowed) return authorizationError(authorization);
     const body = (await request.json()) as { status?: "active" | "inactive" };
     if (body.status !== "active" && body.status !== "inactive") return apiError(422, "Invalid status.");
+    if (user.id === authorization.principal.userId && body.status === "inactive") {
+      return apiError(409, "You can't deactivate your own account.", "SELF_MODIFICATION");
+    }
     if (user.role === "admin" && user.status !== "inactive" && body.status === "inactive") {
       const activeAdmins = (await listRecords<MockUser>("users")).filter((item) => item.organizationId === user.organizationId && item.role === "admin" && item.status === "active");
       if (activeAdmins.length <= 1) return apiError(409, "The final active Admin cannot be deactivated.");
@@ -400,6 +408,10 @@ export const usersHandlers = [
 
     if (user.status === "deleted") {
       return apiError(404, "Resource not found.");
+    }
+
+    if (user.id === authorization.principal.userId) {
+      return apiError(409, "You can't delete your own account.", "SELF_MODIFICATION");
     }
 
     if (user.role === "admin" && user.status === "active") {

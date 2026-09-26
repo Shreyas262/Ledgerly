@@ -1,4 +1,5 @@
 import { BackLink } from "../../../components/navigation/BackLink";
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useState } from "react";
 import {
   Alert,
@@ -22,11 +23,13 @@ import {
   resetSettings,
   saveSettings,
 } from "../utils/settingsStorage";
+import { PageHeader } from "../../../components/common/PageHeader";
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<UserSettings>(() => getSettings());
 
   const [showSuccess, setShowSuccess] = useState(false);
+  const confirm = useConfirm();
 
   const updateSettings = (updates: Partial<UserSettings>) => {
     setSettings((currentSettings) => ({
@@ -37,12 +40,21 @@ export function SettingsPage() {
     setShowSuccess(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!(await confirm({ title: "Save settings", message: "Save your preference changes?", confirmLabel: "Save" }))) return;
+
     saveSettings(settings);
     setShowSuccess(true);
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    if (!(await confirm({
+      title: "Reset settings",
+      message: "Restore all preferences to their defaults? Your current choices will be lost.",
+      confirmLabel: "Reset",
+      destructive: true,
+    }))) return;
+
     const defaultSettings = resetSettings();
 
     setSettings(defaultSettings);
@@ -52,13 +64,10 @@ export function SettingsPage() {
   return (
     <Stack spacing={3}>
       <BackLink to="/account" label="Account" />
-      <div>
-        <Typography variant="h4">Settings</Typography>
-
-        <Typography color="text.secondary">
-          Manage your Ledgerly application preferences.
-        </Typography>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Manage your Ledgerly application preferences."
+      />
 
       {showSuccess && (
         <Alert severity="success" onClose={() => setShowSuccess(false)}>

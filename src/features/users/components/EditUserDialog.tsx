@@ -35,6 +35,7 @@ import {
 } from "../../organizations/api/organizationApi";
 import type { RoleName } from "../../roles/types/role";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
+import { useAuth } from "../../auth/context/AuthContext";
 
 interface EditUserDialogProps {
   user: User | null;
@@ -43,6 +44,9 @@ interface EditUserDialogProps {
 }
 
 export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
+  const { user: currentUser } = useAuth();
+  // Admins cannot change their own role.
+  const isSelf = Boolean(user && user.id === currentUser?.id);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -170,7 +174,7 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
                 labelId="edit-user-role-label"
                 value={roles ? role : ""}
                 label="Role"
-                disabled={rolesLoading || rolesError || isUpdating}
+                disabled={rolesLoading || rolesError || isUpdating || isSelf}
                 onChange={(event) => setRole(event.target.value as RoleName)}
               >
                 {roles?.map((item) => (
@@ -179,6 +183,7 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
                   </MenuItem>
                 ))}
               </Select>
+              {isSelf && <FormHelperText>You can't change your own role.</FormHelperText>}
             </FormControl>
 
             <FormControl fullWidth>

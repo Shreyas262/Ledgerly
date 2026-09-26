@@ -1,6 +1,6 @@
 import { Stack, Typography } from "@mui/material";
 
-import type { MonthlySpending } from "../utils/calculateMonthlySpending";
+import type { DashboardSpendingPoint as MonthlySpending } from "../types/dashboard";
 import { Amount } from "../../../components/common/Amount";
 import { ChartCard } from "../../../components/common/ChartCard";
 

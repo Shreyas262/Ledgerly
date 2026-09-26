@@ -68,13 +68,20 @@ export async function resolveExpenseOwner(ownerId: string): Promise<ExpenseOwner
  * - Admin: any expense in the organization, including their own (§35.2), and
  *   the only reviewer of expenses submitted by Finance users.
  * Nobody except Admin reviews their own expense.
+ * Policy escalation (§22.3): an expense submitted above its policy's approval
+ * threshold routes one level up — team members' expenses to Finance for the
+ * department (or Admin), managers' expenses to Admin.
  * Returns a denial reason, or null when the principal may review.
  */
 export function getReviewDenialReason(
   principal: AuthenticatedPrincipal,
-  expense: Pick<Expense, "organizationId" | "employeeId" | "teamId" | "departmentId">,
+  expense: Pick<Expense, "organizationId" | "employeeId" | "teamId" | "departmentId" | "policyEvaluation">,
   owner: ExpenseOwner,
 ): string | null {
+  const escalated = expense.policyEvaluation?.details.escalated === true;
+  const threshold = expense.policyEvaluation?.details.approvalThreshold;
+  const aboveThreshold = `It is above the ${threshold !== undefined ? `₹${threshold.toLocaleString("en-IN")} ` : ""}policy approval threshold`;
+
   if (expense.organizationId !== principal.organizationId || owner.organizationId !== principal.organizationId) {
     return "The expense is outside your organization.";
   }
@@ -101,14 +108,22 @@ export function getReviewDenialReason(
     if (owner.roleName === "manager") {
       return "Expenses submitted by managers are reviewed by Finance.";
     }
+    if (escalated) {
+      return `${aboveThreshold}, so Finance or an administrator must review it.`;
+    }
     return owner.teamId === principal.teamId
       ? null
       : "You are not the authorized manager for this expense team.";
   }
 
   if (principal.role === "finance") {
-    if (owner.roleName !== "manager") {
-      return "Finance reviews expenses submitted by managers only.";
+    if (owner.roleName === "manager" && escalated) {
+      return `${aboveThreshold}, so an administrator must review it.`;
+    }
+    // Finance reviews managers' expenses, and team members' expenses escalated by policy.
+    const memberEscalated = escalated && owner.roleName !== "admin";
+    if (owner.roleName !== "manager" && !memberEscalated) {
+      return "Finance reviews expenses submitted by managers, and expenses above a policy approval threshold.";
     }
     return principal.authorizedDepartmentIds.includes(expense.departmentId)
       ? null

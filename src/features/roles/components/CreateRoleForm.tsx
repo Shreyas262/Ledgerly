@@ -98,6 +98,7 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
         type="submit"
         variant="contained"
         disabled={isLoading}
+        sx={{ alignSelf: "flex-end" }}
       >
         {isLoading ? "Creating..." : "Create Role"}
       </Button>

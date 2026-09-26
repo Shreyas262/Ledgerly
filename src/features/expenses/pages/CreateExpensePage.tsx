@@ -1,3 +1,4 @@
+import { ExpensePolicyPreview } from "../../policies/components/ExpensePolicyPreview";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useState, type FormEvent } from "react";
 import {
@@ -9,9 +10,7 @@ import {
   Select,
   Stack,
   TextField,
-  Typography,
 } from "@mui/material";
-import { ArrowBackOutlined } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useCreateExpenseMutation } from "../api/expenseApi";
 import { useGetActiveBudgetPeriodQuery } from "../../budgets/api/budgetsApi";
@@ -19,6 +18,8 @@ import { Alert } from "@mui/material";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { getApiErrorDetails } from "../../../services/api/apiErrors";
 import { EXPENSE_TYPES, EXPENSE_TYPE_LABELS, type ExpenseType } from "../types/expense";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
 interface ExpenseFormData {
   type: ExpenseType;
@@ -87,20 +88,9 @@ export function CreateExpensePage() {
 
   return (
     <Stack spacing={3}>
-      <Stack
-        direction={"row"}
-        sx={{ justifyContent: "flex-start", alignItems: "center" }}
-      >
-        <Button
-          variant="text"
-          startIcon={<ArrowBackOutlined />}
-          onClick={() => navigate(-1)}
-        >
-          Back to Expenses
-        </Button>
-      </Stack>
+      <BackLink to="/expenses" label="Expenses" />
 
-      <Typography variant="h4">Create Expense</Typography>
+      <PageHeader title="Create Expense" />
 
       {creationBlocked && (
         <Alert severity="warning">
@@ -196,6 +186,13 @@ export function CreateExpensePage() {
               },
               htmlInput: activePeriod ? { min: activePeriod.startDate, max: activePeriod.endDate } : undefined,
             }}
+          />
+
+          <ExpensePolicyPreview
+            type={formData.type}
+            amount={formData.amount}
+            expenseDate={formData.expenseDate}
+            description={formData.description}
           />
 
           <Stack

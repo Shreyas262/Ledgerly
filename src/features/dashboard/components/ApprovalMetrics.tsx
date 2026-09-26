@@ -1,6 +1,6 @@
 import { LinearProgress, Stack, Typography } from "@mui/material";
 
-import type { ApprovalMetrics as ApprovalMetricsData } from "../utils/calculateApprovalMetrics";
+import type { DashboardApprovalMetrics as ApprovalMetricsData } from "../types/dashboard";
 import { ChartCard } from "../../../components/common/ChartCard";
 
 interface ApprovalMetricsProps {

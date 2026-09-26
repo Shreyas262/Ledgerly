@@ -17,6 +17,7 @@ import { useAppDispatch } from "../../../store/hooks";
 import { useLogoutMutation } from "../../../features/auth/api/authApi";
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { baseApi } from "../../../services/api/baseApi";
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 
 interface TopbarProps {
   isMobile: boolean;
@@ -36,6 +37,7 @@ export function Topbar({
   const [logout, { isLoading }] = useLogoutMutation();
 
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const dispatch = useAppDispatch();
 
   const menuOpen = Boolean(anchorEl);
@@ -54,6 +56,9 @@ export function Topbar({
   };
 
   const handleLogout = async () => {
+    handleMenuClose();
+    if (!(await confirm({ title: "Sign out", message: "Sign out of Ledgerly?", confirmLabel: "Sign out" }))) return;
+
     try {
       await logout().unwrap();
     } finally {

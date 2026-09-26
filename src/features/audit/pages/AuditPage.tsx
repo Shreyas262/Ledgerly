@@ -1,6 +1,6 @@
 import { BackLink } from "../../../components/navigation/BackLink";
 import { useState } from "react";
-import { Alert, Pagination, Stack, Typography } from "@mui/material";
+import { Alert, Pagination, Stack } from "@mui/material";
 
 import { useGetAuditEventsQuery } from "../api/auditApi";
 import { AuditFilters } from "../components/AuditFilters";
@@ -8,6 +8,7 @@ import { AuditTable } from "../components/AuditTable";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import type { AuditAction, AuditEntityType } from "../types/audit";
+import { PageHeader } from "../../../components/common/PageHeader";
 
 function AuditPage() {
   const [action, setAction] = useState<AuditAction | "">("");
@@ -38,12 +39,10 @@ function AuditPage() {
   return (
     <Stack spacing={3}>
       <BackLink to="/admin" label="Administration" />
-      <div>
-        <Typography variant="h4">Audit Log</Typography>
-        <Typography color="text.secondary">
-          Append-only history of authorized business and authentication operations.
-        </Typography>
-      </div>
+      <PageHeader
+        title="Audit Log"
+        description="Append-only history of authorized business and authentication operations."
+      />
 
       <AuditFilters
         action={action}

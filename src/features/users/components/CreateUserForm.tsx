@@ -3,11 +3,7 @@ import { useState } from "react";
 import type { SyntheticEvent } from "react";
 
 import {
-  Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   FormControl,
   FormHelperText,
   InputLabel,
@@ -24,15 +20,17 @@ import { useCreateUserMutation } from "../api/usersApi";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useGetRolesQuery } from "../../../features/roles/api/rolesApi";
 
-import { permissionGroups } from "../../roles/constants/permissions";
+import { GroupedPermissions } from "../../roles/components/GroupedPermissions";
 import { useGetDepartmentsQuery, useGetTeamsQuery } from "../../organizations/api/organizationApi";
 
 interface CreateUserFormProps {
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 export function CreateUserForm({
   onSuccess,
+  onCancel,
 }: CreateUserFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -232,54 +230,7 @@ export function CreateUserForm({
           </Typography>
         </Stack>
 
-        {Object.entries(permissionGroups).map(
-          ([groupName, groupPermissions]) => {
-            const availablePermissions =
-              groupPermissions.filter((permission) =>
-                selectedPermissions.includes(permission),
-              );
-
-            if (!availablePermissions.length) {
-              return null;
-            }
-
-            return (
-              <Card
-                key={groupName}
-                variant="outlined"
-              >
-                <CardContent>
-                  <Stack spacing={1.5}>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{fontWeight: 700}}
-                    >
-                      {groupName}
-                    </Typography>
-
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 1,
-                      }}
-                    >
-                      {availablePermissions.map(
-                        (permission) => (
-                          <Chip
-                            key={permission}
-                            label={permission.split(".")[1]}
-                            size="small"
-                          />
-                        ),
-                      )}
-                    </Box>
-                  </Stack>
-                </CardContent>
-              </Card>
-            );
-          },
-        )}
+        <GroupedPermissions permissions={selectedPermissions} />
       </Stack>
 
       {/* Errors */}
@@ -291,19 +242,27 @@ export function CreateUserForm({
 
       {createUserError && <ApiFeedback error={createUserError} />}
 
-      {/* Submit */}
-      <Button
-        type="submit"
-        variant="contained"
-        disabled={
-          isCreating ||
-          rolesLoading ||
-          rolesError ||
-          !selectedRole
-        }
-      >
-        {isCreating ? "Creating..." : "Create User"}
-      </Button>
+      {/* Actions */}
+      <Stack direction="row" spacing={1.5} sx={{ justifyContent: "flex-end" }}>
+        {onCancel && (
+          <Button variant="outlined" onClick={onCancel} disabled={isCreating} sx={{ minWidth: 120 }}>
+            Cancel
+          </Button>
+        )}
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={
+            isCreating ||
+            rolesLoading ||
+            rolesError ||
+            !selectedRole
+          }
+          sx={{ minWidth: 140 }}
+        >
+          {isCreating ? "Creating..." : "Create User"}
+        </Button>
+      </Stack>
     </Stack>
   );
 }

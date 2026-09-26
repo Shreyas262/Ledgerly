@@ -11,6 +11,30 @@ import { buildAuthenticatedPrincipal, resolveAuthenticatedPrincipal } from "../s
 import { runAuditedTransaction } from "../services/auditService";
 import { hashPassword, isPasswordHash, verifyPassword } from "../services/passwordService";
 
+interface NamedRecord {
+  id: string;
+  name: string;
+}
+
+/** Display names for the user's organization context, so clients never show raw IDs. */
+async function resolveContextNames(user: MockUser, authorizedDepartmentIds: string[] = []) {
+  const [organization, departments, team] = await Promise.all([
+    getRecord<NamedRecord>("organizations", user.organizationId),
+    listRecords<NamedRecord>("departments"),
+    user.teamId ? getRecord<NamedRecord>("teams", user.teamId) : Promise.resolve(undefined),
+  ]);
+  const departmentName = (id: string) => departments.find((department) => department.id === id)?.name;
+
+  return {
+    organizationName: organization?.name,
+    departmentName: departmentName(user.departmentId),
+    teamName: team?.name,
+    authorizedDepartmentNames: authorizedDepartmentIds
+      .map(departmentName)
+      .filter((name): name is string => Boolean(name)),
+  };
+}
+
 interface MockUser {
   id: string;
   organizationId: string;
@@ -201,6 +225,7 @@ export const authHandlers = [
         role: principal.role,
         permissions: principal.effectivePermissions,
         authorizedDepartmentIds: principal.authorizedDepartmentIds,
+        ...(await resolveContextNames(user, principal.authorizedDepartmentIds)),
       },
     });
   }),

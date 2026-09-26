@@ -1,4 +1,5 @@
 import type { ExpenseStatus, ExpenseType } from "../../expenses/types/expense";
+import type { PolicyFindingRule } from "../../policies/types/policy";
 
 export type AnalyticsScope = "TEAM" | "DEPARTMENT" | "ORGANIZATION";
 
@@ -58,6 +59,21 @@ export interface AnalyticsBudgetComparison {
   rows: Array<{ id: string; name: string; allocated: number; spent: number }>;
 }
 
+/** Policy outcomes for expenses in the view (§26.8). */
+export interface AnalyticsPolicyCompliance {
+  /** Submitted expenses checked against a policy. */
+  checked: number;
+  /** Submitted above a policy approval threshold. */
+  escalated: number;
+  /** Submitted with at least one policy warning. */
+  withWarnings: number;
+  /** Submission attempts blocked by policy. */
+  blockedAttempts: number;
+  byRule: Array<{ rule: PolicyFindingRule; warnings: number; blocked: number }>;
+  /** Blocked attempts per department; empty for the team scope. */
+  blockedByDepartment: Array<{ dimensionId: string; dimensionName: string; count: number }>;
+}
+
 export interface AnalyticsSummary {
   scope: AnalyticsScope;
   filters: AnalyticsQuery;
@@ -75,4 +91,5 @@ export interface AnalyticsSummary {
   statusCounts: Array<{ status: ExpenseStatus; count: number }>;
   filterOptions: AnalyticsFilterOptions;
   budgetComparison: AnalyticsBudgetComparison | null;
+  policyCompliance: AnalyticsPolicyCompliance;
 }

@@ -22,12 +22,6 @@ export function buildSession(user: SessionUser): Session {
   };
 }
 
-export async function createSession(user: SessionUser): Promise<Session> {
-  const session = buildSession(user);
-  await saveRecord("sessions", session);
-  return session;
-}
-
 export async function resolveSession(sessionId: string): Promise<Session | null> {
   const session = await getRecord<Session>("sessions", sessionId);
   if (!session) return null;
@@ -73,10 +67,4 @@ export async function revokeSessionInTransaction(
   return revokedSession;
 }
 
-export async function saveSessionInTransaction(
-  transaction: IDBTransaction,
-  session: Session,
-): Promise<Session> {
-  transaction.objectStore("sessions").put(session);
-  return session;
-}
+

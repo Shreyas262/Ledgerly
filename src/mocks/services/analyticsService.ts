@@ -1,11 +1,13 @@
 import type {
   AnalyticsInterval,
   AnalyticsKpis,
+  AnalyticsPolicyCompliance,
   AnalyticsQuery,
   AnalyticsScope,
   AnalyticsSummary,
 } from "../../features/analytics/types/analytics";
 import type { ExpenseStatus, ExpenseType } from "../../features/expenses/types/expense";
+import type { PolicyEvaluation, PolicyFindingRule } from "../../features/policies/types/policy";
 
 export interface AnalyticsExpenseRecord {
   amount: number;
@@ -17,6 +19,70 @@ export interface AnalyticsExpenseRecord {
   projectId?: string;
   submittedAt?: string;
   reimbursement?: { processedAt?: string };
+  id?: string;
+  policyEvaluation?: PolicyEvaluation;
+}
+
+/** A stored policy check, used to count blocked submission attempts. */
+export interface AnalyticsPolicySnapshot {
+  expenseId: string;
+  result: string;
+  details?: PolicyEvaluation["details"];
+  /** Minimal fields of the (possibly draft) expense, resolved within the viewer's scope. */
+  expense: Pick<AnalyticsExpenseRecord, "amount" | "type" | "status" | "expenseDate" | "departmentId" | "teamId">;
+}
+
+const BLOCKED_RESULTS = new Set(["VIOLATES_POLICY", "MISSING_INFORMATION"]);
+
+/**
+ * §26.8: policy outcomes. Warnings and escalation come from submitted
+ * expenses; blocked attempts from stored checks whose submission was refused
+ * (counted in aggregate only — draft contents are never exposed).
+ */
+function buildPolicyCompliance(
+  submitted: AnalyticsExpenseRecord[],
+  query: AnalyticsQuery,
+  snapshots: AnalyticsPolicySnapshot[],
+  names: Map<string, string> | undefined,
+  hasDimensions: boolean,
+): AnalyticsPolicyCompliance {
+  const byRule = new Map<PolicyFindingRule, { warnings: number; blocked: number }>();
+  const bump = (rule: PolicyFindingRule, key: "warnings" | "blocked") => {
+    const entry = byRule.get(rule) ?? { warnings: 0, blocked: 0 };
+    entry[key] += 1;
+    byRule.set(rule, entry);
+  };
+  const checked = submitted.filter((expense) => expense.policyEvaluation?.policyId);
+  for (const expense of submitted) {
+    for (const finding of expense.policyEvaluation?.details.findings ?? []) {
+      if (finding.enforcement === "WARN") bump(finding.rule, "warnings");
+    }
+  }
+  const blocked = snapshots.filter((snapshot) => BLOCKED_RESULTS.has(snapshot.result) && matchesFilters(snapshot.expense, query));
+  const blockedByDepartment = new Map<string, number>();
+  for (const snapshot of blocked) {
+    const findings = snapshot.details?.findings;
+    if (findings?.length) {
+      for (const finding of findings) if (finding.enforcement === "BLOCK") bump(finding.rule, "blocked");
+    } else if (snapshot.details?.missingInformation?.length) {
+      bump("receipt", "blocked");
+    }
+    addTotal(blockedByDepartment, snapshot.expense.departmentId, 1);
+  }
+  return {
+    checked: checked.length,
+    escalated: submitted.filter((expense) => expense.policyEvaluation?.details.escalated).length,
+    withWarnings: submitted.filter((expense) => expense.policyEvaluation?.details.warnings?.length).length,
+    blockedAttempts: blocked.length,
+    byRule: Array.from(byRule.entries())
+      .map(([rule, counts]) => ({ rule, ...counts }))
+      .sort((first, second) => second.warnings + second.blocked - (first.warnings + first.blocked)),
+    blockedByDepartment: hasDimensions
+      ? Array.from(blockedByDepartment.entries())
+          .map(([dimensionId, count]) => ({ dimensionId, dimensionName: names?.get(dimensionId) ?? dimensionId, count }))
+          .sort((first, second) => second.count - first.count)
+      : [],
+  };
 }
 
 const MAX_RANGE_DAYS = 366;
@@ -26,15 +92,18 @@ function isValidDate(value: string): boolean {
   return !Number.isNaN(new Date(`${value}T00:00:00.000Z`).getTime());
 }
 
+// Default ranges use the local calendar date, matching how expense dates are entered.
+const localDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
 function dateOnlyDaysAgo(days: number): string {
   const date = new Date();
-  date.setUTCHours(0, 0, 0, 0);
-  date.setUTCDate(date.getUTCDate() - days);
-  return date.toISOString().slice(0, 10);
+  date.setDate(date.getDate() - days);
+  return localDate(date);
 }
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localDate(new Date());
 }
 
 export function normalizeAnalyticsRange(query: AnalyticsQuery): AnalyticsQuery {
@@ -193,6 +262,7 @@ export function buildAnalyticsSummary(
   rawQuery: AnalyticsQuery,
   scope: AnalyticsScope,
   names?: AnalyticsDimensionNames,
+  policySnapshots: AnalyticsPolicySnapshot[] = [],
 ): Omit<AnalyticsSummary, "filterOptions" | "budgetComparison"> {
   const query = normalizeAnalyticsRange(rawQuery);
   const from = query.from!;
@@ -261,5 +331,12 @@ export function buildAnalyticsSummary(
       status,
       count: expenses.filter((expense) => expense.status === status).length,
     })),
+    policyCompliance: buildPolicyCompliance(
+      expenses.filter((expense) => expense.status !== "cancelled"),
+      query,
+      policySnapshots,
+      names?.departments,
+      hasDimensions,
+    ),
   };
 }

@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
   Stack,
-  Typography,
 } from "@mui/material";
 
 import PolicyForm from "../components/PolicyForm";
@@ -15,6 +14,8 @@ import type { CreateExpensePolicyRequest } from "../types/policy";
 import {LoadingState} from "../../../components/common/LoadingState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import {ErrorState} from "../../../components/common/ErrorState";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
 export function EditPolicyPage() {
   const { id } = useParams();
@@ -54,9 +55,9 @@ export function EditPolicyPage() {
   const initialValues: CreateExpensePolicyRequest = {
     name: policy.name,
     description: policy.description,
-    approvalLimit: policy.approvalLimit,
     expenseType: policy.expenseType,
-    rule: policy.rule,
+    departmentIds: policy.departmentIds ?? [],
+    rules: policy.rules,
     status: policy.status,
   };
 
@@ -78,15 +79,11 @@ export function EditPolicyPage() {
 
   return (
     <Stack spacing={3}>
-      <div>
-        <Typography variant="h4">
-          Edit Policy
-        </Typography>
-
-        <Typography color="text.secondary">
-          Update the expense approval policy.
-        </Typography>
-      </div>
+      <BackLink to={`/policies/${id}`} label="Policy" />
+      <PageHeader
+        title="Edit Policy"
+        description="New checks use the updated rules; expenses already submitted keep the result they were checked with."
+      />
 
       {updateError && <ApiFeedback error={updateError} />}
 

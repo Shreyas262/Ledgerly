@@ -15,7 +15,3 @@ export interface Document {
 }
 
 export type DocumentStatus = "UPLOADED" | "ACTIVE" | "REMOVED";
-
-export interface DocumentListItem extends Omit<Document, "storageKey"> {
-  downloadUrl: string;
-}

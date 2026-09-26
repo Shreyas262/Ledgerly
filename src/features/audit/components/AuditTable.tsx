@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import type { AuditEvent } from "../types/audit";
-import { humanize } from "../../../utils/format";
+import { formatDateTime, humanize } from "../../../utils/format";
 
 interface AuditTableProps {
   auditEvents: AuditEvent[];
@@ -28,7 +28,7 @@ export function AuditTable({ auditEvents }: AuditTableProps) {
           <TableRow>
             <TableCell>Action</TableCell>
             <TableCell>Entity</TableCell>
-            <TableCell>Actor ID</TableCell>
+            <TableCell>Performed by</TableCell>
             <TableCell>State</TableCell>
             <TableCell>Description</TableCell>
             <TableCell>Timestamp</TableCell>
@@ -38,27 +38,37 @@ export function AuditTable({ auditEvents }: AuditTableProps) {
         <TableBody>
           {auditEvents.map((event) => (
             <TableRow key={event.id} hover>
-              <TableCell><Chip label={humanize(event.action)} size="small" /></TableCell>
               <TableCell>
-                <Typography variant="body2">{humanize(event.entityType)}</Typography>
+                <Chip label={humanize(event.action)} size="small" />
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2">
+                  {humanize(event.entityType)}
+                </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {event.entityId}
                 </Typography>
               </TableCell>
-              <TableCell>{event.actorId}</TableCell>
+              <TableCell>{event.actorName ?? "Unknown user"}</TableCell>
               <TableCell>
                 {event.previousState || event.newState ? (
                   <Typography variant="body2">
                     {event.previousState ?? "—"} → {event.newState ?? "—"}
                   </Typography>
-                ) : "—"}
+                ) : (
+                  "—"
+                )}
               </TableCell>
               <TableCell>{event.description ?? "—"}</TableCell>
               <TableCell sx={{ whiteSpace: "nowrap" }}>
-                {new Date(event.timestamp).toLocaleString("en-IN")}
+                {formatDateTime(event.timestamp)}
               </TableCell>
               <TableCell align="right">
-                <Button size="small" onClick={() => navigate(`/audit/${event.id}`)}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => navigate(`/audit/${event.id}`)}
+                >
                   View
                 </Button>
               </TableCell>

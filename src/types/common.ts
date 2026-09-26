@@ -7,5 +7,3 @@ export interface ResourceTimestamps {
   createdAt: ISODateString;
   updatedAt: ISODateString;
 }
-
-export type ResourceScope = "OWN" | "TEAM" | "ORGANIZATION";

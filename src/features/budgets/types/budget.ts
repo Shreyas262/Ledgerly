@@ -137,5 +137,3 @@ export interface ActiveBudgetPeriod {
 }
 
 export type Budget = OrganizationBudget;
-export type CreateBudgetRequest = CreateOrganizationBudgetRequest;
-export type UpdateBudgetRequest = UpdateOrganizationBudgetRequest;

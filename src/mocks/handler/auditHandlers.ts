@@ -12,6 +12,17 @@ import { authorizationError } from "../services/authorizationHttp";
 import { apiError } from "../services/apiError";
 import { getRecord, listRecords, listRecordsByIndex } from "../services/mockDataService";
 
+/** Adds the acting user's display name so clients never show raw actor IDs. */
+async function withActorNames(events: AuditEvent[]): Promise<AuditEvent[]> {
+  const users = await listRecords<{ id: string; name: string }>("users");
+  const names = new Map(users.map((user) => [user.id, user.name]));
+
+  return events.map((event) => {
+    const actorName = names.get(event.actorId);
+    return actorName ? { ...event, actorName } : event;
+  });
+}
+
 export const auditHandlers = [
   // §24: User Activity is a current-user projection of authoritative audit
   // events. It requires authentication only and never exposes other actors.
@@ -68,7 +79,9 @@ export const auditHandlers = [
         new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime(),
     );
 
-    return HttpResponse.json(applyCollectionQueryResult(records, parseCollectionQuery(request)));
+    const page = applyCollectionQueryResult(records, parseCollectionQuery(request));
+
+    return HttpResponse.json({ ...page, data: await withActorNames(page.data) });
   }),
 
   http.get("/api/audit-logs/:id", async ({ params, request }) => {
@@ -94,6 +107,8 @@ export const auditHandlers = [
       return authorizationError(authorization);
     }
 
-    return HttpResponse.json({ data: auditEvent });
+    const [namedEvent] = await withActorNames([auditEvent]);
+
+    return HttpResponse.json({ data: namedEvent });
   }),
 ];

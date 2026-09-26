@@ -19,6 +19,7 @@ import { ExpenseCard } from "../../expenses/components/ExpenseCard";
 import type { Expense } from "../../expenses/types/expense";
 import { ReimbursementQueue } from "../../reimbursements/components/ReimbursementQueue";
 import { usePermissions } from "../../auth/hooks/usePermissions";
+import { PageHeader } from "../../../components/common/PageHeader";
 
 type ApprovalTab = "review" | "reimbursement";
 
@@ -45,7 +46,7 @@ export function ApprovalsPage() {
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h4">Approvals</Typography>
+      <PageHeader title="Approvals" />
 
       {canReview && canReimburse && (
         <Tabs

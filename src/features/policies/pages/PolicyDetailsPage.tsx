@@ -6,17 +6,44 @@ import {
   CardContent,
   Chip,
   Divider,
+  Grid,
   Stack,
   Typography,
 } from "@mui/material";
+import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
 
 import {
   useGetPolicyByIdQuery,
 } from "../api/policiesApi";
+import { useGetDepartmentsQuery } from "../../organizations/api/organizationApi";
+import { useGetAuditEventsQuery } from "../../audit/api/auditApi";
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
-import { Amount } from "../../../components/common/Amount";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
+import { PolicyRuleList } from "../components/PolicyRuleList";
+import { EXPENSE_TYPE_LABELS } from "../../expenses/types/expense";
+import { humanize } from "../../../utils/format";
+
+const STATUS_COLOR = { active: "success", draft: "warning", inactive: "default" } as const;
+const FIELD_LABELS: Record<string, string> = {
+  name: "name",
+  description: "description",
+  expenseType: "expense type",
+  departmentIds: "departments",
+  rules: "rules",
+  status: "status",
+};
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="body2" color="text.secondary">{label}</Typography>
+      <Typography component="div">{children}</Typography>
+    </Stack>
+  );
+}
 
 export function PolicyDetailsPage() {
   const { id } = useParams();
@@ -32,6 +59,12 @@ export function PolicyDetailsPage() {
   } = useGetPolicyByIdQuery(id ?? "", {
     skip: !id,
   });
+  const { data: departments = [] } = useGetDepartmentsQuery();
+  const canReadAudit = can("audit.read");
+  const { data: history } = useGetAuditEventsQuery(
+    { filter: { entityId: id ?? "" }, sort: "timestamp", sortOrder: "desc", pageSize: 20 },
+    { skip: !id || !canReadAudit },
+  );
 
   if (isLoading) {
     return <LoadingState />;
@@ -46,145 +79,90 @@ export function PolicyDetailsPage() {
   }
 
   const canUpdate = can("policies.update");
+  const departmentName = (departmentId: string) => departments.find((department) => department.id === departmentId)?.name ?? departmentId;
 
   return (
     <Stack spacing={3}>
-      <Stack
-        direction="row"
-        spacing={2}
-        sx={{
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div>
-          <Typography variant="h4">
-            {policy.name}
-          </Typography>
-
-          <Typography color="text.secondary">
-            Expense policy details
-          </Typography>
-        </div>
-
-        {canUpdate && (
-          <Button
-            variant="contained"
-            onClick={() => navigate(`/policies/${policy.id}/edit`)}
-          >
+      <BackLink to="/policies" label="Policies" />
+      <PageHeader
+        title={policy.name}
+        description={policy.description || "Expense policy"}
+        actions={canUpdate && (
+          <Button variant="contained" onClick={() => navigate(`/policies/${policy.id}/edit`)} sx={{ minWidth: 140 }}>
             Edit Policy
           </Button>
         )}
-      </Stack>
+      />
 
-      <Card>
-        <CardContent>
-          <Stack spacing={3}>
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Description
-              </Typography>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent>
+              <Stack spacing={2}>
+                <Typography variant="h6">Applies to</Typography>
+                <Field label="Status">
+                  <Chip size="small" label={humanize(policy.status)} color={STATUS_COLOR[policy.status]} />
+                </Field>
+                <Field label="Expense type">
+                  {policy.expenseType ? EXPENSE_TYPE_LABELS[policy.expenseType] : "All expense types"}
+                </Field>
+                <Field label="Scope">
+                  {policy.departmentIds?.length ? policy.departmentIds.map(departmentName).join(", ") : "Whole organization"}
+                </Field>
+                <Divider />
+                <Field label="Created">{new Date(policy.createdAt).toLocaleString("en-IN")}</Field>
+                <Field label="Last updated">{new Date(policy.updatedAt).toLocaleString("en-IN")}</Field>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Card sx={{ height: "100%" }}>
+            <CardContent>
+              <Stack spacing={2}>
+                <Typography variant="h6">Rules</Typography>
+                <PolicyRuleList rules={policy.rules} />
+                <Alert severity="info" icon={<ReceiptLongOutlinedIcon />}>
+                  A receipt is always required before submission.
+                </Alert>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-              <Typography>
-                {policy.description || "No description provided."}
-              </Typography>
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Expense Type
-              </Typography>
-              <Typography>
-                {policy.expenseType
-                  ? policy.expenseType.replaceAll("_", " ")
-                  : "All Expense Types"}
-              </Typography>
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Approval Limit
-              </Typography>
-
-              <Typography variant="h5">
-                <Amount value={policy.approvalLimit} />
-              </Typography>
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Policy Rules
-              </Typography>
-              <Typography variant="body2">
-                Approval threshold: <Amount value={policy.rule?.approvalThreshold ?? policy.approvalLimit} />
-              </Typography>
-              {policy.rule?.maximumAmount !== undefined && (
-                <Typography variant="body2">
-                  Maximum amount: <Amount value={policy.rule.maximumAmount} />
-                </Typography>
+      {canReadAudit && (
+        <Card>
+          <CardContent>
+            <Stack spacing={2}>
+              <Typography variant="h6">Change history</Typography>
+              {!history?.data.length ? (
+                <Typography variant="body2" color="text.secondary">No changes recorded.</Typography>
+              ) : (
+                <Stack divider={<Divider flexItem />} spacing={1.5}>
+                  {history.data.map((event) => {
+                    const changes = (event.metadata?.changes as Array<{ field: string }> | undefined) ?? [];
+                    return (
+                      <Stack key={event.id} direction={{ xs: "column", sm: "row" }} spacing={{ xs: 0.5, sm: 2 }} sx={{ justifyContent: "space-between" }}>
+                        <Stack spacing={0.25}>
+                          <Typography variant="body2">
+                            {humanize(event.action.replace(/^POLICY_/, ""))}
+                            {changes.length > 0 && ` · changed ${changes.map((change) => FIELD_LABELS[change.field] ?? change.field).join(", ")}`}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">{event.actorName ?? event.actorId}</Typography>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(event.timestamp).toLocaleString("en-IN")}
+                        </Typography>
+                      </Stack>
+                    );
+                  })}
+                </Stack>
               )}
-              {policy.rule?.requiresReceipt && (
-                <Typography variant="body2">Receipt required</Typography>
-              )}
             </Stack>
-
-            <Divider />
-
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Status
-              </Typography>
-
-              <div>
-                <Chip
-                  label={
-                    policy.status === "active"
-                      ? "Active"
-                      : policy.status === "draft"
-                        ? "Draft"
-                        : "Inactive"
-                  }
-                  color={
-                    policy.status === "active"
-                      ? "success"
-                      : policy.status === "draft"
-                        ? "warning"
-                        : "default"
-                  }
-                />
-              </div>
-            </Stack>
-
-            <Divider />
-
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Created
-              </Typography>
-
-              <Typography>
-                {new Date(policy.createdAt).toLocaleString("en-IN")}
-              </Typography>
-            </Stack>
-
-            <Stack spacing={1}>
-              <Typography variant="subtitle2" color="text.secondary">
-                Last Updated
-              </Typography>
-
-              <Typography>
-                {new Date(policy.updatedAt).toLocaleString("en-IN")}
-              </Typography>
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </Stack>
   );
 }

@@ -54,13 +54,6 @@ export function getExpenseTransition(
   );
 }
 
-export function canTransitionExpense(
-  transition: ExpenseTransition,
-  currentState: ExpenseStatus,
-): boolean {
-  return getExpenseTransition(transition, currentState) !== null;
-}
-
 export function transitionExpenseState(
   transition: ExpenseTransition,
   currentState: ExpenseStatus,
@@ -74,12 +67,4 @@ export function transitionExpenseState(
   }
 
   return definition.to;
-}
-
-export function getExpenseTransitions(
-  currentState: ExpenseStatus,
-): ExpenseTransitionDefinition[] {
-  return transitions.filter(
-    (definition) => definition.from === currentState,
-  );
 }

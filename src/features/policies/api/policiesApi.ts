@@ -3,10 +3,14 @@ import { buildCollectionQuery } from "../../../services/api/queryParams";
 import { baseApi } from "../../../services/api/baseApi";
 
 import type {
+  ApplicablePolicy,
   CreateExpensePolicyRequest,
   ExpensePolicy,
+  PolicyPreviewRequest,
+  PolicyPreviewResult,
   UpdateExpensePolicyRequest,
 } from "../types/policy";
+import type { ExpenseType } from "../../expenses/types/expense";
 
 export const policiesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -62,6 +66,7 @@ export const policiesApi = baseApi.injectEndpoints({
           type: "Policies",
           id: "LIST",
         },
+        { type: "Policies", id: "APPLICABLE" },
       ],
     }),
 
@@ -83,7 +88,22 @@ export const policiesApi = baseApi.injectEndpoints({
           type: "Policies",
           id: "LIST",
         },
+        { type: "Policies", id: "APPLICABLE" },
       ],
+    }),
+
+    /** The policy that applies to the caller for an expense type (§21.12). */
+    getApplicablePolicy: builder.query<
+      ApplicablePolicy,
+      { type: ExpenseType; date?: string; excludeExpenseId?: string }
+    >({
+      query: (params) => ({ url: "/policies/applicable", params }),
+      providesTags: [{ type: "Policies", id: "APPLICABLE" }],
+    }),
+
+    /** Simulates the applicable policy for a hypothetical expense (§21.13). */
+    previewPolicy: builder.mutation<PolicyPreviewResult, PolicyPreviewRequest>({
+      query: (body) => ({ url: "/policies/preview", method: "POST", body }),
     }),
   }),
 });
@@ -93,4 +113,6 @@ export const {
   useGetPolicyByIdQuery,
   useCreatePolicyMutation,
   useUpdatePolicyMutation,
+  useGetApplicablePolicyQuery,
+  usePreviewPolicyMutation,
 } = policiesApi;

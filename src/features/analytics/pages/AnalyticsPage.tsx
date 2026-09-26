@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Alert, Button, Chip, Grid, Stack, Typography } from "@mui/material";
+import { Alert, Button, Chip, Grid, Stack } from "@mui/material";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { LoadingState } from "../../../components/common/LoadingState";
@@ -16,6 +16,7 @@ import { ExpenseTypeDonut } from "../components/ExpenseTypeDonut";
 import { DimensionBarChart } from "../components/DimensionBarChart";
 import { BudgetComparisonChart } from "../components/BudgetComparisonChart";
 import { WorkflowOverview } from "../components/WorkflowOverview";
+import { PolicyComplianceCard } from "../components/PolicyComplianceCard";
 import {
   DATE_PRESETS,
   formatDate,
@@ -26,6 +27,7 @@ import {
   type AnalyticsFilterState,
 } from "../utils/analyticsFilters";
 import { exportAnalyticsCsv } from "../utils/exportAnalyticsCsv";
+import { PageHeader } from "../../../components/common/PageHeader";
 
 const EMPTY_OPTIONS = { departments: [], teams: [] };
 
@@ -69,27 +71,23 @@ export function AnalyticsPage() {
     <Stack spacing={3}>
       {isFetching && <RefreshingState />}
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "flex-end" } }}>
-        <Stack spacing={0.5}>
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
-            <Typography variant="h4">Spending Analytics</Typography>
-            {summary && <Chip size="small" color="primary" variant="outlined" label={scopeLabel(scope, summary)} />}
-          </Stack>
-          <Typography color="text.secondary">
-            {summary
-              ? `${presetLabel === "Custom" ? "" : `${presetLabel} · `}${formatDate(summary.filters.from!)} – ${formatDate(summary.filters.to!)}. Spending counts reimbursed expenses only.`
-              : "Analyze reimbursed spending and approval activity."}
-          </Typography>
-        </Stack>
-        <Button
-          variant="outlined"
-          startIcon={<FileDownloadOutlinedIcon />}
-          disabled={!summary || Boolean(rangeError)}
-          onClick={() => summary && exportAnalyticsCsv(summary, describeFilters(filters, summary))}
-        >
-          Export CSV
-        </Button>
-      </Stack>
+      <PageHeader
+        title="Spending Analytics"
+        chips={summary && <Chip size="small" color="primary" variant="outlined" label={scopeLabel(scope, summary)} />}
+        description={summary
+          ? `${presetLabel === "Custom" ? "" : `${presetLabel} · `}${formatDate(summary.filters.from!)} – ${formatDate(summary.filters.to!)}. Spending counts reimbursed expenses only.`
+          : "Analyze reimbursed spending and approval activity."}
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<FileDownloadOutlinedIcon />}
+            disabled={!summary || Boolean(rangeError)}
+            onClick={() => summary && exportAnalyticsCsv(summary, describeFilters(filters, summary))}
+          >
+            Export CSV
+          </Button>
+        }
+      />
 
       <AnalyticsFilterBar
         filters={filters}
@@ -191,6 +189,10 @@ export function AnalyticsPage() {
                 </Grid>
               </>
             )}
+
+            <Grid size={12}>
+              <PolicyComplianceCard compliance={summary.policyCompliance} />
+            </Grid>
           </Grid>
         </>
       )}

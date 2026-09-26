@@ -13,8 +13,12 @@ import {
   DialogTitle,
   DialogContent,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
+import { GroupedPermissions } from "../components/GroupedPermissions";
 
 import {
   useDeleteRoleMutation,
@@ -32,6 +36,7 @@ import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 
 import type { ID } from "../../../types/common";
 import type { Role, RoleName } from "../types/role";
+import { PageHeader } from "../../../components/common/PageHeader";
 
 function formatRoleName(roleName: RoleName): string {
   return roleName.charAt(0).toUpperCase() + roleName.slice(1);
@@ -97,22 +102,14 @@ export function RolesPage() {
       <Stack spacing={3}>
         <BackLink to="/admin" label="Administration" />
         {deleteError && <ApiFeedback error={deleteError} />}
-        <Stack
-          direction="row"
-          sx={{
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="h4">
-            Roles & Permissions
-          </Typography>
-          {can("roles.create") && (
+        <PageHeader
+          title="Roles & Permissions"
+          actions={can("roles.create") && (
             <Button variant="contained" onClick={() => setCreateDialogOpen(true)}>
               Create Role
             </Button>
           )}
-        </Stack>
+        />
 
 
         <Stack spacing={2}>
@@ -121,76 +118,50 @@ export function RolesPage() {
               <CardContent>
                 <Stack spacing={2}>
                   <Stack
-                    direction={{
-                      xs: "column",
-                      sm: "row",
-                    }}
-                    sx={{
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                    }}
+                    direction={{ xs: "column", sm: "row" }}
                     spacing={2}
+                    sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}
                   >
-                    <Typography variant="subtitle1">
-                      {formatRoleName(role.name)}
-                    </Typography>
+                    <Stack spacing={0.5}>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }} useFlexGap>
+                        <Typography variant="subtitle1">{formatRoleName(role.name)}</Typography>
+                        {role.isSystemRole && <Chip label="System" size="small" variant="outlined" />}
+                      </Stack>
+                      <Typography variant="body2" color="text.secondary">
+                        {role.permissions.length} {role.permissions.length === 1 ? "permission" : "permissions"}
+                        {role.userCount !== undefined && ` · ${role.userCount} ${role.userCount === 1 ? "user" : "users"}`}
+                      </Typography>
+                    </Stack>
 
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                    >
+                    <Stack direction="row" spacing={1.5}>
                       {can("roles.update") && (
-                        <Button
-                          variant="outlined"
-                          onClick={() =>
-                            setEditingRole(role)
-                          }
-                        >
+                        <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => setEditingRole(role)} sx={{ minWidth: 120 }}>
                           Edit
                         </Button>
                       )}
 
                       {can("roles.delete") && (
-                        <Button
-                          color="error"
-                          variant="outlined"
-                          disabled={
-                            isDeleting &&
-                            deletingRoleId === role.id
-                          }
-                          onClick={() =>
-                            handleDelete(role.id)
-                          }
-                        >
-                          {isDeleting &&
-                          deletingRoleId === role.id
-                            ? "Deleting..."
-                            : "Delete"}
-                        </Button>
+                        <Tooltip title={role.userCount ? "Roles assigned to users cannot be deleted." : ""}>
+                          <span>
+                            <Button
+                              color="error"
+                              variant="outlined"
+                              startIcon={<DeleteOutlinedIcon />}
+                              disabled={Boolean(role.userCount) || (isDeleting && deletingRoleId === role.id)}
+                              onClick={() => handleDelete(role.id)}
+                              sx={{ minWidth: 120 }}
+                            >
+                              {isDeleting && deletingRoleId === role.id ? "Deleting..." : "Delete"}
+                            </Button>
+                          </span>
+                        </Tooltip>
                       )}
                     </Stack>
                   </Stack>
 
                   <Divider />
 
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      flexWrap: "wrap",
-                    }}
-                    useFlexGap
-                  >
-                    {role.permissions.map(
-                      (permission) => (
-                        <Chip
-                          key={permission}
-                          label={permission}
-                          size="small"
-                        />
-                      ),
-                    )}
-                  </Stack>
+                  <GroupedPermissions permissions={role.permissions} />
                 </Stack>
               </CardContent>
             </Card>

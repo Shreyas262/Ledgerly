@@ -51,7 +51,13 @@ export const roleHandlers = [
       return authorizationError(result);
     }
 
-    return HttpResponse.json(applyCollectionQuery(result.records, parseCollectionQuery(request)));
+    // Number of current (non-removed) users holding each role.
+    const users = await listRecords<{ roleId: string; status?: string }>("users");
+    const withCounts = result.records.map((role) => ({
+      ...role,
+      userCount: users.filter((user) => user.roleId === role.id && user.status !== "deleted").length,
+    }));
+    return HttpResponse.json(applyCollectionQuery(withCounts, parseCollectionQuery(request)));
   }),
 
   http.post(`${API_BASE_URL}/roles`, async ({ request }) => {
@@ -213,8 +219,9 @@ export const roleHandlers = [
       return authorizationError(authorization);
     }
 
-    const assignedUsers = await listRecords<{ roleId: string; organizationId: string }>("users");
-    if (assignedUsers.some((user) => user.organizationId === existingRole.organizationId && user.roleId === existingRole.id)) {
+    // Removed users keep their role name on record, so only current users block deletion.
+    const assignedUsers = await listRecords<{ roleId: string; organizationId: string; status?: string }>("users");
+    if (assignedUsers.some((user) => user.organizationId === existingRole.organizationId && user.roleId === existingRole.id && user.status !== "deleted")) {
       return apiError(409, "Role cannot be deleted while it is assigned to users.");
     }
 

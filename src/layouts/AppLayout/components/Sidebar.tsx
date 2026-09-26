@@ -127,7 +127,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <Box sx={{ width: SIDEBAR_WIDTH }}>
+    // maxWidth keeps content inside the permanent drawer's border (no 1px horizontal overflow).
+    <Box sx={{ width: SIDEBAR_WIDTH, maxWidth: "100%" }}>
       <Box sx={{ px: 3, py: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           Ledgerly

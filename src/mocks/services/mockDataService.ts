@@ -152,10 +152,3 @@ export async function saveRecord<T extends object>(
   return indexedDbRepository.save(storeName, record);
 }
 
-export async function deleteRecord(
-  storeName: MockStoreName,
-  id: string,
-): Promise<void> {
-  await initializeMockDatabase();
-  return indexedDbRepository.delete(storeName, id);
-}

@@ -4,6 +4,8 @@ export interface AuditEvent {
   id: EntityId;
   organizationId: EntityId;
   actorId: EntityId;
+  /** Display name of the actor, resolved by the API. */
+  actorName?: string;
   action: AuditAction;
   entityType: AuditEntityType;
   entityId: EntityId;
