@@ -86,7 +86,7 @@ export const authHandlers = [
       );
     }
 
-    if (user.status === "inactive") {
+    if (user.status !== "active") {
       return apiError(403, "This user account is inactive.", "ACCOUNT_INACTIVE");
     }
 

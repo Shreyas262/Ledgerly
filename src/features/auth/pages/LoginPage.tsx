@@ -40,7 +40,7 @@ export function LoginPage() {
     <AuthLayout>
       <Stack component="form" onSubmit={handleSubmit} spacing={3} noValidate>
         <Stack spacing={0.5}>
-          <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+          <Typography variant="h5" component="h1">
             Sign in
           </Typography>
 

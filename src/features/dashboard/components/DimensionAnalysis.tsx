@@ -7,6 +7,7 @@ import {
 
 import type { DimensionSpending } from "../utils/calculateDimensionSpending";
 import { ChartState } from "./ChartState";
+import { Amount } from "../../../components/common/Amount";
 
 interface DimensionAnalysisProps {
   title: string;
@@ -76,10 +77,7 @@ export function DimensionAnalysis({
                         variant="body2"
                         color="text.secondary"
                       >
-                        ₹
-                        {item.amount.toLocaleString(
-                          "en-IN",
-                        )}
+                        <Amount value={item.amount} />
                       </Typography>
                     </Stack>
 
@@ -87,7 +85,7 @@ export function DimensionAnalysis({
                       sx={{
                         height: 8,
                         borderRadius: 1,
-                        bgcolor: "action.hover",
+                        bgcolor: "chart.track",
                         overflow: "hidden",
                       }}
                     >
@@ -95,7 +93,7 @@ export function DimensionAnalysis({
                         sx={{
                           width: `${percentage}%`,
                           height: "100%",
-                          bgcolor: "primary.main",
+                          bgcolor: "chart.series",
                         }}
                       />
                     </Stack>

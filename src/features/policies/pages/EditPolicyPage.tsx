@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -18,6 +19,7 @@ import {ErrorState} from "../../../components/common/ErrorState";
 export function EditPolicyPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   const {
     data: policy,
@@ -61,6 +63,7 @@ export function EditPolicyPage() {
   const handleSubmit = async (
     values: CreateExpensePolicyRequest,
   ) => {
+    if (!(await confirm({ title: "Save policy", message: `Save changes to "${values.name}"? New evaluations use the updated rules.`, confirmLabel: "Save" }))) return;
     try {
       const updatedPolicy = await updatePolicy({
         id: policy.id,

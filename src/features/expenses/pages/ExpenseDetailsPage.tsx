@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import {
   Alert,
   Button,
@@ -43,6 +44,7 @@ import { isForbiddenError } from "../../auth/utils/authErrors";
 import { EXPENSE_TYPE_LABELS, type ExpenseStatus } from "../types/expense";
 import { isStatus } from "../../../services/api/apiErrors";
 import { DocumentPanel } from "../../documents/components/DocumentPanel";
+import { Amount } from "../../../components/common/Amount";
 
 const reimbursementStatusLabels: Record<string, string> = {
   PENDING: "Pending",
@@ -75,6 +77,7 @@ export function ExpenseDetailsPage({
   const navigate = useNavigate();
   const { can } = usePermissions();
   const { user } = useAuth();
+  const confirm = useConfirm();
 
   const { id } = useParams<{
     id: string;
@@ -102,6 +105,7 @@ export function ExpenseDetailsPage({
   ] = useStartExpenseReviewMutation();
 
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [budgetWarnings, setBudgetWarnings] = useState<string[]>([]);
 
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
@@ -162,14 +166,17 @@ export function ExpenseDetailsPage({
   const policyResult = expense.policyEvaluation;
 
   const handleSubmitExpense = async () => {
+    if (!(await confirm({ title: "Submit expense", message: `Submit "${expense.title}" for approval? You won't be able to edit it while it is being reviewed.`, confirmLabel: "Submit" }))) return;
     try {
-      await submitExpense(expense.id).unwrap();
+      const submitted = await submitExpense(expense.id).unwrap();
+      setBudgetWarnings(submitted.budgetWarnings ?? []);
     } catch {
-      // Error is exposed through isSubmitError.
+      // Error is exposed through submitError.
     }
   };
 
   const handleStartReview = async () => {
+    if (!(await confirm({ title: "Start review", message: `Start reviewing "${expense.title}"?`, confirmLabel: "Start review" }))) return;
     try {
       await startExpenseReview(expense.id).unwrap();
     } catch {
@@ -178,6 +185,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleApproveExpense = async () => {
+    if (!(await confirm({ title: "Approve expense", message: `Approve "${expense.title}" for ${expense.currency} ${expense.amount.toLocaleString("en-IN")}? It moves to Finance for reimbursement.`, confirmLabel: "Approve" }))) return;
     try {
       await approveExpense(expense.id).unwrap();
     } catch {
@@ -206,6 +214,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleRestoreExpense = async () => {
+    if (!(await confirm({ title: "Restore to draft", message: "Move this rejected expense back to draft so you can fix and resubmit it?", confirmLabel: "Restore" }))) return;
     try {
       await restoreExpense(expense.id).unwrap();
     } catch {
@@ -214,6 +223,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleStartReimbursement = async () => {
+    if (!(await confirm({ title: "Start reimbursement", message: `Start reimbursing "${expense.title}"?`, confirmLabel: "Start" }))) return;
     try {
       await startReimbursement(expense.id).unwrap();
     } catch {
@@ -222,6 +232,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleReimburseExpense = async () => {
+    if (!(await confirm({ title: "Mark as reimbursed", message: `Confirm that ${expense.currency} ${expense.amount.toLocaleString("en-IN")} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark reimbursed" }))) return;
     try {
       await reimburseExpense(expense.id).unwrap();
     } catch {
@@ -327,6 +338,15 @@ export function ExpenseDetailsPage({
       </Button>
 
       {mutationError && <ApiFeedback error={mutationError} />}
+
+      {budgetWarnings.length > 0 && (
+        <Alert severity="warning" onClose={() => setBudgetWarnings([])}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>Submitted — budget notice</Typography>
+          {budgetWarnings.map((warning) => (
+            <Typography key={warning} variant="body2">{warning}</Typography>
+          ))}
+        </Alert>
+      )}
 
       {needsReceipt && (
         <Alert severity="info">
@@ -545,7 +565,7 @@ export function ExpenseDetailsPage({
               </Typography>
 
               <Typography variant="h6">
-                {expense.currency} {expense.amount.toLocaleString()}
+                <Amount value={expense.amount} currency={expense.currency} />
               </Typography>
             </Stack>
 
@@ -564,6 +584,7 @@ export function ExpenseDetailsPage({
 
               <Typography variant="body1">
                 {expense.employeeName ?? expense.employeeId}
+                {expense.employeeRemoved ? " (removed)" : ""}
               </Typography>
             </Stack>
 
@@ -611,7 +632,7 @@ export function ExpenseDetailsPage({
             <>
               <Divider />
               <Stack spacing={1}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                <Typography variant="subtitle1">
                   Reimbursement
                 </Typography>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={4}>
@@ -631,8 +652,10 @@ export function ExpenseDetailsPage({
                         Amount
                       </Typography>
                       <Typography variant="body1">
-                        {expense.currency}{" "}
-                        {expense.reimbursement.amount.toLocaleString("en-IN")}
+                        <Amount
+                          value={expense.reimbursement.amount}
+                          currency={expense.currency}
+                        />
                       </Typography>
                     </Stack>
                   )}

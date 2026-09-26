@@ -19,6 +19,8 @@ interface ConfirmDialogProps {
   loading?: boolean;
   /** When set, a non-empty reason is required and passed to onConfirm. */
   reasonLabel?: string;
+  /** Red confirm button for destructive actions (default). */
+  destructive?: boolean;
   onConfirm: (reason?: string) => void;
   onCancel: () => void;
 }
@@ -32,6 +34,7 @@ export function ConfirmDialog({
   loadingLabel = "Deleting...",
   loading = false,
   reasonLabel,
+  destructive = true,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -91,7 +94,7 @@ export function ConfirmDialog({
 
         <Button
           onClick={handleConfirm}
-          color="error"
+          color={destructive ? "error" : "primary"}
           variant="contained"
           disabled={loading || isReasonMissing}
         >

@@ -1,5 +1,5 @@
 const DB_NAME = "ledgerly";
-export const DB_VERSION = 16;
+export const DB_VERSION = 19;
 
 export const MOCK_STORES = [
   "users",
@@ -13,6 +13,7 @@ export const MOCK_STORES = [
   "budgets",
   "departmentBudgetAllocations",
   "expenseTypeBudgets",
+  "teamBudgetAllocations",
   "documents",
   "auditEvents",
   "sessions",
@@ -340,6 +341,34 @@ const migrations: Record<number, Migration> = {
     // Finance users create and submit their own expenses.
     grantWorkflowPermissions(transaction);
   },
+
+  17: (_database, transaction) => {
+    // Admin administers organization structure, users and roles.
+    grantWorkflowPermissions(transaction);
+  },
+
+  18: (database, transaction) => {
+    // Team-level budget allocations; expense-type budgets now sit under teams.
+    createStoreIfMissing(database, "teamBudgetAllocations");
+    const teamAllocations = transaction.objectStore("teamBudgetAllocations");
+    for (const index of ["organizationBudgetId", "departmentAllocationId", "teamId"]) {
+      if (!teamAllocations.indexNames.contains(index)) {
+        teamAllocations.createIndex(index, index, { unique: false });
+      }
+    }
+    const expenseTypeBudgets = transaction.objectStore("expenseTypeBudgets");
+    if (!expenseTypeBudgets.indexNames.contains("teamAllocationId")) {
+      expenseTypeBudgets.createIndex("teamAllocationId", "teamAllocationId", { unique: false });
+    }
+    // Managers see their team's budget.
+    grantWorkflowPermissions(transaction);
+  },
+
+  19: () => {
+    // Intentionally empty. This version once carried a one-time reset of
+    // expense data; it has been removed so no data is ever reset again. The
+    // version is kept because databases already at 19 cannot downgrade.
+  },
 };
 
 function grantWorkflowPermissions(transaction: IDBTransaction): void {
@@ -360,8 +389,27 @@ function grantWorkflowPermissions(transaction: IDBTransaction): void {
       "expenses.update",
       "expenses.submit",
     ],
-    manager: ["expenses.approve", "expenses.reject"],
-    admin: ["expenses.approve", "expenses.reject", "reimbursements.manage"],
+    manager: ["expenses.approve", "expenses.reject", "budgets.read"],
+    admin: [
+      "expenses.approve",
+      "expenses.reject",
+      "reimbursements.manage",
+      "organization.read",
+      "organization.manage",
+      "departments.read",
+      "departments.manage",
+      "teams.read",
+      "teams.manage",
+      "users.read",
+      "users.create",
+      "users.update",
+      "users.delete",
+      "roles.read",
+      "roles.create",
+      "roles.update",
+      "roles.delete",
+      "audit.read",
+    ],
   };
   const request = roles.getAll();
   request.onsuccess = () => {

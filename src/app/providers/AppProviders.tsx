@@ -3,6 +3,7 @@ import { CssBaseline, ThemeProvider } from "@mui/material";
 import { Provider } from "react-redux";
 
 import { AuthProvider } from "../../features/auth/context/AuthContext";
+import { ConfirmProvider } from "../../components/common/ConfirmProvider";
 import { store } from "../../store/store";
 import { createAppTheme } from "../../theme/theme";
 import { getSettings } from "../../features/settings/utils/settingsStorage";
@@ -89,7 +90,9 @@ export function AppProviders({ children }: PropsWithChildren) {
       <ThemeProvider theme={theme}>
         <CssBaseline />
 
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </AuthProvider>
       </ThemeProvider>
     </Provider>
   );

@@ -12,6 +12,7 @@ import { KpiCard } from "../../dashboard/components/KpiCard";
 import { useGetAnalyticsSummaryQuery } from "../api/analyticsApi";
 import type { AnalyticsQuery } from "../types/analytics";
 import { EXPENSE_TYPES, EXPENSE_TYPE_LABELS, type ExpenseType } from "../../expenses/types/expense";
+import { formatCurrency } from "../../../utils/currency";
 
 interface DateRange {
   startDate: string;
@@ -79,13 +80,13 @@ export function AnalyticsPage() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <KpiCard label="Total Spend" value={`₹${summary.kpis.totalSpend.toLocaleString("en-IN")}`} description="Reimbursed expenses in your scope" />
+          <KpiCard label="Total Spend" value={formatCurrency(summary.kpis.totalSpend)} description="Reimbursed expenses in your scope" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <KpiCard label="Average Expense" value={`₹${summary.kpis.averageExpense.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`} description="Average reimbursed expense" />
+          <KpiCard label="Average Expense" value={formatCurrency(summary.kpis.averageExpense, { maximumFractionDigits: 0 })} description="Average reimbursed expense" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <KpiCard label="Largest Expense" value={`₹${summary.kpis.largestExpense.toLocaleString("en-IN")}`} description="Highest individual expense" />
+          <KpiCard label="Largest Expense" value={formatCurrency(summary.kpis.largestExpense)} description="Highest individual expense" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KpiCard label="Reimbursed Expenses" value={summary.kpis.expenseCount} description="Completed and reimbursed" />

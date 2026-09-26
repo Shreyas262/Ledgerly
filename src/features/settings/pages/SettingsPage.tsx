@@ -1,3 +1,4 @@
+import { BackLink } from "../../../components/navigation/BackLink";
 import { useState } from "react";
 import {
   Alert,
@@ -50,6 +51,7 @@ export function SettingsPage() {
 
   return (
     <Stack spacing={3}>
+      <BackLink to="/account" label="Account" />
       <div>
         <Typography variant="h4">Settings</Typography>
 

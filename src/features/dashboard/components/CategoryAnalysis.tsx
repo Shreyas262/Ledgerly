@@ -8,6 +8,7 @@ import {
 import type { DashboardExpenseTypeSpending } from "../types/dashboard";
 import { EXPENSE_TYPE_LABELS } from "../../expenses/types/expense";
 import { ChartState } from "./ChartState";
+import { Amount } from "../../../components/common/Amount";
 
 interface CategoryAnalysisProps {
   data: DashboardExpenseTypeSpending[];
@@ -71,7 +72,7 @@ export function CategoryAnalysis({
                         variant="body2"
                         color="text.secondary"
                       >
-                        ₹{item.amount.toLocaleString("en-IN")}
+                        <Amount value={item.amount} />
                       </Typography>
                     </Stack>
 
@@ -79,7 +80,7 @@ export function CategoryAnalysis({
                       sx={{
                         height: 8,
                         borderRadius: 1,
-                        bgcolor: "action.hover",
+                        bgcolor: "chart.track",
                         overflow: "hidden",
                       }}
                     >
@@ -87,7 +88,7 @@ export function CategoryAnalysis({
                         sx={{
                           width: `${percentage}%`,
                           height: "100%",
-                          bgcolor: "primary.main",
+                          bgcolor: "chart.series",
                         }}
                       />
                     </Stack>

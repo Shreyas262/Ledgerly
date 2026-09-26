@@ -1,3 +1,4 @@
+import { BackLink } from "../../../components/navigation/BackLink";
 import { useState } from "react";
 import { Alert, Pagination, Stack, Typography } from "@mui/material";
 
@@ -36,6 +37,7 @@ function AuditPage() {
 
   return (
     <Stack spacing={3}>
+      <BackLink to="/admin" label="Administration" />
       <div>
         <Typography variant="h4">Audit Log</Typography>
         <Typography color="text.secondary">

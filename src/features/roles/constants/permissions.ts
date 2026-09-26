@@ -67,3 +67,11 @@ export const permissionGroups: Record<string, Permission[]> = {
 };
 
 export const allPermissions: Permission[] = Object.values(permissionGroups).flat();
+/** Permissions that each open at least one Administration page. */
+export const administrationPermissions: Permission[] = [
+  "users.read",
+  "roles.read",
+  "organization.manage",
+  "policies.read",
+  "audit.read",
+];

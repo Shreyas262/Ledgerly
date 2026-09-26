@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState } from "react";
 import type { SyntheticEvent } from "react";
@@ -45,6 +46,7 @@ export function EditRoleForm({
     updateRole,
     { isLoading, isError, error },
   ] = useUpdateRoleMutation();
+  const confirm = useConfirm();
 
   function handlePermissionChange(
     permission: Permission,
@@ -65,6 +67,7 @@ export function EditRoleForm({
     event: SyntheticEvent,
   ) {
     event.preventDefault();
+    if (!(await confirm({ title: "Save role", message: `Save changes to the role "${name}"? Users with this role get the updated permissions immediately.`, confirmLabel: "Save" }))) return;
 
     try {
       await updateRole({

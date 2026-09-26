@@ -5,6 +5,7 @@ import { lazy } from "react";
 import { AppLayout } from "../layouts/AppLayout/AppLayout";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { PermissionRoute } from "./PermissionRoute";
+import { administrationPermissions } from "../features/roles/constants/permissions";
 
 const DashboardPage = lazy(() =>
   import("../features/dashboard/pages/DashboardPage").then((module) => ({
@@ -113,6 +114,11 @@ const AuditPage = lazy(() => import("../features/audit/pages/AuditPage"));
 const AuditDetailsPage = lazy(() =>
   import("../features/audit/pages/AuditDetailsPage").then((module) => ({
     default: module.default,
+  })),
+);
+const AccountPage = lazy(() =>
+  import("../features/userProfile/pages/AccountPage").then((module) => ({
+    default: module.AccountPage,
   })),
 );
 const ActivityPage = lazy(() =>
@@ -293,7 +299,7 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            element: <PermissionRoute permission="organization.read" />,
+            element: <PermissionRoute permission={administrationPermissions} />,
             children: [
               {
                 path: "/admin",
@@ -399,6 +405,17 @@ export const router = createBrowserRouter([
             ],
           },
           {
+            path: "/account",
+            element: <AccountPage />,
+            handle: {
+              title: "Account",
+            },
+          },
+          {
+            path: "/security",
+            element: <Navigate to="/activity" replace />,
+          },
+          {
             path: "/settings",
             element: <SettingsPage />,
             handle: {
@@ -406,7 +423,7 @@ export const router = createBrowserRouter([
             },
           },
           {
-            path: "/security",
+            path: "/activity",
             element: <ActivityPage />,
             handle: {
               title: "Activity",

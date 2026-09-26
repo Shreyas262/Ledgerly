@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState, type SyntheticEvent } from "react";
 import {
@@ -22,6 +23,7 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
   const [permissions, setPermissions] = useState<Permission[]>([]);
 
   const [createRole, { isLoading, isError, error }] = useCreateRoleMutation();
+  const confirm = useConfirm();
 
   function handlePermissionChange(permission: Permission) {
     setPermissions((currentPermissions) => {
@@ -40,14 +42,19 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
 
   async function handleSubmit(event: SyntheticEvent) {
     event.preventDefault();
+    if (!(await confirm({ title: "Create role", message: `Create the role "${name}" with ${permissions.length} permission(s)?`, confirmLabel: "Create" }))) return;
 
-    await createRole({
-      name,
-      permissions,
-    }).unwrap();
-    setName("employee");
-    setPermissions([]);
-    onSuccess?.();
+    try {
+      await createRole({
+        name,
+        permissions,
+      }).unwrap();
+      setName("employee");
+      setPermissions([]);
+      onSuccess?.();
+    } catch {
+      // Error is exposed through the mutation state.
+    }
   }
 
   return (

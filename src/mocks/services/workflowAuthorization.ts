@@ -79,12 +79,14 @@ export function getReviewDenialReason(
     return "The expense is outside your organization.";
   }
 
-  if (owner.teamId !== expense.teamId) {
-    return "The expense team does not match the owner's team.";
-  }
-
+  // Admin may review any expense, including those of users who have since
+  // moved teams.
   if (principal.role === "admin") {
     return null;
+  }
+
+  if (owner.teamId !== expense.teamId) {
+    return "The owner has moved teams since submitting; an administrator must review this expense.";
   }
 
   if (expense.employeeId === principal.userId) {

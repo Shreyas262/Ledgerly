@@ -25,6 +25,32 @@ import {
   persistExpenseSubmissionEvaluation,
 } from "../services/policyService";
 import { getRecord } from "../services/mockDataService";
+import { findActiveBudgetForDate, getBudgetWarnings, getExpenseCreationEligibility, todayDate } from "../services/budgetService";
+
+/**
+ * Expenses may be created only while an active budget covers today, and must
+ * be dated within that budget's period so they count against it.
+ */
+async function checkBudgetPeriod(
+  principal: { organizationId: string; departmentId: string; teamId: string },
+  expenseDate: string,
+  requireCreationEligibility: boolean,
+) {
+  let budget;
+  if (requireCreationEligibility) {
+    const eligibility = await getExpenseCreationEligibility(principal);
+    if (!eligibility.allowed) return apiError(422, eligibility.reason!, eligibility.code);
+    budget = eligibility.budget!;
+  } else {
+    budget = await findActiveBudgetForDate(principal.organizationId, todayDate());
+    if (!budget) return null;
+  }
+  if (expenseDate < budget.startDate || expenseDate > budget.endDate) {
+    const message = `The expense date must fall within the active budget period (${budget.startDate} to ${budget.endDate}).`;
+    return apiError(422, message, "OUTSIDE_BUDGET_PERIOD", { fieldErrors: { expenseDate: message } });
+  }
+  return null;
+}
 
 interface MockExpense {
   id: string;
@@ -248,6 +274,9 @@ export const expensesHandlers = [
       return apiError(422, "Expense validation failed.", "VALIDATION_ERROR", { fieldErrors: body.fieldErrors });
     }
 
+    const periodError = await checkBudgetPeriod(authorization.principal, body.expenseDate, true);
+    if (periodError) return periodError;
+
     const now = new Date().toISOString();
 
     const newExpense: MockExpense = {
@@ -320,6 +349,9 @@ export const expensesHandlers = [
     if ("fieldErrors" in body) {
       return apiError(422, "Expense validation failed.", "VALIDATION_ERROR", { fieldErrors: body.fieldErrors });
     }
+
+    const periodError = await checkBudgetPeriod(existingExpense, body.expenseDate, false);
+    if (periodError) return periodError;
 
     const updatedExpense: MockExpense = {
       ...existingExpense,
@@ -433,7 +465,9 @@ export const expensesHandlers = [
       );
     }
 
-    return HttpResponse.json(evaluatedExpense);
+    // Non-blocking: tell the submitter if this expense would exceed a budget.
+    const budgetWarnings = await getBudgetWarnings(evaluatedExpense as unknown as Parameters<typeof getBudgetWarnings>[0]);
+    return HttpResponse.json({ ...evaluatedExpense, ...(budgetWarnings.length ? { budgetWarnings } : {}) });
   }),
 
   http.post("/api/expenses/:id/restore", async ({ params, request }) => {

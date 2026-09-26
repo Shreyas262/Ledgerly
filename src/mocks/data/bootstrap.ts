@@ -102,6 +102,7 @@ export const bootstrapRoles = [
       "expenses.approve",
       "expenses.reject",
       "analytics.read",
+      "budgets.read",
       "documents.read",
       "documents.create",
       "documents.update",

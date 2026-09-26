@@ -1,3 +1,5 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { BackLink } from "../../../components/navigation/BackLink";
 import {
   Box,
   Button,
@@ -14,7 +16,7 @@ import {
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined"
+import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
 import { useState } from "react";
 
 import { useGetUsersQuery } from "../api/usersApi";
@@ -26,7 +28,10 @@ import { CreateUserForm } from "../components/CreateUserForm";
 import { EditUserDialog } from "../components/EditUserDialog";
 import { ConfirmDialog } from "../../../components/common/ConfirmDialog";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
-import { useDeleteUserMutation, useUpdateUserStatusMutation } from "../api/usersApi";
+import {
+  useDeleteUserMutation,
+  useUpdateUserStatusMutation,
+} from "../api/usersApi";
 import type { User } from "../types/user";
 
 export function UsersPage() {
@@ -46,30 +51,30 @@ export function UsersPage() {
     error: usersError,
     refetch,
   } = useGetUsersQuery({ page, pageSize: 25 });
-  
+
   const [updateUserStatus] = useUpdateUserStatusMutation();
+  const confirm = useConfirm();
 
-  const [
-    deleteUser,
-    {
-      isLoading: isDeleting,
-      error: deleteError,
-    },
-  ] = useDeleteUserMutation();
+  const [deleteUser, { isLoading: isDeleting, error: deleteError }] =
+    useDeleteUserMutation();
 
-  if (!can("users.read")) return <ErrorState title="Access denied" message="You do not have permission to view users." />
+  if (!can("users.read"))
+    return (
+      <ErrorState
+        title="Access denied"
+        message="You do not have permission to view users."
+      />
+    );
 
-  if (isLoading) return <LoadingState />
+  if (isLoading) return <LoadingState />;
 
-  if (isError) return <ErrorState error={usersError} onRetry={refetch} />
-  
+  if (isError) return <ErrorState error={usersError} onRetry={refetch} />;
+
   async function handleDelete() {
-    if (!deletingUser) return
+    if (!deletingUser) return;
 
     try {
-      await deleteUser(
-        deletingUser.id,
-      ).unwrap();
+      await deleteUser(deletingUser.id).unwrap();
 
       setDeletingUser(null);
     } catch {
@@ -81,33 +86,30 @@ export function UsersPage() {
   return (
     <>
       <Stack spacing={3}>
+        <BackLink to="/admin" label="Administration" />
         {/* Page header */}
         <Stack
           sx={{
             display: "flex",
             flexDirection: {
-            xs: "column",
-            sm: "row",
+              xs: "column",
+              sm: "row",
             },
             justifyContent: "space-between",
             alignItems: {
-            xs: "flex-start",
-            sm: "center",
+              xs: "flex-start",
+              sm: "center",
             },
             gap: 2, // Equivalent to spacing={2} (16px)
-        }}
+          }}
         >
-          <Typography variant="h4">
-            Users
-          </Typography>
+          <Typography variant="h4">Users</Typography>
 
           {can("users.create") && (
             <Button
               variant="contained"
               startIcon={<AddOutlinedIcon />}
-              onClick={() =>
-                setCreateDialogOpen(true)
-              }
+              onClick={() => setCreateDialogOpen(true)}
             >
               Create User
             </Button>
@@ -128,41 +130,42 @@ export function UsersPage() {
                       sx={{
                         display: "flex",
                         flexDirection: {
-                        xs: "column",
-                        sm: "row",
+                          xs: "column",
+                          sm: "row",
                         },
                         justifyContent: "space-between",
                         alignItems: {
-                        xs: "flex-start",
-                        sm: "center",
+                          xs: "flex-start",
+                          sm: "center",
                         },
                         gap: 2, // Equivalent to spacing={2} (16px)
-                    }}
+                      }}
                     >
                       <Stack spacing={0.5}>
-                        <Typography variant="h6">
-                          {user.name}
-                        </Typography>
+                        <Typography variant="h6">{user.name}</Typography>
 
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                        >
+                        <Typography variant="body2" color="text.secondary">
                           {user.email}
                         </Typography>
                       </Stack>
 
                       <Stack direction="row" spacing={1}>
-                        <Chip label={user.status === "inactive" ? "Inactive" : "Active"} color={user.status === "inactive" ? "default" : "success"} size="small" />
                         <Chip
-                        label={
-                          user.role
-                            .charAt(0)
-                            .toUpperCase() +
-                          user.role.slice(1)
-                        }
-                        variant="outlined"
-                      />
+                          label={
+                            user.status === "inactive" ? "Inactive" : "Active"
+                          }
+                          color={
+                            user.status === "inactive" ? "default" : "success"
+                          }
+                          size="small"
+                        />
+                        <Chip
+                          label={
+                            user.role.charAt(0).toUpperCase() +
+                            user.role.slice(1)
+                          }
+                          variant="outlined"
+                        />
                       </Stack>
                     </Stack>
 
@@ -170,67 +173,77 @@ export function UsersPage() {
                     <Stack
                       direction="row"
                       spacing={1}
-                      sx={{flexWrap: "wrap"}}
+                      sx={{ flexWrap: "wrap" }}
                       useFlexGap
                     >
-                      {user.permissions.map(
-                        (permission) => (
-                          <Chip
-                            key={permission}
-                            label={permission}
-                            size="small"
-                          />
-                        ),
-                      )}
+                      {user.permissions.map((permission) => (
+                        <Chip
+                          key={permission}
+                          label={permission}
+                          size="small"
+                        />
+                      ))}
                     </Stack>
 
                     {/* Actions */}
                     {can("users.update") && (
                       <Stack
                         direction="row"
-                        sx={{justifyContent: "flex-end"}}
+                        sx={{ justifyContent: "flex-end" }}
                       >
                         <Button
                           variant="outlined"
-                          startIcon={
-                            <EditOutlinedIcon />
-                          }
-                          onClick={() =>
-                            setEditingUser(user)
-                          }
+                          startIcon={<EditOutlinedIcon />}
+                          onClick={() => setEditingUser(user)}
                         >
                           Edit
                         </Button>
                       </Stack>
                     )}
                     {can("users.update") && (
-                      <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
+                      <Stack
+                        direction="row"
+                        sx={{ justifyContent: "flex-end" }}
+                      >
                         <Button
-                          variant="text"
-                          onClick={() => updateUserStatus({ id: user.id, status: user.status === "inactive" ? "active" : "inactive" })}
+                          variant="outlined"
+                          onClick={() =>
+                            confirm({
+                              title: user.status === "inactive" ? "Activate user" : "Deactivate user",
+                              message: user.status === "inactive"
+                                ? `Allow ${user.name} to sign in again?`
+                                : `${user.name} will no longer be able to sign in. Continue?`,
+                              confirmLabel: user.status === "inactive" ? "Activate" : "Deactivate",
+                              destructive: user.status !== "inactive",
+                            }).then((ok) => { if (ok) void updateUserStatus({
+                              id: user.id,
+                              status:
+                                user.status === "inactive"
+                                  ? "active"
+                                  : "inactive",
+                            }); })
+                          }
                         >
-                          {user.status === "inactive" ? "Activate" : "Deactivate"}
+                          {user.status === "inactive"
+                            ? "Activate"
+                            : "Deactivate"}
                         </Button>
                       </Stack>
                     )}
                     {can("users.delete") && (
-                    <Stack
+                      <Stack
                         direction="row"
-                        sx={{justifyContent: "flex-end"}}
-                    >
+                        sx={{ justifyContent: "flex-end" }}
+                      >
                         <Button
                           variant="outlined"
                           color="error"
-                          startIcon={
-                            <DeleteOutlinedIcon />
-                          }
-                          onClick={() =>
-                            setDeletingUser(user)
-                          }
+                          startIcon={<DeleteOutlinedIcon />}
+                          onClick={() => setDeletingUser(user)}
                         >
                           Delete
                         </Button>
-                    </Stack>
+                      </Stack>
                     )}
                   </Stack>
                 </CardContent>
@@ -254,22 +267,14 @@ export function UsersPage() {
       {/* Create User Dialog */}
       <Dialog
         open={createDialogOpen}
-        onClose={() =>
-          setCreateDialogOpen(false)
-        }
+        onClose={() => setCreateDialogOpen(false)}
         fullWidth
         maxWidth="md"
       >
-        <DialogTitle>
-          Create User
-        </DialogTitle>
+        <DialogTitle>Create User</DialogTitle>
 
         <DialogContent dividers>
-          <CreateUserForm
-            onSuccess={() =>
-              setCreateDialogOpen(false)
-            }
-          />
+          <CreateUserForm onSuccess={() => setCreateDialogOpen(false)} />
         </DialogContent>
       </Dialog>
 
@@ -277,27 +282,23 @@ export function UsersPage() {
       <EditUserDialog
         user={editingUser}
         open={Boolean(editingUser)}
-        onClose={() =>
-          setEditingUser(null)
-        }
+        onClose={() => setEditingUser(null)}
       />
-      
+
       {/* Delete User */}
       <ConfirmDialog
         open={Boolean(deletingUser)}
         title="Delete User?"
         message={
           deletingUser
-            ? `Are you sure you want to delete ${deletingUser.name}? This action cannot be undone.`
+            ? `Delete ${deletingUser.name}? They lose access and are removed from their team and department. Their expense history is kept; drafts are cancelled and submitted expenses continue through approval and reimbursement.`
             : ""
         }
         confirmLabel="Delete"
         cancelLabel="Cancel"
         loading={isDeleting}
         onConfirm={handleDelete}
-        onCancel={() =>
-          setDeletingUser(null)
-        }
+        onCancel={() => setDeletingUser(null)}
       />
       {deleteError && (
         <Box sx={{ mt: 2 }}>

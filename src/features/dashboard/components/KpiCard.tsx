@@ -27,7 +27,7 @@ export function KpiCard({
             {label}
           </Typography>
 
-          <Typography variant="h4">
+          <Typography variant="kpi">
             {value}
           </Typography>
 

@@ -2,11 +2,13 @@ import type { CollectionQuery } from "../../../types/api";
 import { buildCollectionQuery } from "../../../services/api/queryParams";
 import { baseApi } from "../../../services/api/baseApi";
 import type {
+  ActiveBudgetPeriod,
   OrganizationBudgetView,
   CreateOrganizationBudgetRequest,
   UpdateOrganizationBudgetRequest,
   UpsertDepartmentAllocationRequest,
   UpsertExpenseTypeBudgetRequest,
+  UpsertTeamAllocationRequest,
 } from "../types/budget";
 
 export const budgetsApi = baseApi.injectEndpoints({
@@ -44,6 +46,7 @@ export const budgetsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: "Budgets", id },
         { type: "Budgets", id: "LIST" },
+        { type: "Budgets", id: "ACTIVE_PERIOD" },
       ],
     }),
     activateBudget: builder.mutation<OrganizationBudgetView, string>({
@@ -51,6 +54,7 @@ export const budgetsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: "Budgets", id },
         { type: "Budgets", id: "LIST" },
+        { type: "Budgets", id: "ACTIVE_PERIOD" },
       ],
     }),
     closeBudget: builder.mutation<OrganizationBudgetView, string>({
@@ -58,7 +62,29 @@ export const budgetsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: "Budgets", id },
         { type: "Budgets", id: "LIST" },
+        { type: "Budgets", id: "ACTIVE_PERIOD" },
       ],
+    }),
+    reopenBudget: builder.mutation<OrganizationBudgetView, string>({
+      query: (id) => ({ url: `/budgets/${id}/reopen`, method: "POST" }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: "Budgets", id },
+        { type: "Budgets", id: "LIST" },
+        { type: "Budgets", id: "ACTIVE_PERIOD" },
+      ],
+    }),
+    rolloverBudget: builder.mutation<OrganizationBudgetView, { id: string; name: string; startDate: string; endDate: string }>({
+      query: ({ id, ...body }) => ({ url: `/budgets/${id}/rollover`, method: "POST", body }),
+      invalidatesTags: [{ type: "Budgets", id: "LIST" }],
+    }),
+    getActiveBudgetPeriod: builder.query<ActiveBudgetPeriod, void>({
+      query: () => "/budgets/active-period",
+      transformResponse: (response: {
+        data: ActiveBudgetPeriod["period"];
+        canCreateExpense: boolean;
+        reason: string | null;
+      }) => ({ period: response.data, canCreateExpense: response.canCreateExpense, reason: response.reason }),
+      providesTags: [{ type: "Budgets", id: "ACTIVE_PERIOD" }],
     }),
     upsertDepartmentAllocation: builder.mutation<
       OrganizationBudgetView,
@@ -72,6 +98,22 @@ export const budgetsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { organizationBudgetId }) => [
         { type: "Budgets", id: organizationBudgetId },
         { type: "Budgets", id: "LIST" },
+        { type: "Budgets", id: "ACTIVE_PERIOD" },
+      ],
+    }),
+    upsertTeamAllocation: builder.mutation<
+      OrganizationBudgetView,
+      UpsertTeamAllocationRequest
+    >({
+      query: ({ organizationBudgetId, ...body }) => ({
+        url: `/budgets/${organizationBudgetId}/teams`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { organizationBudgetId }) => [
+        { type: "Budgets", id: organizationBudgetId },
+        { type: "Budgets", id: "LIST" },
+        { type: "Budgets", id: "ACTIVE_PERIOD" },
       ],
     }),
     upsertExpenseTypeBudget: builder.mutation<
@@ -86,6 +128,7 @@ export const budgetsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { organizationBudgetId }) => [
         { type: "Budgets", id: organizationBudgetId },
         { type: "Budgets", id: "LIST" },
+        { type: "Budgets", id: "ACTIVE_PERIOD" },
       ],
     }),
   }),
@@ -100,4 +143,8 @@ export const {
   useCloseBudgetMutation,
   useUpsertDepartmentAllocationMutation,
   useUpsertExpenseTypeBudgetMutation,
+  useUpsertTeamAllocationMutation,
+  useReopenBudgetMutation,
+  useRolloverBudgetMutation,
+  useGetActiveBudgetPeriodQuery,
 } = budgetsApi;

@@ -1,3 +1,5 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { BackLink } from "../../../components/navigation/BackLink";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState } from "react";
 
@@ -51,6 +53,7 @@ export function RolesPage() {
     { isLoading: isDeleting, error: deleteError },
   ] = useDeleteRoleMutation();
 
+  const confirm = useConfirm();
   const [deletingRoleId, setDeletingRoleId] =
     useState<ID | null>(null);
 
@@ -59,7 +62,7 @@ export function RolesPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   async function handleDelete(roleId: ID) {
-    if (!window.confirm("Are you sure to delete this Role?")) {
+    if (!(await confirm({ title: "Delete role", message: "Delete this role? This cannot be undone.", confirmLabel: "Delete", destructive: true }))) {
       return;
     }
     try {
@@ -92,6 +95,7 @@ export function RolesPage() {
   return (
     <>
       <Stack spacing={3}>
+        <BackLink to="/admin" label="Administration" />
         {deleteError && <ApiFeedback error={deleteError} />}
         <Stack
           direction="row"

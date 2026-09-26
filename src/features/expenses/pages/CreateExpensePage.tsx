@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useState, type FormEvent } from "react";
 import {
   Button,
@@ -13,6 +14,8 @@ import {
 import { ArrowBackOutlined } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useCreateExpenseMutation } from "../api/expenseApi";
+import { useGetActiveBudgetPeriodQuery } from "../../budgets/api/budgetsApi";
+import { Alert } from "@mui/material";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { getApiErrorDetails } from "../../../services/api/apiErrors";
 import { EXPENSE_TYPES, EXPENSE_TYPE_LABELS, type ExpenseType } from "../types/expense";
@@ -35,9 +38,13 @@ const initialFormData: ExpenseFormData = {
 
 export function CreateExpensePage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [formData, setFormData] = useState<ExpenseFormData>(initialFormData);
 
   const [createExpense, { isLoading, error }] = useCreateExpenseMutation();
+  const { data: eligibility } = useGetActiveBudgetPeriodQuery(undefined, { refetchOnMountOrArgChange: true });
+  const activePeriod = eligibility?.period;
+  const creationBlocked = eligibility ? !eligibility.canCreateExpense : false;
   const details = getApiErrorDetails(error);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,6 +66,8 @@ export function CreateExpensePage() {
     if (!Number.isFinite(Number(formData.amount)) || Number(formData.amount) <= 0) {
       return;
     }
+
+    if (!(await confirm({ title: "Create expense", message: `Create "${formData.title.trim()}" for ₹${Number(formData.amount).toLocaleString("en-IN")} as a draft?`, confirmLabel: "Create" }))) return;
 
     try {
       const createdExpense = await createExpense({
@@ -92,6 +101,17 @@ export function CreateExpensePage() {
       </Stack>
 
       <Typography variant="h4">Create Expense</Typography>
+
+      {creationBlocked && (
+        <Alert severity="warning">
+          {eligibility?.reason}
+        </Alert>
+      )}
+      {activePeriod && (
+        <Alert severity="info">
+          The expense date must fall within the active budget period ({activePeriod.startDate} to {activePeriod.endDate}).
+        </Alert>
+      )}
 
       <Paper sx={{ p: 3 }}>
         <Stack component="form" spacing={3} onSubmit={handleSubmit}>
@@ -174,6 +194,7 @@ export function CreateExpensePage() {
               inputLabel: {
                 shrink: true,
               },
+              htmlInput: activePeriod ? { min: activePeriod.startDate, max: activePeriod.endDate } : undefined,
             }}
           />
 
@@ -190,7 +211,7 @@ export function CreateExpensePage() {
               Cancel
             </Button>
 
-            <Button type="submit" variant="contained" loading={isLoading}>
+            <Button type="submit" variant="contained" loading={isLoading} disabled={creationBlocked}>
               Create Expense
             </Button>
           </Stack>

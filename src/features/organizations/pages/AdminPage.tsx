@@ -1,57 +1,65 @@
 import {
-  AdminPanelSettingsOutlined,
+  AccountTreeOutlined,
+  AssignmentTurnedInOutlined,
   GroupOutlined,
   KeyOutlined,
-  AccountTreeOutlined,
+  PolicyOutlined,
 } from "@mui/icons-material";
-import { Button, Card, CardContent, Stack, Typography } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+
+import {
+  SectionHub,
+  type SectionHubItem,
+} from "../../../components/navigation/SectionHub";
+import { usePermissions } from "../../auth/hooks/usePermissions";
+import type { Permission } from "../../roles/types/role";
+
+const sections: Array<SectionHubItem & { permission: Permission }> = [
+  {
+    label: "Users",
+    description:
+      "Create users, assign roles, activate, deactivate or remove them.",
+    path: "/users",
+    icon: <GroupOutlined />,
+    permission: "users.read",
+  },
+  {
+    label: "Roles & Permissions",
+    description: "Manage roles and the permissions each role grants.",
+    path: "/roles",
+    icon: <KeyOutlined />,
+    permission: "roles.read",
+  },
+  {
+    label: "Organization Structure",
+    description: "Departments, teams, team members and Finance assignments.",
+    path: "/admin/organization",
+    icon: <AccountTreeOutlined />,
+    permission: "organization.manage",
+  },
+  {
+    label: "Policies",
+    description: "Expense policies, limits and receipt requirements.",
+    path: "/policies",
+    icon: <PolicyOutlined />,
+    permission: "policies.read",
+  },
+  {
+    label: "Audit Log",
+    description: "Append-only history of business and authentication events.",
+    path: "/audit",
+    icon: <AssignmentTurnedInOutlined />,
+    permission: "audit.read",
+  },
+];
 
 export function AdminPage() {
-  const sections = [
-    { label: "Users", description: "Manage organization users, roles, assignments, activation, and deactivation.", path: "/users", icon: <GroupOutlined /> },
-    { label: "Roles & Permissions", description: "Manage roles and controlled application permission assignments.", path: "/roles", icon: <KeyOutlined /> },
-    { label: "Organization Structure", description: "Manage departments, teams, and organization configuration.", path: "/admin/organization", icon: <AccountTreeOutlined /> },
-  ];
+  const { can } = usePermissions();
 
   return (
-    <Stack spacing={3}>
-      <Stack spacing={0.5}>
-        <Typography variant="h4">Administration</Typography>
-        <Typography color="text.secondary">
-          Organization-scoped administrative controls. Domain ownership and lifecycle rules remain enforced by their respective APIs.
-        </Typography>
-      </Stack>
-
-      <Stack spacing={2}>
-        {sections.map((section) => (
-          <Card key={section.path}>
-            <CardContent>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}>
-                <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
-                  {section.icon}
-                  <Stack>
-                    <Typography variant="h6">{section.label}</Typography>
-                    <Typography variant="body2" color="text.secondary">{section.description}</Typography>
-                  </Stack>
-                </Stack>
-                <Button component={RouterLink} to={section.path} variant="outlined">Open</Button>
-              </Stack>
-            </CardContent>
-          </Card>
-        ))}
-      </Stack>
-
-      <Card variant="outlined">
-        <CardContent>
-          <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
-            <AdminPanelSettingsOutlined />
-            <Typography variant="body2" color="text.secondary">
-              Administrative mutations are authorized at the API boundary and produce audit events. They do not grant access to separate Personal-mode data.
-            </Typography>
-          </Stack>
-        </CardContent>
-      </Card>
-    </Stack>
+    <SectionHub
+      title="Administration"
+      description="Organization-wide administrative controls."
+      items={sections.filter((section) => can(section.permission))}
+    />
   );
 }

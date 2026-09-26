@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
 import { useState, type ChangeEvent } from "react";
 import {
@@ -33,6 +34,7 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
     useRemoveDocumentMutation();
   const [uploadDocument, { isLoading: isUploading, error: uploadError }] =
     useUploadDocumentMutation();
+  const confirm = useConfirm();
   const [actionError, setActionError] = useState<string | null>(null);
   const [uploadStates, setUploadStates] = useState<
     Record<string, "pending" | "success" | "error">
@@ -64,6 +66,11 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
 
   const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
+    if (!(await confirm({ title: "Upload documents", message: `Upload ${files.map((file) => file.name).join(", ")}?`, confirmLabel: "Upload" }))) {
+      setFileInputKey((current) => current + 1);
+      return;
+    }
     setActionError(null);
     let hasFailure = false;
     // Each file has its own upload state; one failure does not stop the rest.
@@ -89,6 +96,7 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
   };
 
   const handleRemove = async (documentId: string) => {
+    if (!(await confirm({ title: "Remove document", message: "Remove this document from the expense?", confirmLabel: "Remove", destructive: true }))) return;
     setActionError(null);
     try {
       await removeDocument({ id: documentId, expenseId }).unwrap();

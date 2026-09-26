@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useCreateBudgetMutation } from "../api/budgetsApi";
@@ -7,8 +8,10 @@ import type { CreateOrganizationBudgetRequest } from "../types/budget";
 
 export function CreateBudgetPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [createBudget, { isLoading, error }] = useCreateBudgetMutation();
   const handleSubmit = async (data: CreateOrganizationBudgetRequest) => {
+    if (!(await confirm({ title: "Create budget", message: `Create "${data.name}" (₹${data.amount.toLocaleString("en-IN")}) as a draft?`, confirmLabel: "Create" }))) return;
     try {
       const created = await createBudget(data).unwrap();
       navigate(`/budgets/${created.id}`);

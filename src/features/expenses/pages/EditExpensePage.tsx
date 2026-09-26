@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import {
   useEffect,
   useState,
@@ -66,6 +67,7 @@ export function EditExpensePage() {
   }>();
 
   const { can } = usePermissions();
+  const confirm = useConfirm();
 
   const {
     data: expense,
@@ -162,6 +164,7 @@ export function EditExpensePage() {
     event: FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
+    if (!(await confirm({ title: "Save changes", message: "Save your changes to this expense?", confirmLabel: "Save" }))) return;
 
     try {
       const updatedExpense =

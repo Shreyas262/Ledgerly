@@ -7,6 +7,7 @@ import {
 
 import type { MonthlySpending } from "../utils/calculateMonthlySpending";
 import { ChartState } from "./ChartState";
+import { Amount } from "../../../components/common/Amount";
 
 interface SpendingTrendProps {
   data: MonthlySpending[];
@@ -75,7 +76,7 @@ export function SpendingTrend({
                       variant="caption"
                       color="text.secondary"
                     >
-                      ₹{item.amount.toLocaleString("en-IN")}
+                      <Amount value={item.amount} />
                     </Typography>
 
                     <Stack
@@ -84,7 +85,7 @@ export function SpendingTrend({
                         height,
                         minHeight: 4,
                         borderRadius: 1,
-                        bgcolor: "primary.main",
+                        bgcolor: "chart.series",
                       }}
                     />
 

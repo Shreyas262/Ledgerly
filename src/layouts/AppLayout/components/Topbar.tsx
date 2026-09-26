@@ -5,23 +5,18 @@ import {
   Box,
   IconButton,
   Toolbar,
-  Typography,
   Menu,
   MenuItem,
 } from "@mui/material";
 import type { MouseEvent } from "react";
 
 import { useState } from "react";
-import { useNavigate, useMatches } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../../../store/hooks";
 
 import { useLogoutMutation } from "../../../features/auth/api/authApi";
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { baseApi } from "../../../services/api/baseApi";
-
-interface RouteHandle {
-  title?: string;
-}
 
 interface TopbarProps {
   isMobile: boolean;
@@ -34,15 +29,6 @@ export function Topbar({
   mobileSidebaropen,
   onMobileMenuClick,
 }: TopbarProps) {
-  const matches = useMatches();
-  const currentMatch = [...matches].reverse().find((match) => {
-    const handle = match.handle as RouteHandle | undefined;
-
-    return Boolean(handle?.title);
-  });
-  const handle = currentMatch?.handle as RouteHandle | undefined;
-
-  const pageTitle = handle?.title ?? "Ledgerly";
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const { user } = useAuth();
@@ -77,15 +63,7 @@ export function Topbar({
   };
 
   return (
-    <AppBar
-      position="sticky"
-      color="inherit"
-      elevation={0}
-      sx={{
-        borderBottom: 1,
-        borderColor: "divider",
-      }}
-    >
+    <AppBar position="sticky">
       <Toolbar sx={{ justifyContent: "space-between" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {isMobile && (
@@ -98,10 +76,6 @@ export function Topbar({
               <MenuOutlined />
             </IconButton>
           )}
-
-          <Typography variant="h6" component="h1" sx={{ fontWeight: 600 }}>
-            {pageTitle}
-          </Typography>
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>

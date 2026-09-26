@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useEffect, useState } from "react";
 import { Button, Card, CardContent, Stack, TextField } from "@mui/material";
 
@@ -14,6 +15,7 @@ export function UserProfileForm({
   onSubmit,
   isSubmitting = false,
 }: ProfileFormProps) {
+  const confirm = useConfirm();
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
 
@@ -48,14 +50,14 @@ export function UserProfileForm({
     return !nextErrors.name && !nextErrors.email;
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!validate()) {
       return;
     }
 
-    if (!window.confirm("Save changes to your profile?")) {
+    if (!(await confirm({ title: "Save profile", message: "Save changes to your profile?", confirmLabel: "Save" }))) {
       return;
     }
 

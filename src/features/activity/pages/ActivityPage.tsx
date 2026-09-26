@@ -1,4 +1,5 @@
 
+import { BackLink } from "../../../components/navigation/BackLink";
 import {
   Alert,
   Card,
@@ -63,6 +64,7 @@ export function ActivityPage() {
 
   return (
     <Stack spacing={3}>
+      <BackLink to="/account" label="Account" />
       <div>
         <Typography variant="h4">Security</Typography>
 

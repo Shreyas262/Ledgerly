@@ -56,11 +56,20 @@ export const organizationApi = baseApi.injectEndpoints({
     }),
     updateTeam: builder.mutation<Team, { id: ID; body: TeamPayload }>({
       query: ({ id, body }) => ({ url: `/teams/${id}`, method: "PUT", body }),
-      invalidatesTags: ["Teams"],
+      // Members follow the team into its department.
+      invalidatesTags: ["Teams", "Users", "User"],
     }),
     deleteTeam: builder.mutation<void, ID>({
       query: (id) => ({ url: `/teams/${id}`, method: "DELETE" }),
       invalidatesTags: ["Teams"],
+    }),
+    addTeamMember: builder.mutation<unknown, { teamId: ID; userId: ID }>({
+      query: ({ teamId, userId }) => ({ url: `/teams/${teamId}/members`, method: "POST", body: { userId } }),
+      invalidatesTags: ["Users", "User", "Teams"],
+    }),
+    setDepartmentFinanceUsers: builder.mutation<unknown, { departmentId: ID; userIds: ID[] }>({
+      query: ({ departmentId, userIds }) => ({ url: `/departments/${departmentId}/finance-users`, method: "PUT", body: { userIds } }),
+      invalidatesTags: ["Users", "User", "Departments"],
     }),
   }),
 });
@@ -76,4 +85,6 @@ export const {
   useCreateTeamMutation,
   useUpdateTeamMutation,
   useDeleteTeamMutation,
+  useAddTeamMemberMutation,
+  useSetDepartmentFinanceUsersMutation,
 } = organizationApi;

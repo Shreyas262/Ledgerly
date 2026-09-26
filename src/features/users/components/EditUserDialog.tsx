@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useEffect, useState } from "react";
 import type { SyntheticEvent } from "react";
 
@@ -59,6 +60,7 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
     isError: rolesError,
   } = useGetRolesQuery();
 
+  const confirm = useConfirm();
   const [updateUser, { isLoading: isUpdating, error: updateError }] =
     useUpdateUserMutation();
 
@@ -96,6 +98,7 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
     if (!user || !selectedRole) {
       return;
     }
+    if (!(await confirm({ title: "Save user", message: `Save changes to ${name}?`, confirmLabel: "Save" }))) return;
 
     try {
       await updateUser({

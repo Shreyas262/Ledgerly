@@ -80,7 +80,7 @@ interface NamedExpenseFields {
  */
 export async function withEmployeeNames<T extends NamedExpenseFields>(
   expenses: T[],
-): Promise<Array<T & { employeeName?: string; cancelledByName?: string; teamName?: string; departmentName?: string }>> {
+): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; teamName?: string; departmentName?: string }>> {
   if (expenses.length === 0) return [];
 
   const [teams, departments] = await Promise.all([
@@ -99,11 +99,12 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
   );
   const users =
     userIds.size === 1
-      ? [await getRecord<{ id: string; name: string }>("users", [...userIds][0])].filter(
-          (user): user is { id: string; name: string } => Boolean(user),
+      ? [await getRecord<{ id: string; name: string; status?: string }>("users", [...userIds][0])].filter(
+          (user): user is { id: string; name: string; status?: string } => Boolean(user),
         )
-      : await listRecords<{ id: string; name: string }>("users");
+      : await listRecords<{ id: string; name: string; status?: string }>("users");
   const nameById = new Map(users.map((user) => [user.id, user.name]));
+  const removedIds = new Set(users.filter((user) => (user as { status?: string }).status === "deleted").map((user) => user.id));
 
   return expenses.map((expense) => {
     const employeeName = nameById.get(expense.employeeId);
@@ -118,6 +119,7 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
     return {
       ...expense,
       ...(employeeName ? { employeeName } : {}),
+      ...(removedIds.has(expense.employeeId) ? { employeeRemoved: true } : {}),
       ...(teamName ? { teamName } : {}),
       ...(departmentName ? { departmentName } : {}),
       ...(cancelledByName ? { cancelledByName } : {}),

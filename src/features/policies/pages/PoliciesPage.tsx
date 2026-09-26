@@ -1,3 +1,4 @@
+import { BackLink } from "../../../components/navigation/BackLink";
 import {
   Button,
   Grid,
@@ -36,6 +37,7 @@ export function PoliciesPage() {
 
   return (
     <Stack spacing={3}>
+      <BackLink to="/admin" label="Administration" />
       <Stack
         direction={{
           xs: "column",

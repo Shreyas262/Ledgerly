@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useState } from "react";
 import {
   Alert,
@@ -27,6 +28,7 @@ import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { ConfirmDialog } from "../../../components/common/ConfirmDialog";
 import { useAuth } from "../../auth/context/AuthContext";
+import { Amount } from "../../../components/common/Amount";
 
 type ReimbursementView = Extract<
   ExpenseStatus,
@@ -63,6 +65,7 @@ const views: Record<ReimbursementView, { label: string; chip: string; empty: str
 export function ReimbursementQueue() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [view, setView] = useState<ReimbursementView>("approved");
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [cancellingExpense, setCancellingExpense] = useState<Expense | null>(null);
@@ -155,13 +158,14 @@ export function ReimbursementQueue() {
                     <Typography variant="body2" color="text.secondary">
                       {EXPENSE_TYPE_LABELS[expense.type] ?? expense.type} · Employee:{" "}
                       {expense.employeeName ?? expense.employeeId}
+                      {expense.employeeRemoved ? " (removed)" : ""}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {expense.teamName ?? expense.teamId} · {expense.departmentName ?? expense.departmentId}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Amount: {expense.currency}{" "}
-                      {expense.amount.toLocaleString("en-IN")}
+                      Amount:{" "}
+                      <Amount value={expense.amount} currency={expense.currency} />
                     </Typography>
                     {expense.status === "cancelled" && expense.cancellationReason && (
                       <Typography variant="body2" color="text.secondary">
@@ -199,7 +203,8 @@ export function ReimbursementQueue() {
                         loading={isProcessing}
                         disabled={Boolean(processingId) && !isProcessing}
                         onClick={() =>
-                          runAction(expense.id, () => startReimbursement(expense.id).unwrap())
+                          confirm({ title: "Start reimbursement", message: `Start reimbursing "${expense.title}"?`, confirmLabel: "Start" })
+                            .then((ok) => { if (ok) void runAction(expense.id, () => startReimbursement(expense.id).unwrap()); })
                         }
                       >
                         Start Reimbursement
@@ -212,7 +217,8 @@ export function ReimbursementQueue() {
                         loading={isProcessing}
                         disabled={Boolean(processingId) && !isProcessing}
                         onClick={() =>
-                          runAction(expense.id, () => reimburseExpense(expense.id).unwrap())
+                          confirm({ title: "Mark as reimbursed", message: `Confirm that ${expense.currency} ${expense.amount.toLocaleString("en-IN")} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark reimbursed" })
+                            .then((ok) => { if (ok) void runAction(expense.id, () => reimburseExpense(expense.id).unwrap()); })
                         }
                       >
                         Mark Reimbursed

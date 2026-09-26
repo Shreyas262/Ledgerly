@@ -16,6 +16,7 @@ import {
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
+import { Amount } from "../../../components/common/Amount";
 
 export function PolicyDetailsPage() {
   const { id } = useParams();
@@ -110,7 +111,7 @@ export function PolicyDetailsPage() {
               </Typography>
 
               <Typography variant="h5">
-                ₹{policy.approvalLimit.toLocaleString("en-IN")}
+                <Amount value={policy.approvalLimit} />
               </Typography>
             </Stack>
 
@@ -121,11 +122,11 @@ export function PolicyDetailsPage() {
                 Policy Rules
               </Typography>
               <Typography variant="body2">
-                Approval threshold: ₹{(policy.rule?.approvalThreshold ?? policy.approvalLimit).toLocaleString("en-IN")}
+                Approval threshold: <Amount value={policy.rule?.approvalThreshold ?? policy.approvalLimit} />
               </Typography>
               {policy.rule?.maximumAmount !== undefined && (
                 <Typography variant="body2">
-                  Maximum amount: ₹{policy.rule.maximumAmount.toLocaleString("en-IN")}
+                  Maximum amount: <Amount value={policy.rule.maximumAmount} />
                 </Typography>
               )}
               {policy.rule?.requiresReceipt && (

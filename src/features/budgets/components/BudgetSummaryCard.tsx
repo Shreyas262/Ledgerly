@@ -27,7 +27,7 @@ export function BudgetSummaryCard({
             {label}
           </Typography>
 
-          <Typography variant="h5">
+          <Typography variant="kpi">
             {value}
           </Typography>
 

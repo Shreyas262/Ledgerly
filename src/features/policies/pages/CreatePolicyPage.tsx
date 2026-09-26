@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useNavigate } from "react-router-dom";
 import {
   Stack,
@@ -13,6 +14,7 @@ import type { CreateExpensePolicyRequest } from "../types/policy";
 
 export function CreatePolicyPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   const [
     createPolicy,
@@ -22,6 +24,7 @@ export function CreatePolicyPage() {
   const handleSubmit = async (
     values: CreateExpensePolicyRequest,
   ) => {
+    if (!(await confirm({ title: "Create policy", message: `Create the policy "${values.name}"?`, confirmLabel: "Create" }))) return;
     try {
       const policy = await createPolicy(values).unwrap();
 

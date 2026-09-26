@@ -71,6 +71,8 @@ export interface Expense extends ResourceTimestamps {
   employeeId: EntityId;
   /** Owner display name, resolved by the API for read responses. */
   employeeName?: string;
+  /** True when the owner has been removed from the organization. */
+  employeeRemoved?: boolean;
   /** Team and department display names, resolved by the API. */
   teamName?: string;
   departmentName?: string;
@@ -98,6 +100,8 @@ export interface Expense extends ResourceTimestamps {
   /** Display name of cancelledBy, resolved by the API. */
   cancelledByName?: string;
   cancellationReason?: string;
+  /** Non-blocking budget notices returned when the expense is submitted. */
+  budgetWarnings?: string[];
 }
 
 

@@ -9,6 +9,15 @@ import {
 import { authorizationError } from "../services/authorizationHttp";
 import { runAuditedTransaction } from "../services/auditService";
 import { hashPassword } from "../services/passwordService";
+import { findOtherActiveManager } from "./organizationHandlers";
+
+/** One manager per team: the response when the team already has one. */
+async function teamManagerConflict(teamId: string, userId: string | undefined) {
+  const existingManager = await findOtherActiveManager(teamId, userId);
+  return existingManager
+    ? apiError(409, `This team already has a manager (${String(existingManager.name ?? existingManager.id)}). A team can have only one manager.`, "TEAM_HAS_MANAGER")
+    : null;
+}
 
 import {
   getRecord,
@@ -28,7 +37,7 @@ interface MockUser {
   email: string;
   role: string;
   permissions: string[];
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "deleted";
   financeDepartmentIds?: string[];
 }
 
@@ -89,7 +98,8 @@ export const usersHandlers = [
 
     const roles = await listRecords<{ id: string; permissions: string[] }>("roles");
     const rolePermissions = new Map(roles.map((role) => [role.id, role.permissions]));
-    const records = result.records.map((user) => ({
+    // Removed users are kept only so their historical records stay attributable.
+    const records = result.records.filter((user) => user.status !== "deleted").map((user) => ({
       ...user,
       permissions: rolePermissions.get(user.roleId) ?? user.permissions,
     }));
@@ -133,7 +143,8 @@ export const usersHandlers = [
     const email = body.email.trim();
     const users = await listRecords<MockUser>("users");
 
-    if (users.some((user) => user.email.toLowerCase() === email.toLowerCase())) {
+    // Removed users' emails may be reused.
+    if (users.some((user) => user.status !== "deleted" && user.email.toLowerCase() === email.toLowerCase())) {
       return apiError(409, "A user with this email already exists.");
     }
 
@@ -155,6 +166,11 @@ export const usersHandlers = [
       return apiError(422, financeAuthority.error, "VALIDATION_ERROR", {
         fieldErrors: { financeDepartmentIds: financeAuthority.error },
       });
+    }
+
+    if (role.name.toLowerCase() === "manager" && (body.status ?? "active") === "active") {
+      const conflict = await teamManagerConflict(team.id, undefined);
+      if (conflict) return conflict;
     }
 
     const passwordHash = await hashPassword(body.password);
@@ -220,7 +236,7 @@ export const usersHandlers = [
         userId,
       );
 
-      if (!currentUser) {
+      if (!currentUser || currentUser.status === "deleted") {
         return apiError(404, "User not found.");
       }
 
@@ -249,6 +265,7 @@ export const usersHandlers = [
         users.some(
           (user) =>
             user.id !== userId &&
+            user.status !== "deleted" &&
             user.email.toLowerCase() === email.toLowerCase(),
         )
       ) {
@@ -276,8 +293,13 @@ export const usersHandlers = [
         });
       }
 
+      if (role.name.toLowerCase() === "manager" && (body.status ?? currentUser.status) !== "inactive") {
+        const conflict = await teamManagerConflict(team.id, currentUser.id);
+        if (conflict) return conflict;
+      }
+
       const usersForAdminGuard = await listRecords<MockUser>("users");
-      if (currentUser.role === "admin" && (role.name !== "admin" || body.status === "inactive") && !usersForAdminGuard.some((item) => item.id !== currentUser.id && item.organizationId === currentUser.organizationId && item.role === "admin" && item.status !== "inactive")) {
+      if (currentUser.role === "admin" && (role.name !== "admin" || body.status === "inactive") && !usersForAdminGuard.some((item) => item.id !== currentUser.id && item.organizationId === currentUser.organizationId && item.role === "admin" && item.status === "active")) {
         return apiError(409, "The final active Admin cannot be deactivated or reassigned without a replacement Admin.");
       }
 
@@ -340,14 +362,18 @@ export const usersHandlers = [
   http.patch(`${API_BASE_URL}/users/:id/status`, async ({ params, request }) => {
     const userId = String(params.id);
     const user = await getRecord<MockUser>("users", userId);
-    if (!user) return apiError(404, "User not found.");
+    if (!user || user.status === "deleted") return apiError(404, "User not found.");
     const authorization = await authorizeRequest(request, { permission: "users.update", scope: "ORGANIZATION", resource: { organizationId: user.organizationId } });
     if (!authorization.allowed) return authorizationError(authorization);
     const body = (await request.json()) as { status?: "active" | "inactive" };
     if (body.status !== "active" && body.status !== "inactive") return apiError(422, "Invalid status.");
     if (user.role === "admin" && user.status !== "inactive" && body.status === "inactive") {
-      const activeAdmins = (await listRecords<MockUser>("users")).filter((item) => item.organizationId === user.organizationId && item.role === "admin" && item.status !== "inactive");
+      const activeAdmins = (await listRecords<MockUser>("users")).filter((item) => item.organizationId === user.organizationId && item.role === "admin" && item.status === "active");
       if (activeAdmins.length <= 1) return apiError(409, "The final active Admin cannot be deactivated.");
+    }
+    if (body.status === "active" && user.status === "inactive" && user.role.toLowerCase() === "manager") {
+      const conflict = await teamManagerConflict(user.teamId, user.id);
+      if (conflict) return conflict;
     }
     const updated = { ...user, status: body.status, updatedAt: new Date().toISOString() };
     await runAuditedTransaction(["users"], { organizationId: user.organizationId, actorId: authorization.principal.userId, action: body.status === "inactive" ? "USER_DEACTIVATED" : "USER_UPDATED", entityType: "USER", entityId: user.id, previousState: user.status, newState: updated.status, description: `Changed user ${user.name} status to ${updated.status}.` }, (transaction) => transaction.objectStore("users").put(updated));
@@ -372,17 +398,68 @@ export const usersHandlers = [
       return authorizationError(authorization);
     }
 
-    if (user.role === "admin" && user.status !== "inactive") {
-      const activeAdmins = (await listRecords<MockUser>("users")).filter((item) => item.organizationId === user.organizationId && item.role === "admin" && item.status !== "inactive");
+    if (user.status === "deleted") {
+      return apiError(404, "Resource not found.");
+    }
+
+    if (user.role === "admin" && user.status === "active") {
+      const activeAdmins = (await listRecords<MockUser>("users")).filter((item) => item.organizationId === user.organizationId && item.role === "admin" && item.status === "active");
       if (activeAdmins.length <= 1) {
         return apiError(409, "The final active Admin cannot be deleted.");
       }
     }
 
-    // §27.3/§27.8: historical business records must stay attributable.
-    const ownedExpenses = await listRecordsByIndex<{ id: string }>("expenses", "employeeId", user.id);
+    // §27.3: a user with expense history is removed rather than erased, so
+    // their expenses stay attributable. They leave their team and department,
+    // lose access, and their private drafts are cancelled; submitted work
+    // continues through the normal workflow.
+    const ownedExpenses = await listRecordsByIndex<{ id: string; status: string; title: string; [key: string]: unknown }>("expenses", "employeeId", user.id);
     if (ownedExpenses.length > 0) {
-      return apiError(409, "This user owns expense records and cannot be deleted. Deactivate the user instead.", "USER_HAS_RECORDS");
+      const now = new Date().toISOString();
+      const { teamId: _teamId, departmentId: _departmentId, financeDepartmentIds: _finance, ...rest } = user;
+      const removedUser = { ...rest, status: "deleted" as const, deletedAt: now, updatedAt: now };
+      const cancelledDrafts = ownedExpenses
+        .filter((expense) => expense.status === "draft")
+        .map((expense) => ({
+          ...expense,
+          status: "cancelled",
+          cancelledAt: now,
+          cancelledBy: authorization.principal.userId,
+          cancellationReason: "The owner was removed from the organization.",
+          updatedAt: now,
+        }));
+      const activeSessions = (await listRecords<{ id: string; userId: string; status: string }>("sessions"))
+        .filter((session) => session.userId === user.id && session.status === "active");
+
+      await runAuditedTransaction(
+        ["users", "credentials", "expenses", "sessions"],
+        {
+          organizationId: user.organizationId,
+          actorId: authorization.principal.userId,
+          action: "USER_DELETED",
+          entityType: "USER",
+          entityId: user.id,
+          previousState: user.status,
+          newState: "deleted",
+          metadata: {
+            previousTeamId: user.teamId,
+            previousDepartmentId: user.departmentId,
+            retainedExpenseCount: ownedExpenses.length,
+            cancelledDraftIds: cancelledDrafts.map((expense) => expense.id),
+          },
+          description: `Removed user ${user.name}; their expense history was retained.`,
+        },
+        (transaction) => {
+          transaction.objectStore("users").put(removedUser);
+          transaction.objectStore("credentials").delete(userId);
+          for (const expense of cancelledDrafts) transaction.objectStore("expenses").put(expense);
+          for (const session of activeSessions) {
+            transaction.objectStore("sessions").put({ ...session, status: "revoked", revokedAt: now });
+          }
+        },
+      );
+
+      return new HttpResponse(null, { status: 204 });
     }
 
     await runAuditedTransaction(

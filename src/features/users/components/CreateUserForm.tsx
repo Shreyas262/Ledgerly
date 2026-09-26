@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useState } from "react";
 import type { SyntheticEvent } from "react";
 
@@ -57,6 +58,7 @@ export function CreateUserForm({
       error: createUserError,
     },
   ] = useCreateUserMutation();
+  const confirm = useConfirm();
 
   const selectedRole = roles?.find(
     (item) => item.name === role,
@@ -73,6 +75,7 @@ export function CreateUserForm({
     if (!departmentId || !teamId) {
       return;
     }
+    if (!(await confirm({ title: "Create user", message: `Create an account for ${name} (${email})?`, confirmLabel: "Create" }))) return;
 
     try {
       await createUser({
@@ -216,7 +219,7 @@ export function CreateUserForm({
       {/* Permissions */}
       <Stack spacing={2}>
         <Stack spacing={0.5}>
-          <Typography variant="subtitle1" sx={{fontWeight: 600}}>
+          <Typography variant="subtitle1">
             Permissions
           </Typography>
 

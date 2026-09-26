@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { Stack, Typography } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGetBudgetByIdQuery, useUpdateBudgetMutation } from "../api/budgetsApi";
@@ -9,12 +10,14 @@ import { ApiFeedback } from "../../../components/common/ApiFeedback";
 
 export function EditBudgetPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { id } = useParams<{ id: string }>();
   const { data, isLoading, isError, error: loadError, refetch } = useGetBudgetByIdQuery(id ?? "", { skip: !id });
   const [updateBudget, { isLoading: isUpdating, error: updateError }] = useUpdateBudgetMutation();
   if (isLoading) return <LoadingState />;
   if (isError || !data) return <ErrorState error={loadError} onRetry={refetch} />;
   const handleSubmit = async (payload: CreateOrganizationBudgetRequest) => {
+    if (!(await confirm({ title: "Save budget", message: `Save changes to "${payload.name}"?`, confirmLabel: "Save" }))) return;
     try {
       await updateBudget({ id: data.id, ...payload }).unwrap();
       navigate(`/budgets/${data.id}`);

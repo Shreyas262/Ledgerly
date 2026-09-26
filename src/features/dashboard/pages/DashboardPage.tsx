@@ -15,6 +15,7 @@ import { SpendingTrend } from "../components/SpendingTrend";
 import { CategoryAnalysis } from "../components/CategoryAnalysis";
 import { ApprovalMetrics } from "../components/ApprovalMetrics";
 import { useGetDashboardSummaryQuery } from "../api/dashboardApi";
+import { formatCurrency } from "../../../utils/currency";
 
 interface DashboardDateRange {
   startDate: string;
@@ -97,7 +98,7 @@ export function DashboardPage() {
         <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
             label="Reimbursed Spending"
-            value={`₹${summary.kpis.totalSpending.toLocaleString("en-IN")}`}
+            value={formatCurrency(summary.kpis.totalSpending)}
             description="Reimbursed expenses only"
           />
         </Grid>

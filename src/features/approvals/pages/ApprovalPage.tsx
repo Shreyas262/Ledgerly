@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import {
   Alert,
   Stack,
@@ -66,6 +67,7 @@ export function ApprovalsPage() {
 
 function ReviewQueue() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   const {
     data: expenses,
@@ -79,6 +81,7 @@ function ReviewQueue() {
     useStartExpenseReviewMutation();
 
   const handleStartReview = async (expense: Expense) => {
+    if (!(await confirm({ title: "Start review", message: `Start reviewing "${expense.title}"?`, confirmLabel: "Start review" }))) return;
     try {
       await startExpenseReview(String(expense.id)).unwrap();
       navigate(`/approvals/${expense.id}`);

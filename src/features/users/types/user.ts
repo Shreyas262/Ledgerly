@@ -15,7 +15,7 @@ export interface User extends ResourceTimestamps {
   financeDepartmentIds?: EntityId[];
 }
 
-export type UserStatus = "active" | "inactive";
+export type UserStatus = "active" | "inactive" | "deleted";
 
 
 export interface CreateUserPayload {

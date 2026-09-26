@@ -1,3 +1,4 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { Stack, Typography, Button, Alert, Pagination, Tab, Tabs } from "@mui/material";
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
@@ -23,6 +24,7 @@ import {
   initialExpenseFilters,
 } from "../types/expense";
 import { ExpenseFilters } from "../components/ExpenseFilters";
+import { useGetActiveBudgetPeriodQuery } from "../../budgets/api/budgetsApi";
 
 /**
  * The wider view a role is authorized for. The API enforces this scope; the
@@ -59,8 +61,13 @@ export function ExpensesPage() {
   const [submittingExpenseId, setSubmittingExpenseId] = useState<string | null>(
     null,
   );
+  const [budgetWarnings, setBudgetWarnings] = useState<string[]>([]);
   const { can } = usePermissions();
   const { user } = useAuth();
+  // Expenses can be created only while an active budget covers today.
+  const { data: eligibility } = useGetActiveBudgetPeriodQuery(undefined, { refetchOnMountOrArgChange: true });
+  const creationBlocked = eligibility ? !eligibility.canCreateExpense : false;
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const widerScope = getAuthorizedWiderScope(user?.role);
   const [selectedScope, setSelectedScope] = useState<ExpenseScope>("OWN");
@@ -122,10 +129,12 @@ export function ExpensesPage() {
   }
 
   const handleSubmitExpense = async (expenseId: string) => {
+    if (!(await confirm({ title: "Submit expense", message: "Submit this expense for approval? You won't be able to edit it while it is being reviewed.", confirmLabel: "Submit" }))) return;
     try {
       setSubmittingExpenseId(expenseId);
 
-      await submitExpense(expenseId).unwrap();
+      const submitted = await submitExpense(expenseId).unwrap();
+      setBudgetWarnings(submitted.budgetWarnings ?? []);
     } catch {
       // Error (e.g. a policy violation) is exposed through submitError.
     } finally {
@@ -162,11 +171,18 @@ export function ExpensesPage() {
             variant="contained"
             startIcon={<AddOutlinedIcon />}
             onClick={() => navigate("/expenses/new")}
+            disabled={creationBlocked}
           >
             Create Expense
           </Button>
         )}
       </Stack>
+
+      {can("expenses.create") && creationBlocked && (
+        <Alert severity="info">
+          {eligibility?.reason} Existing drafts can still be submitted.
+        </Alert>
+      )}
 
       {widerScope && (
         <Tabs
@@ -192,6 +208,14 @@ export function ExpensesPage() {
       />
 
       {submitError && <ApiFeedback error={submitError} />}
+
+      {budgetWarnings.length > 0 && (
+        <Alert severity="warning" onClose={() => setBudgetWarnings([])}>
+          {budgetWarnings.map((warning) => (
+            <Typography key={warning} variant="body2">{warning}</Typography>
+          ))}
+        </Alert>
+      )}
 
       {hasInvalidDateRange && (
         <Alert severity="warning">
