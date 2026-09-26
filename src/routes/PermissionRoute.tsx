@@ -6,7 +6,8 @@ import type { Permission } from "../features/roles/types/role";
 import { ForbiddenPage } from "../features/auth/pages/ForbiddenPage";
 
 interface PermissionRouteProps {
-  permission: Permission;
+  /** A single permission, or a list of which the user needs any one. */
+  permission: Permission | readonly Permission[];
 }
 
 export function PermissionRoute({ permission }: PermissionRouteProps) {
@@ -21,7 +22,11 @@ export function PermissionRoute({ permission }: PermissionRouteProps) {
     return <Navigate to="/auth/login" replace />;
   }
 
-  if (!can(permission)) {
+  const permissions: readonly Permission[] = Array.isArray(permission)
+    ? permission
+    : [permission as Permission];
+
+  if (!permissions.some((item) => can(item))) {
     return <ForbiddenPage />;
   }
 

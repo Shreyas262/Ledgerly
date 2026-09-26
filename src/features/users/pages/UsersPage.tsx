@@ -43,6 +43,8 @@ export function UsersPage() {
     data: users,
     isLoading,
     isError,
+    error: usersError,
+    refetch,
   } = useGetUsersQuery({ page, pageSize: 25 });
   
   const [updateUserStatus] = useUpdateUserStatusMutation();
@@ -55,11 +57,11 @@ export function UsersPage() {
     },
   ] = useDeleteUserMutation();
 
-  if (!can("users.read")) return <ErrorState />
+  if (!can("users.read")) return <ErrorState title="Access denied" message="You do not have permission to view users." />
 
   if (isLoading) return <LoadingState />
 
-  if (isError) return <ErrorState />
+  if (isError) return <ErrorState error={usersError} onRetry={refetch} />
   
   async function handleDelete() {
     if (!deletingUser) return

@@ -1,3 +1,4 @@
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState } from "react";
 import type { SyntheticEvent } from "react";
 
@@ -42,7 +43,7 @@ export function EditRoleForm({
 
   const [
     updateRole,
-    { isLoading, isError },
+    { isLoading, isError, error },
   ] = useUpdateRoleMutation();
 
   function handlePermissionChange(
@@ -121,11 +122,7 @@ export function EditRoleForm({
             </FormGroup>
           </Stack>
 
-          {isError && (
-            <Typography color="error">
-              Failed to update role.
-            </Typography>
-          )}
+          {isError && <ApiFeedback error={error} />}
         </Stack>
       </DialogContent>
 

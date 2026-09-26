@@ -15,7 +15,7 @@ function AuditPage() {
 
   // Every business mutation appends audit events, so the log is refreshed
   // whenever the page is opened rather than served from a stale cache.
-  const { data: auditResult, isLoading, isError } = useGetAuditEventsQuery(
+  const { data: auditResult, isLoading, isError, error, refetch } = useGetAuditEventsQuery(
     {
       page,
       pageSize: 50,
@@ -32,7 +32,7 @@ function AuditPage() {
 
 
   if (isLoading) return <LoadingState />;
-  if (isError) return <ErrorState message="Unable to load audit events." />;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   return (
     <Stack spacing={3}>

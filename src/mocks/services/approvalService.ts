@@ -1,19 +1,24 @@
 import type { Expense } from "../../features/expenses/types/expense";
 import { transitionExpenseState } from "../../features/expenses/domain/expenseStateMachine";
 import { listRecords, listRecordsByIndex } from "./mockDataService";
-import { authorizeExpenseManager, hasEligibleTeamManager } from "./workflowAuthorization";
+import {
+  authorizeExpenseManager,
+  getReviewDenialReason,
+  type ExpenseOwner,
+} from "./workflowAuthorization";
 import { runAuditedTransaction } from "./auditService";
 import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 
 /**
- * Managers review their team's expenses except their own. Admins review
- * escalated expenses (no eligible team manager) and their own expenses.
+ * Submitted expenses the principal may review, per the approval matrix in
+ * getReviewDenialReason (manager: team members; finance: managers within
+ * authorized departments; admin: everyone).
  */
 export async function getApprovalQueue(
   principal: AuthenticatedPrincipal,
 ): Promise<Expense[]> {
   if (
-    (principal.role !== "manager" && principal.role !== "admin") ||
+    !["manager", "finance", "admin"].includes(principal.role) ||
     !principal.effectivePermissions.includes("expenses.approve")
   ) {
     return [];
@@ -22,41 +27,42 @@ export async function getApprovalQueue(
   const expenses =
     principal.role === "admin"
       ? await listRecordsByIndex<Expense>("expenses", "organizationId", principal.organizationId)
-      : await listRecordsByIndex<Expense>("expenses", "teamId", principal.teamId);
-  const users = await listRecords<{
-    id: string;
-    organizationId: string;
-    teamId: string;
-  }>("users");
+      : principal.role === "finance"
+        ? (
+            await Promise.all(
+              principal.authorizedDepartmentIds.map((departmentId) =>
+                listRecordsByIndex<Expense>("expenses", "departmentId", departmentId),
+              ),
+            )
+          ).flat()
+        : await listRecordsByIndex<Expense>("expenses", "teamId", principal.teamId);
 
-  const ownerById = new Map(users.map((user) => [String(user.id), user]));
-  const reviewable = expenses.filter((expense) => {
-    const owner = ownerById.get(String(expense.employeeId));
-
-    return (
-      expense.organizationId === principal.organizationId &&
-      (expense.status === "submitted" || expense.status === "under_review") &&
-      owner?.organizationId === principal.organizationId &&
-      owner.teamId === expense.teamId
-    );
-  });
-
-  if (principal.role === "manager") {
-    return reviewable.filter(
-      (expense) =>
-        expense.teamId === principal.teamId &&
-        expense.employeeId !== principal.userId,
-    );
-  }
-
-  const escalated = await Promise.all(
-    reviewable.map(async (expense) =>
-      expense.employeeId === principal.userId ||
-      !(await hasEligibleTeamManager(expense.organizationId, expense.teamId, expense.employeeId)),
-    ),
+  const [users, roles] = await Promise.all([
+    listRecords<{ id: string; organizationId: string; teamId: string; departmentId: string; roleId: string; role?: string }>("users"),
+    listRecords<{ id: string; name: string }>("roles"),
+  ]);
+  const roleNameById = new Map(roles.map((role) => [role.id, String(role.name).toLowerCase()]));
+  const ownerById = new Map<string, ExpenseOwner>(
+    users.map((user) => [
+      user.id,
+      {
+        id: user.id,
+        organizationId: user.organizationId,
+        teamId: user.teamId,
+        departmentId: user.departmentId,
+        roleName: roleNameById.get(user.roleId) ?? String(user.role ?? "").toLowerCase(),
+      },
+    ]),
   );
 
-  return reviewable.filter((_expense, index) => escalated[index]);
+  return expenses.filter((expense) => {
+    const owner = ownerById.get(String(expense.employeeId));
+    return (
+      Boolean(owner) &&
+      (expense.status === "submitted" || expense.status === "under_review") &&
+      getReviewDenialReason(principal, expense, owner!) === null
+    );
+  });
 }
 
 export async function startExpenseReview(

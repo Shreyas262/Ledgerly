@@ -1,6 +1,7 @@
 import type { ExpenseType } from "../../expenses/types/expense";
 
 export interface DashboardKpis {
+  /** Sum of reimbursed expenses. */
   totalSpending: number;
   pendingApproval: number;
   approvedExpenses: number;

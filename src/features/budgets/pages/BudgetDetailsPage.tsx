@@ -16,7 +16,7 @@ export function BudgetDetailsPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { data: budget, isLoading, isError } = useGetBudgetByIdQuery(id ?? "", { skip: !id });
+  const { data: budget, isLoading, isError, error: loadError, refetch } = useGetBudgetByIdQuery(id ?? "", { skip: !id });
   const isAdmin = user?.role === "admin";
   const isFinance = user?.role === "finance";
   const { data: departments = [] } = useGetDepartmentsQuery(undefined, { skip: !isAdmin });
@@ -32,7 +32,7 @@ export function BudgetDetailsPage() {
   const [error, setError] = useState("");
 
   if (isLoading) return <LoadingState />;
-  if (isError || !budget) return <ErrorState />;
+  if (isError || !budget) return <ErrorState error={loadError} onRetry={refetch} />;
 
   const canManage = budget.status !== "closed";
   const allocation = budget.departmentAllocations.find((item) => item.id === allocationId);
@@ -66,7 +66,7 @@ export function BudgetDetailsPage() {
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 4 }}><Card><CardContent><Typography color="text.secondary">Organization Budget</Typography><Typography variant="h5">{money(budget.amount)}</Typography></CardContent></Card></Grid>
-        <Grid size={{ xs: 12, sm: 4 }}><Card><CardContent><Typography color="text.secondary">Derived Spend</Typography><Typography variant="h5">{money(budget.utilization.spentAmount)}</Typography></CardContent></Card></Grid>
+        <Grid size={{ xs: 12, sm: 4 }}><Card><CardContent><Typography color="text.secondary">Reimbursed Spend</Typography><Typography variant="h5">{money(budget.utilization.spentAmount)}</Typography></CardContent></Card></Grid>
         <Grid size={{ xs: 12, sm: 4 }}><Card><CardContent><Typography color="text.secondary">Utilization</Typography><Typography variant="h5">{budget.utilization.utilizationPercent.toFixed(1)}%</Typography></CardContent></Card></Grid>
       </Grid>
 

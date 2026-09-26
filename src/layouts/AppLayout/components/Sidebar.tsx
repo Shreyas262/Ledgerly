@@ -7,7 +7,6 @@ import {
   ReceiptLongOutlined,
   RequestQuoteOutlined,
   SecurityOutlined,
-  PaymentsOutlined,
   SettingsOutlined,
   AdminPanelSettingsOutlined,
 } from "@mui/icons-material";
@@ -39,14 +38,14 @@ interface NavigationItem {
   label: string;
   path: string;
   icon: React.ReactNode;
-  permission?: Permission;
+  /** Visible when the user has the permission, or any permission in the list. */
+  permission?: Permission | readonly Permission[];
 }
 
 const navigationItems: NavigationItem[] = [
   { label: "Dashboard", path: "/dashboard", icon: <DashboardOutlined /> },
   { label: "Expenses", path: "/expenses", icon: <ReceiptLongOutlined />, permission: "expenses.read" },
-  { label: "Approvals", path: "/approvals", icon: <RequestQuoteOutlined />, permission: "expenses.approve" },
-  { label: "Reimbursements", path: "/reimbursements", icon: <PaymentsOutlined />, permission: "reimbursements.manage" },
+  { label: "Approvals", path: "/approvals", icon: <RequestQuoteOutlined />, permission: ["expenses.approve", "reimbursements.manage"] },
   { label: "Budgets", path: "/budgets", icon: <AccountBalanceOutlined />, permission: "budgets.read" },
   { label: "Analytics", path: "/analytics", icon: <AssessmentOutlined />, permission: "analytics.read" },
   { label: "Users", path: "/users", icon: <PeopleOutlined />, permission: "users.read" },
@@ -62,7 +61,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { can } = usePermissions();
 
   const visibleNavigationItems = navigationItems.filter(
-    (item) => !item.permission || can(item.permission),
+    (item) =>
+      !item.permission ||
+      (Array.isArray(item.permission)
+        ? item.permission.some((permission) => can(permission))
+        : can(item.permission as Permission)),
   );
 
   return (

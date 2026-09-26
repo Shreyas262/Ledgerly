@@ -10,10 +10,10 @@ import { ApiFeedback } from "../../../components/common/ApiFeedback";
 export function EditBudgetPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { data, isLoading, isError } = useGetBudgetByIdQuery(id ?? "", { skip: !id });
+  const { data, isLoading, isError, error: loadError, refetch } = useGetBudgetByIdQuery(id ?? "", { skip: !id });
   const [updateBudget, { isLoading: isUpdating, error: updateError }] = useUpdateBudgetMutation();
   if (isLoading) return <LoadingState />;
-  if (isError || !data) return <ErrorState />;
+  if (isError || !data) return <ErrorState error={loadError} onRetry={refetch} />;
   const handleSubmit = async (payload: CreateOrganizationBudgetRequest) => {
     try {
       await updateBudget({ id: data.id, ...payload }).unwrap();

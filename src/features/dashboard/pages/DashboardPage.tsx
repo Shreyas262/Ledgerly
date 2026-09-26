@@ -45,12 +45,14 @@ export function DashboardPage() {
     isLoading,
     isFetching,
     isError,
+    error,
+    refetch,
   } = useGetDashboardSummaryQuery(query, {
     skip: isInvalidRange,
   });
 
   if (isLoading) return <LoadingState />;
-  if (isError || !summary) return <ErrorState />;
+  if (isError || !summary) return <ErrorState error={error} onRetry={refetch} />;
 
   const hasData = summary.kpis.totalSpending > 0 ||
     summary.kpis.pendingApproval > 0 ||
@@ -92,15 +94,15 @@ export function DashboardPage() {
       )}
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
-            label="Total Spending"
+            label="Reimbursed Spending"
             value={`₹${summary.kpis.totalSpending.toLocaleString("en-IN")}`}
-            description="Across your expenses"
+            description="Reimbursed expenses only"
           />
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
             label="Pending Approval"
             value={summary.kpis.pendingApproval}
@@ -108,7 +110,7 @@ export function DashboardPage() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
             label="Approved Expenses"
             value={summary.kpis.approvedExpenses}
@@ -116,7 +118,7 @@ export function DashboardPage() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
             label="Rejected Expenses"
             value={summary.kpis.rejectedExpenses}

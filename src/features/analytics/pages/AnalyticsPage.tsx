@@ -31,12 +31,12 @@ export function AnalyticsPage() {
     status: status.trim() || undefined,
   }), [dateRange, expenseType, status]);
 
-  const { data: summary, isLoading, isFetching, isError } = useGetAnalyticsSummaryQuery(query, {
+  const { data: summary, isLoading, isFetching, isError, error, refetch } = useGetAnalyticsSummaryQuery(query, {
     skip: isInvalidRange,
   });
 
   if (isLoading) return <LoadingState />;
-  if (isError || !summary) return <ErrorState />;
+  if (isError || !summary) return <ErrorState error={error} onRetry={refetch} />;
 
   return (
     <Stack spacing={3}>
@@ -74,21 +74,21 @@ export function AnalyticsPage() {
 
       {isInvalidRange && <Alert severity="warning">Start date must be before or equal to end date.</Alert>}
       {!isInvalidRange && summary.kpis.expenseCount === 0 && (
-        <Alert severity="info">No expenses were found for the selected analytics filters.</Alert>
+        <Alert severity="info">No reimbursed expenses were found for the selected filters. Spending figures include reimbursed expenses only.</Alert>
       )}
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <KpiCard label="Total Spend" value={`₹${summary.kpis.totalSpend.toLocaleString("en-IN")}`} description="Authorized analytical spend" />
+          <KpiCard label="Total Spend" value={`₹${summary.kpis.totalSpend.toLocaleString("en-IN")}`} description="Reimbursed expenses in your scope" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <KpiCard label="Average Expense" value={`₹${summary.kpis.averageExpense.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`} description="Average expense amount" />
+          <KpiCard label="Average Expense" value={`₹${summary.kpis.averageExpense.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`} description="Average reimbursed expense" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <KpiCard label="Largest Expense" value={`₹${summary.kpis.largestExpense.toLocaleString("en-IN")}`} description="Highest individual expense" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <KpiCard label="Pending Spend" value={`₹${summary.kpis.pendingSpend.toLocaleString("en-IN")}`} description="Awaiting approval" />
+          <KpiCard label="Reimbursed Expenses" value={summary.kpis.expenseCount} description="Completed and reimbursed" />
         </Grid>
 
         <Grid size={{ xs: 12 }}>
@@ -114,14 +114,6 @@ export function AnalyticsPage() {
             description="Expense spending across authorized teams"
             data={summary.teamSpending.map((item) => ({ name: item.dimensionName, amount: item.amount }))}
             emptyMessage="There is no team spending data in the selected range."
-          />
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <DimensionAnalysis
-            title="Spending by Project"
-            description="Expense spending across authorized projects"
-            data={summary.projectSpending.map((item) => ({ name: item.dimensionName, amount: item.amount }))}
-            emptyMessage="There is no project spending data in the selected range."
           />
         </Grid>
       </Grid>

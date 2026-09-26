@@ -16,12 +16,12 @@ import { ErrorState } from "../../../components/common/ErrorState";
 function AuditDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data: event, isLoading, isError } = useGetAuditEventByIdQuery(id ?? "", {
+  const { data: event, isLoading, isError, error, refetch } = useGetAuditEventByIdQuery(id ?? "", {
     skip: !id,
   });
 
   if (isLoading) return <LoadingState />;
-  if (isError) return <ErrorState message="Unable to load audit event." />;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!event) return <Alert severity="warning">Audit event not found.</Alert>;
 
   return (

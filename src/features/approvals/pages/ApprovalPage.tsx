@@ -1,9 +1,11 @@
 import {
   Alert,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useGetApprovalQueueQuery } from "../api/approvalApi";
 import {
@@ -14,14 +16,63 @@ import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { ExpenseCard } from "../../expenses/components/ExpenseCard";
 import type { Expense } from "../../expenses/types/expense";
+import { ReimbursementQueue } from "../../reimbursements/components/ReimbursementQueue";
+import { usePermissions } from "../../auth/hooks/usePermissions";
 
+type ApprovalTab = "review" | "reimbursement";
+
+/**
+ * Workflow hub. Review (managerial approval) and Reimbursement (finance
+ * processing) remain separate responsibilities with separate authorization
+ * (§22.13); each tab is shown only to users holding its permission.
+ */
 export function ApprovalsPage() {
+  const { can } = usePermissions();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const canReview = can("expenses.approve");
+  const canReimburse = can("reimbursements.manage");
+
+  const requestedTab = searchParams.get("tab") as ApprovalTab | null;
+  const tab: ApprovalTab =
+    requestedTab === "reimbursement" && canReimburse
+      ? "reimbursement"
+      : requestedTab === "review" && canReview
+        ? "review"
+        : canReview
+          ? "review"
+          : "reimbursement";
+
+  return (
+    <Stack spacing={3}>
+      <Typography variant="h4">Approvals</Typography>
+
+      {canReview && canReimburse && (
+        <Tabs
+          value={tab}
+          onChange={(_event, nextTab: ApprovalTab) =>
+            setSearchParams({ tab: nextTab }, { replace: true })
+          }
+          aria-label="Approval workflow"
+        >
+          <Tab value="review" label="Review" />
+          <Tab value="reimbursement" label="Reimbursement" />
+        </Tabs>
+      )}
+
+      {tab === "review" ? <ReviewQueue /> : <ReimbursementQueue />}
+    </Stack>
+  );
+}
+
+function ReviewQueue() {
   const navigate = useNavigate();
 
   const {
     data: expenses,
     isLoading,
     isError,
+    error,
+    refetch,
   } = useGetApprovalQueueQuery();
 
   const [startExpenseReview, { isLoading: isStartingReview, error: startReviewError }] =
@@ -41,12 +92,14 @@ export function ApprovalsPage() {
   }
 
   if (isError) {
-    return <ErrorState />;
+    return <ErrorState error={error} onRetry={refetch} />;
   }
 
   return (
     <Stack spacing={3}>
-      <Typography variant="h4">Approval Queue</Typography>
+      <Typography color="text.secondary">
+        Submitted expenses awaiting your review.
+      </Typography>
 
       {startReviewError && <ApiFeedback error={startReviewError} />}
 

@@ -24,13 +24,13 @@ export function UserProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const { data, isLoading, isError } = useGetCurrentUserQuery();
+  const { data, isLoading, isError, error: loadError, refetch } = useGetCurrentUserQuery();
 
   const [updateCurrentUser, { isLoading: isUpdating, error: updateError }] =
     useUpdateCurrentUserMutation();
 
   if (isLoading) return <LoadingState />;
-  if (isError) return <ErrorState message="Unable to load your profile." />;
+  if (isError) return <ErrorState error={loadError} onRetry={refetch} />;
 
   const user = data?.data;
   if (!user) {

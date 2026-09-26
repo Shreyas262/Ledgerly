@@ -22,6 +22,8 @@ export function PoliciesPage() {
     data: policies,
     isLoading,
     isError,
+    error,
+    refetch,
   } = useGetPoliciesQuery();
 
   if (isLoading) {
@@ -29,7 +31,7 @@ export function PoliciesPage() {
   }
 
   if (isError) {
-    return <ErrorState />;
+    return <ErrorState error={error} onRetry={refetch} />;
   }
 
   return (

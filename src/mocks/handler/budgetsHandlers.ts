@@ -19,11 +19,8 @@ import { getRecord, listRecords } from "../services/mockDataService";
 import type { Expense } from "../../features/expenses/types/expense";
 import type { Department } from "../../features/organizations/types/organization";
 
-const APPROVED_EXPENSE_STATES = new Set([
-  "approved",
-  "reimbursement_pending",
-  "reimbursed",
-]);
+// Only reimbursed (genuine, completed) expenses consume budget.
+const APPROVED_EXPENSE_STATES = new Set(["reimbursed"]);
 
 
 function badRequest(message: string) {

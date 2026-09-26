@@ -99,6 +99,7 @@ export const authHandlers = [
 
     const authenticatedUser = {
       ...user,
+      role: principal.role,
       permissions: principal.effectivePermissions,
       authorizedDepartmentIds: principal.authorizedDepartmentIds,
     };
@@ -197,6 +198,7 @@ export const authHandlers = [
     return HttpResponse.json({
       data: {
         ...user,
+        role: principal.role,
         permissions: principal.effectivePermissions,
         authorizedDepartmentIds: principal.authorizedDepartmentIds,
       },
@@ -271,6 +273,7 @@ export const authHandlers = [
     return HttpResponse.json({
       data: {
         ...updatedUser,
+        role: principal.role,
         permissions: principal.effectivePermissions,
         authorizedDepartmentIds: principal.authorizedDepartmentIds,
       },

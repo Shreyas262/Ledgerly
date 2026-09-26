@@ -77,7 +77,10 @@ export function buildDashboardSummary(
     isWithinDateRange(expense.expenseDate, range),
   );
 
-  const totalSpending = expenses.reduce(
+  // Spending counts only reimbursed (genuine, completed) expenses; workflow
+  // counts below still reflect every expense in the range.
+  const reimbursed = expenses.filter((expense) => expense.status === "reimbursed");
+  const totalSpending = reimbursed.reduce(
     (total, expense) => total + expense.amount,
     0,
   );
@@ -98,10 +101,11 @@ export function buildDashboardSummary(
     (expense) => expense.status === "rejected",
   ).length;
 
+
   const monthlyTotals = new Map<string, number>();
   const typeTotals = new Map<ExpenseType, number>();
 
-  for (const expense of expenses) {
+  for (const expense of reimbursed) {
     const date = new Date(expense.expenseDate);
     const monthKey = `${date.getUTCFullYear()}-${String(
       date.getUTCMonth() + 1,

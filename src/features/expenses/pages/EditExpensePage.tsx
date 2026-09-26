@@ -104,11 +104,11 @@ export function EditExpensePage() {
   }, [expense]);
 
   if (!id) {
-    return <ErrorState />;
+    return <ErrorState title="Not found" message="No expense was specified." />;
   }
 
   if (!can("expenses.update")) {
-    return <ErrorState />;
+    return <ErrorState title="Access denied" message="You do not have permission to edit expenses." />;
   }
 
   if (isExpenseLoading) {
@@ -124,7 +124,7 @@ export function EditExpensePage() {
       return <ErrorState message="This expense does not exist or is not available to you." />;
     }
 
-    return <ErrorState />;
+    return <ErrorState error={expenseError} onRetry={refetchExpense} />;
   }
 
   if (expense.status !== "draft") {

@@ -1,3 +1,4 @@
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState } from "react";
 
 import {
@@ -41,11 +42,13 @@ export function RolesPage() {
     data: roles,
     isLoading,
     isError,
+    error: rolesError,
+    refetch,
   } = useGetRolesQuery();
 
   const [
     deleteRole,
-    { isLoading: isDeleting },
+    { isLoading: isDeleting, error: deleteError },
   ] = useDeleteRoleMutation();
 
   const [deletingRoleId, setDeletingRoleId] =
@@ -63,6 +66,8 @@ export function RolesPage() {
       setDeletingRoleId(roleId);
 
       await deleteRole(roleId).unwrap();
+    } catch {
+      // The reason (e.g. role still assigned) is exposed through deleteError.
     } finally {
       setDeletingRoleId(null);
     }
@@ -77,7 +82,7 @@ export function RolesPage() {
   }
 
   if (isError) {
-    return <ErrorState />;
+    return <ErrorState error={rolesError} onRetry={refetch} />;
   }
 
   if (!roles?.length) {
@@ -87,6 +92,7 @@ export function RolesPage() {
   return (
     <>
       <Stack spacing={3}>
+        {deleteError && <ApiFeedback error={deleteError} />}
         <Stack
           direction="row"
           sx={{

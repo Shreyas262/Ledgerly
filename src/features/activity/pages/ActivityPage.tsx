@@ -19,6 +19,8 @@ export function ActivityPage() {
     data: userResponse,
     isLoading: isUserLoading,
     isError: isUserError,
+    error: userError,
+    refetch: refetchUser,
   } = useGetCurrentUserQuery();
 
   const user = userResponse?.data;
@@ -47,7 +49,7 @@ export function ActivityPage() {
 
   if (isUserError) {
     return (
-      <ErrorState message="Unable to load account security information." />
+      <ErrorState error={userError} onRetry={refetchUser} />
     );
   }
 

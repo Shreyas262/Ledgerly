@@ -26,6 +26,8 @@ export function PolicyDetailsPage() {
     data: policy,
     isLoading,
     isError,
+    error: policyError,
+    refetch,
   } = useGetPolicyByIdQuery(id ?? "", {
     skip: !id,
   });
@@ -35,7 +37,7 @@ export function PolicyDetailsPage() {
   }
 
   if (isError) {
-    return <ErrorState message="Unable to load policy." />;
+    return <ErrorState error={policyError} onRetry={refetch} />;
   }
 
   if (!policy) {

@@ -57,6 +57,8 @@ export interface ReimbursementInfo {
   amount?: number;
   processedAt?: ISODateString;
   processedBy?: EntityId;
+  /** Display name of processedBy, resolved by the API. */
+  processedByName?: string;
   reference?: string;
   notes?: string;
 }
@@ -69,6 +71,9 @@ export interface Expense extends ResourceTimestamps {
   employeeId: EntityId;
   /** Owner display name, resolved by the API for read responses. */
   employeeName?: string;
+  /** Team and department display names, resolved by the API. */
+  teamName?: string;
+  departmentName?: string;
   type: ExpenseType;
   title: string;
   amount: number;
@@ -90,6 +95,9 @@ export interface Expense extends ResourceTimestamps {
   reimbursement?: ReimbursementInfo;
   cancelledAt?: ISODateString;
   cancelledBy?: EntityId;
+  /** Display name of cancelledBy, resolved by the API. */
+  cancelledByName?: string;
+  cancellationReason?: string;
 }
 
 

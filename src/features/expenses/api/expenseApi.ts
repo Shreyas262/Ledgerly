@@ -210,12 +210,13 @@ export const expensesApi = baseApi.injectEndpoints({
       ],
     }),
 
-    cancelExpense: builder.mutation<Expense, string>({
-      query: (id) => ({
+    cancelExpense: builder.mutation<Expense, { id: string; reason?: string }>({
+      query: ({ id, reason }) => ({
         url: `/expenses/${id}/cancel`,
         method: "POST",
+        body: reason ? { reason } : {},
       }),
-      invalidatesTags: (_result, _error, id) => [
+      invalidatesTags: (_result, _error, { id }) => [
         { type: "Expense", id },
         { type: "Expense", id: "LIST" },
         { type: "Expense", id: "APPROVAL_QUEUE" },

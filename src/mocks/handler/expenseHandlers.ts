@@ -424,8 +424,10 @@ export const expensesHandlers = [
       return apiError(
         422,
         evaluation.result === "MISSING_INFORMATION"
-          ? "Expense is missing information required by the applicable policy."
-          : "Expense violates the applicable policy.",
+          ? (evaluation.details.missingInformation ?? []).join(" ") ||
+            "Expense is missing information required by the applicable policy."
+          : (evaluation.details.violatedRules ?? []).join(" ") ||
+            "Expense violates the applicable policy.",
         "POLICY_VIOLATION",
         { evaluation, expense: evaluatedExpense },
       );

@@ -65,18 +65,41 @@ export async function getAuthorizedExpenseRecords(
   );
 }
 
+interface NamedExpenseFields {
+  employeeId: string;
+  teamId?: string;
+  departmentId?: string;
+  cancelledBy?: string;
+  reimbursement?: { processedBy?: string };
+}
+
 /**
- * Adds the owner's display name to expense responses so the UI never has to
- * resolve users itself (users.read is an administrative permission).
+ * Adds display names for the owner, the reimbursement processor and the
+ * canceller to expense responses so the UI never has to resolve users itself
+ * (users.read is an administrative permission).
  */
-export async function withEmployeeNames<T extends { employeeId: string }>(
+export async function withEmployeeNames<T extends NamedExpenseFields>(
   expenses: T[],
-): Promise<Array<T & { employeeName?: string }>> {
+): Promise<Array<T & { employeeName?: string; cancelledByName?: string; teamName?: string; departmentName?: string }>> {
   if (expenses.length === 0) return [];
 
+  const [teams, departments] = await Promise.all([
+    listRecords<{ id: string; name: string }>("teams"),
+    listRecords<{ id: string; name: string }>("departments"),
+  ]);
+  const teamNameById = new Map(teams.map((team) => [team.id, team.name]));
+  const departmentNameById = new Map(departments.map((department) => [department.id, department.name]));
+
+  const userIds = new Set(
+    expenses.flatMap((expense) =>
+      [expense.employeeId, expense.cancelledBy, expense.reimbursement?.processedBy].filter(
+        (id): id is string => Boolean(id),
+      ),
+    ),
+  );
   const users =
-    expenses.length === 1
-      ? [await getRecord<{ id: string; name: string }>("users", expenses[0].employeeId)].filter(
+    userIds.size === 1
+      ? [await getRecord<{ id: string; name: string }>("users", [...userIds][0])].filter(
           (user): user is { id: string; name: string } => Boolean(user),
         )
       : await listRecords<{ id: string; name: string }>("users");
@@ -84,6 +107,23 @@ export async function withEmployeeNames<T extends { employeeId: string }>(
 
   return expenses.map((expense) => {
     const employeeName = nameById.get(expense.employeeId);
-    return employeeName ? { ...expense, employeeName } : expense;
+    const cancelledByName = expense.cancelledBy ? nameById.get(expense.cancelledBy) : undefined;
+    const processedByName = expense.reimbursement?.processedBy
+      ? nameById.get(expense.reimbursement.processedBy)
+      : undefined;
+
+    const teamName = expense.teamId ? teamNameById.get(expense.teamId) : undefined;
+    const departmentName = expense.departmentId ? departmentNameById.get(expense.departmentId) : undefined;
+
+    return {
+      ...expense,
+      ...(employeeName ? { employeeName } : {}),
+      ...(teamName ? { teamName } : {}),
+      ...(departmentName ? { departmentName } : {}),
+      ...(cancelledByName ? { cancelledByName } : {}),
+      ...(expense.reimbursement && processedByName
+        ? { reimbursement: { ...expense.reimbursement, processedByName } }
+        : {}),
+    };
   });
 }

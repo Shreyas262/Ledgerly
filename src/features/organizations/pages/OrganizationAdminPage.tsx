@@ -1,3 +1,5 @@
+import { getApiErrorMessage } from "../../../services/api/apiErrors";
+import { ErrorState } from "../../../components/common/ErrorState";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -62,8 +64,8 @@ export function OrganizationAdminPage() {
     setError(null);
     try {
       await updateOrganization({ name: orgName.trim(), status: orgStatus }).unwrap();
-    } catch {
-      setError("Failed to update organization configuration.");
+    } catch (caught) {
+      setError(getApiErrorMessage(caught, "Failed to update organization configuration."));
     }
   }
 
@@ -73,8 +75,8 @@ export function OrganizationAdminPage() {
     try {
       await createDepartment({ name: newDepartment.trim() }).unwrap();
       setNewDepartment("");
-    } catch {
-      setError("Failed to create department.");
+    } catch (caught) {
+      setError(getApiErrorMessage(caught, "Failed to create department."));
     }
   }
 
@@ -83,8 +85,8 @@ export function OrganizationAdminPage() {
     try {
       await updateDepartment({ id: department.id, body: { name: departmentName.trim(), status: department.status } }).unwrap();
       setEditingDepartment(null);
-    } catch {
-      setError("Failed to update department.");
+    } catch (caught) {
+      setError(getApiErrorMessage(caught, "Failed to update department."));
     }
   }
 
@@ -92,8 +94,8 @@ export function OrganizationAdminPage() {
     setError(null);
     try {
       await deleteDepartment(id).unwrap();
-    } catch {
-      setError("Department cannot be deleted while it is still referenced.");
+    } catch (caught) {
+      setError(getApiErrorMessage(caught, "Department cannot be deleted while it is still referenced."));
     }
   }
 
@@ -104,8 +106,8 @@ export function OrganizationAdminPage() {
       await createTeam({ name: newTeam.trim(), departmentId: newTeamDepartment }).unwrap();
       setNewTeam("");
       setNewTeamDepartment("");
-    } catch {
-      setError("Failed to create team.");
+    } catch (caught) {
+      setError(getApiErrorMessage(caught, "Failed to create team."));
     }
   }
 
@@ -114,8 +116,8 @@ export function OrganizationAdminPage() {
     try {
       await updateTeam({ id: team.id, body: { name: teamName.trim(), departmentId: teamDepartment, status: team.status } }).unwrap();
       setEditingTeam(null);
-    } catch {
-      setError("Failed to update team.");
+    } catch (caught) {
+      setError(getApiErrorMessage(caught, "Failed to update team."));
     }
   }
 
@@ -123,8 +125,8 @@ export function OrganizationAdminPage() {
     setError(null);
     try {
       await deleteTeam(id).unwrap();
-    } catch {
-      setError("Team cannot be deleted while it is still referenced.");
+    } catch (caught) {
+      setError(getApiErrorMessage(caught, "Team cannot be deleted while it is still referenced."));
     }
   }
 
@@ -133,7 +135,16 @@ export function OrganizationAdminPage() {
   }
 
   if (organization.isError || departments.isError || teams.isError || !currentOrganization) {
-    return <Alert severity="error">Unable to load organization administration.</Alert>;
+    return (
+      <ErrorState
+        error={organization.error ?? departments.error ?? teams.error}
+        onRetry={() => {
+          organization.refetch();
+          departments.refetch();
+          teams.refetch();
+        }}
+      />
+    );
   }
 
   return (

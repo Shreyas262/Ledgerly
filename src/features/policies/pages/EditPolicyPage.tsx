@@ -23,6 +23,8 @@ export function EditPolicyPage() {
     data: policy,
     isLoading: isPolicyLoading,
     isError: isPolicyError,
+    error: policyError,
+    refetch: refetchPolicy,
   } = useGetPolicyByIdQuery(id ?? "", {
     skip: !id,
   });
@@ -40,7 +42,7 @@ export function EditPolicyPage() {
   }
 
   if (isPolicyError) {
-    return <ErrorState message="Unable to load policy." />;
+    return <ErrorState error={policyError} onRetry={refetchPolicy} />;
   }
 
   if (!policy) {

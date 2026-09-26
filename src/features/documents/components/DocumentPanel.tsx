@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "../../../services/api/apiErrors";
 import { useState, type ChangeEvent } from "react";
 import {
   Alert,
@@ -55,9 +56,9 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
         window.open(objectUrl, "_blank", "noopener,noreferrer");
       }
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-    } catch {
+    } catch (caught) {
       previewWindow?.close();
-      setActionError("The document could not be opened.");
+      setActionError(getApiErrorMessage(caught, "The document could not be opened."));
     }
   };
 
@@ -91,8 +92,8 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
     setActionError(null);
     try {
       await removeDocument({ id: documentId, expenseId }).unwrap();
-    } catch {
-      setActionError("The document could not be removed.");
+    } catch (caught) {
+      setActionError(getApiErrorMessage(caught, "The document could not be removed."));
     }
   };
 

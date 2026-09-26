@@ -1,7 +1,7 @@
 import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import type { Permission } from "../../features/roles/types/role";
 import type { Expense } from "../../features/expenses/types/expense";
-import { getRecord, listRecordsByIndex } from "./mockDataService";
+import { getRecord } from "./mockDataService";
 
 export interface WorkflowAuthorizationFailure {
   status: 403;
@@ -31,130 +31,149 @@ function hasPermission(
   return principal.effectivePermissions.includes(permission);
 }
 
-interface ApprovalUser {
+export interface ExpenseOwner {
   id: string;
   organizationId: string;
   teamId: string;
-  roleId: string;
-  role?: string;
-  status?: string;
+  departmentId: string;
+  roleName: string;
+}
+
+/** Resolves the expense owner with the role name taken from the role record. */
+export async function resolveExpenseOwner(ownerId: string): Promise<ExpenseOwner | null> {
+  const user = await getRecord<{
+    id: string;
+    organizationId: string;
+    teamId: string;
+    departmentId: string;
+    roleId: string;
+    role?: string;
+  }>("users", ownerId);
+  if (!user) return null;
+
+  const role = await getRecord<{ name: string }>("roles", user.roleId);
+  return {
+    id: user.id,
+    organizationId: user.organizationId,
+    teamId: user.teamId,
+    departmentId: user.departmentId,
+    roleName: String(role?.name ?? user.role ?? "").toLowerCase(),
+  };
 }
 
 /**
- * Whether the owner's team has an active manager, other than the owner, who
- * holds approval authority. Without one the expense escalates to Admin.
+ * Approval matrix:
+ * - Manager: expenses of members of their own team, except managers and Finance.
+ * - Finance: expenses of managers within their authorized departments.
+ * - Admin: any expense in the organization, including their own (§35.2), and
+ *   the only reviewer of expenses submitted by Finance users.
+ * Nobody except Admin reviews their own expense.
+ * Returns a denial reason, or null when the principal may review.
  */
-export async function hasEligibleTeamManager(
-  organizationId: string,
-  teamId: string,
-  ownerId: string,
-): Promise<boolean> {
-  const members = await listRecordsByIndex<ApprovalUser>("users", "teamId", teamId);
-
-  for (const member of members) {
-    if (
-      member.id === ownerId ||
-      member.organizationId !== organizationId ||
-      member.role !== "manager" ||
-      member.status === "inactive"
-    ) {
-      continue;
-    }
-
-    const role = await getRecord<{ permissions: string[] }>("roles", member.roleId);
-    if (role?.permissions.includes("expenses.approve")) return true;
+export function getReviewDenialReason(
+  principal: AuthenticatedPrincipal,
+  expense: Pick<Expense, "organizationId" | "employeeId" | "teamId" | "departmentId">,
+  owner: ExpenseOwner,
+): string | null {
+  if (expense.organizationId !== principal.organizationId || owner.organizationId !== principal.organizationId) {
+    return "The expense is outside your organization.";
   }
 
-  return false;
+  if (owner.teamId !== expense.teamId) {
+    return "The expense team does not match the owner's team.";
+  }
+
+  if (principal.role === "admin") {
+    return null;
+  }
+
+  if (expense.employeeId === principal.userId) {
+    return "You cannot review your own expense.";
+  }
+
+  if (owner.roleName === "finance") {
+    return "Expenses submitted by Finance users are reviewed by an administrator.";
+  }
+
+  if (principal.role === "manager") {
+    if (owner.roleName === "manager") {
+      return "Expenses submitted by managers are reviewed by Finance.";
+    }
+    return owner.teamId === principal.teamId
+      ? null
+      : "You are not the authorized manager for this expense team.";
+  }
+
+  if (principal.role === "finance") {
+    if (owner.roleName !== "manager") {
+      return "Finance reviews expenses submitted by managers only.";
+    }
+    return principal.authorizedDepartmentIds.includes(expense.departmentId)
+      ? null
+      : "You are not authorized to review expenses from this department.";
+  }
+
+  return "You are not authorized to review expenses.";
 }
 
-/**
- * Approval authority is resolved from the expense owner's team; a manager
- * role alone does not grant it, and managers never review their own expenses.
- * Expenses without an eligible team manager (a manager's own expenses, teams
- * without a manager) escalate to Admin, who may also approve their own
- * expenses (§35.2).
- */
 export async function authorizeExpenseManager(
   principal: AuthenticatedPrincipal,
   expense: Expense,
   permission: "expenses.approve" | "expenses.reject",
 ): Promise<WorkflowAuthorizationResult> {
-  if (expense.organizationId !== principal.organizationId) {
-    return forbidden("The expense is outside your organization.");
-  }
-
-  if (principal.role !== "manager" && principal.role !== "admin") {
-    return forbidden("Only an authorized team manager or administrator may approve or reject expenses.");
-  }
-
   if (!hasPermission(principal, permission)) {
     return forbidden("You are not authorized to perform this approval operation.");
   }
 
-  const owner = await getRecord<{
-    id: string;
-    organizationId: string;
-    teamId: string;
-    departmentId: string;
-  }>("users", String(expense.employeeId));
-
+  const owner = await resolveExpenseOwner(String(expense.employeeId));
   if (!owner) {
     return forbidden("The expense owner could not be resolved.");
   }
 
-  if (owner.organizationId !== principal.organizationId) {
-    return forbidden("The expense owner is outside your organization.");
-  }
-
-  if (owner.teamId !== expense.teamId) {
-    return forbidden("The expense team does not match the owner's team.");
-  }
-
-  if (principal.role === "admin") {
-    if (
-      expense.employeeId === principal.userId ||
-      !(await hasEligibleTeamManager(owner.organizationId, owner.teamId, owner.id))
-    ) {
-      return { allowed: true, principal };
-    }
-
-    return forbidden("This expense is reviewed by its team manager.");
-  }
-
-  if (expense.employeeId === principal.userId) {
-    return forbidden("You cannot review your own expense.");
-  }
-
-  if (owner.teamId !== principal.teamId) {
-    return forbidden("You are not the authorized manager for this expense team.");
-  }
-
-  return { allowed: true, principal };
+  const denial = getReviewDenialReason(principal, expense, owner);
+  return denial ? forbidden(denial) : { allowed: true, principal };
 }
 
 /**
- * Reimbursement authority is independent from approval authority and is
- * constrained to the finance user's authorized departments (§22.7).
+ * Reimbursement authority is independent from approval authority. Finance is
+ * constrained to its authorized departments (§22.7); Admin holds
+ * organization-wide authority over expense operations (§27.1, §35.2).
  */
-export function authorizeExpenseFinance(
+export async function authorizeExpenseFinance(
   principal: AuthenticatedPrincipal,
   expense: Expense,
-): WorkflowAuthorizationResult {
+): Promise<WorkflowAuthorizationResult> {
   if (expense.organizationId !== principal.organizationId) {
     return forbidden("The expense is outside your organization.");
   }
 
-  if (principal.role !== "finance") {
-    return forbidden("Only authorized Finance users may process reimbursements.");
+  if (principal.role !== "finance" && principal.role !== "admin") {
+    return forbidden("Only authorized Finance users or administrators may process reimbursements.");
   }
 
   if (!hasPermission(principal, "reimbursements.manage")) {
     return forbidden("You are not authorized to process reimbursements.");
   }
 
-  if (!principal.authorizedDepartmentIds.includes(expense.departmentId)) {
+  // Separation of duties: a Finance user who approved an expense cannot
+  // also process its reimbursement.
+  if (principal.role === "finance" && expense.approvedBy === principal.userId) {
+    return forbidden("You approved this expense, so another authorized user must process its reimbursement.");
+  }
+
+  if (
+    principal.role === "finance" &&
+    !principal.authorizedDepartmentIds.includes(expense.departmentId)
+  ) {
     return forbidden("You are not authorized to process expenses from this department.");
+  }
+
+  // Expenses submitted by Finance users are reimbursed by an administrator.
+  if (principal.role === "finance") {
+    const owner = await resolveExpenseOwner(String(expense.employeeId));
+    if (!owner || owner.roleName === "finance") {
+      return forbidden("Expenses submitted by Finance users are reimbursed by an administrator.");
+    }
   }
 
   return { allowed: true, principal };

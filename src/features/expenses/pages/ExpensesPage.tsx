@@ -84,6 +84,8 @@ export function ExpensesPage() {
     data: expenseResult,
     isLoading,
     isError,
+    error: loadError,
+    refetch,
   } = useGetExpensesQuery(
     {
       scope,
@@ -108,7 +110,7 @@ export function ExpensesPage() {
 
   const [submitExpense, { error: submitError }] = useSubmitExpenseMutation();
   if (!can("expenses.read")) {
-    return <ErrorState />;
+    return <ErrorState title="Access denied" message="You do not have permission to view expenses." />;
   }
 
   if (isLoading) {
@@ -116,7 +118,7 @@ export function ExpensesPage() {
   }
 
   if (isError) {
-    return <ErrorState />;
+    return <ErrorState error={loadError} onRetry={refetch} />;
   }
 
   const handleSubmitExpense = async (expenseId: string) => {

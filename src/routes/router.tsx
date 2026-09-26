@@ -54,11 +54,6 @@ const ApprovalsPage = lazy(() =>
     default: module.ApprovalsPage,
   })),
 );
-const ReimbursementPage = lazy(() =>
-  import("../features/reimbursements/pages/ReimbursementPage").then(
-    (module) => ({ default: module.ReimbursementPage }),
-  ),
-);
 const BudgetsPage = lazy(() =>
   import("../features/budgets/pages/BudgetsPage").then((module) => ({
     default: module.BudgetsPage,
@@ -209,32 +204,35 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            element: <PermissionRoute permission="expenses.approve" />,
+            // Approvals hosts both managerial review and finance
+            // reimbursement; each tab is gated by its own permission.
+            element: (
+              <PermissionRoute
+                permission={["expenses.approve", "reimbursements.manage"]}
+              />
+            ),
             children: [
               {
                 path: "/approvals",
                 element: <ApprovalsPage />,
                 handle: {
-                  title: "Approval Queue",
+                  title: "Approvals",
                 },
               },
+              {
+                path: "/reimbursements",
+                element: <Navigate to="/approvals?tab=reimbursement" replace />,
+              },
+            ],
+          },
+          {
+            element: <PermissionRoute permission="expenses.approve" />,
+            children: [
               {
                 path: "/approvals/:id",
                 element: <ExpenseDetailsPage mode="review" />,
                 handle: {
                   title: "Expense Review",
-                },
-              },
-            ],
-          },
-          {
-            element: <PermissionRoute permission="reimbursements.manage" />,
-            children: [
-              {
-                path: "/reimbursements",
-                element: <ReimbursementPage />,
-                handle: {
-                  title: "Reimbursement Queue",
                 },
               },
             ],

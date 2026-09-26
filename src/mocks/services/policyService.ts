@@ -62,6 +62,9 @@ export async function selectApplicablePolicy(
     })[0];
 }
 
+const RECEIPT_REQUIRED =
+  "A receipt or supporting document is required before submission.";
+
 export async function evaluateExpensePolicy(
   expense: PolicyExpense,
 ): Promise<PolicyEvaluation> {
@@ -71,13 +74,18 @@ export async function evaluateExpensePolicy(
     expenseType,
   );
   const evaluatedAt = new Date().toISOString();
+  const hasDocument = (expense.documentIds?.length ?? 0) > 0;
 
   if (!policy) {
-    return {
-      result: "NO_APPLICABLE_POLICY",
-      evaluatedAt,
-      details: {},
-    };
+    // Baseline documentation rule: every expense needs supporting evidence,
+    // even when no specific policy applies.
+    return hasDocument
+      ? { result: "NO_APPLICABLE_POLICY", evaluatedAt, details: {} }
+      : {
+          result: "MISSING_INFORMATION",
+          evaluatedAt,
+          details: { missingInformation: [RECEIPT_REQUIRED], requestedAmount: expense.amount },
+        };
   }
 
   const rule = policy.rule ?? {
@@ -122,8 +130,9 @@ export async function evaluateExpensePolicy(
     violatedRules.push("Expense cost center is not allowed by this policy.");
   }
 
-  if (rule.requiresReceipt && !(expense.documentIds?.length ?? 0)) {
-    missingInformation.push("A receipt is required by this policy.");
+  // Baseline documentation rule applies regardless of the policy setting.
+  if (!hasDocument) {
+    missingInformation.push(RECEIPT_REQUIRED);
   }
 
   let result: PolicyEvaluationResult = "COMPLIANT";

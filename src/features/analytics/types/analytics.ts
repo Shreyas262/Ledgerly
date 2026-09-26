@@ -15,8 +15,7 @@ export interface AnalyticsKpis {
   totalSpend: number;
   averageExpense: number;
   largestExpense: number;
-  approvedSpend: number;
-  pendingSpend: number;
+  /** Number of reimbursed expenses in the filtered range. */
   expenseCount: number;
 }
 
@@ -46,6 +45,5 @@ export interface AnalyticsSummary {
   expenseTypeSpending: Array<{ expenseType: ExpenseType; amount: number }>;
   departmentSpending: AnalyticsDimensionSpending[];
   teamSpending: AnalyticsDimensionSpending[];
-  projectSpending: AnalyticsDimensionSpending[];
   approvalMetrics: AnalyticsApprovalMetrics;
 }

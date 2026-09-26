@@ -139,6 +139,13 @@ export function ExpenseCard({
               variant="body2"
               color="text.secondary"
             >
+              {expense.teamName ?? expense.teamId} · {expense.departmentName ?? expense.departmentId}
+            </Typography>
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+            >
               {expense.expenseDate}
             </Typography>
           </Stack>
@@ -192,8 +199,10 @@ export function ExpenseCard({
               variant="contained"
               onClick={() => onSubmit?.(expense)}
               loading={isSubmitting}
+              disabled={!expense.documentIds?.length}
+              title={expense.documentIds?.length ? undefined : "Attach a receipt before submitting"}
             >
-              Submit
+              {expense.documentIds?.length ? "Submit" : "Receipt required"}
             </Button>
           )}
 

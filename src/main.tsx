@@ -12,7 +12,11 @@ import "./index.css";
 async function enableMocking() {
   if (import.meta.env.DEV) {
     await worker.start({
-      onUnhandledRequest: "warn",
+      onUnhandledRequest(request, print) {
+        if (new URL(request.url).pathname.startsWith("/api/")) {
+          print.warning();
+        }
+      },
     });
   }
 }

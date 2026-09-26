@@ -33,7 +33,7 @@ function workflowError(error: unknown) {
   const message =
     error instanceof Error ? error.message : "The workflow operation failed.";
 
-  if (message.includes("rejection reason")) {
+  if (message.includes("rejection reason") || message.includes("cancellation reason")) {
     return apiError(422, message, "VALIDATION_ERROR", {
       fieldErrors: { reason: message },
     });
@@ -61,8 +61,8 @@ export const workflowHandlers = [
       return authorizationError(authorization);
     }
 
-    if (authorization.principal.role !== "manager" && authorization.principal.role !== "admin") {
-      return apiError(403, "Only authorized team managers and administrators have an approval queue.");
+    if (!["manager", "finance", "admin"].includes(authorization.principal.role)) {
+      return apiError(403, "Only managers, Finance and administrators have an approval queue.");
     }
 
     return HttpResponse.json(
@@ -175,8 +175,8 @@ export const workflowHandlers = [
       return authorizationError(authorization);
     }
 
-    if (authorization.principal.role !== "finance") {
-      return apiError(403, "Only authorized Finance users have a reimbursement queue.");
+    if (authorization.principal.role !== "finance" && authorization.principal.role !== "admin") {
+      return apiError(403, "Only authorized Finance users and administrators have a reimbursement queue.");
     }
 
     return HttpResponse.json(
@@ -311,9 +311,16 @@ export const workflowHandlers = [
       return HttpResponse.json(updatedExpense);
     }
 
+    // Financial cancellation records why the expense was stopped (§22.11).
+    const cancelBody = (await request.json().catch(() => ({}))) as { reason?: unknown };
+
     try {
       return HttpResponse.json(
-        await cancelFinancialExpense(principal, expense),
+        await cancelFinancialExpense(
+          principal,
+          expense,
+          typeof cancelBody.reason === "string" ? cancelBody.reason : "",
+        ),
       );
     } catch (error) {
       return workflowError(error);

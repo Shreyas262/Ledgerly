@@ -44,6 +44,7 @@ interface AuthorizationUser {
 interface AuthorizationRole {
   id: string;
   organizationId: string;
+  name?: string;
   permissions: string[];
 }
 
@@ -74,7 +75,8 @@ export async function buildAuthenticatedPrincipal(
     departmentId: user.departmentId,
     teamId: user.teamId,
     roleId: user.roleId,
-    role: user.role ?? "",
+    // The role record is authoritative; the user record's copy can be stale.
+    role: String(role.name ?? user.role ?? "").toLowerCase(),
     effectivePermissions: role.permissions as Permission[],
     authorizedDepartmentIds: user.financeDepartmentIds?.length
       ? [...user.financeDepartmentIds]

@@ -1,3 +1,4 @@
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState, type SyntheticEvent } from "react";
 import {
   Button,
@@ -84,11 +85,7 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
         ))}
       </FormGroup>
 
-      {isError && (
-        <Typography color="error">
-          Failed to create role.
-        </Typography>
-      )}
+      {isError && <ApiFeedback error={error} />}
 
       <Button
         type="submit"

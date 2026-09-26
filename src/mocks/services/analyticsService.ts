@@ -122,23 +122,19 @@ export function buildAnalyticsSummary(
     return true;
   });
 
-  const totalSpend = expenses.reduce((total, expense) => total + expense.amount, 0);
+  // Spending metrics count only reimbursed (genuine, completed) expenses.
+  // Workflow counts below still reflect every expense in the filtered set.
+  const reimbursed = expenses.filter((expense) => expense.status === "reimbursed");
+  const totalSpend = reimbursed.reduce((total, expense) => total + expense.amount, 0);
   const approvedStatuses = new Set(["approved", "reimbursement_pending", "reimbursed"]);
   const pendingStatuses = new Set(["submitted", "under_review"]);
-  const approvedSpend = expenses
-    .filter((expense) => approvedStatuses.has(expense.status))
-    .reduce((total, expense) => total + expense.amount, 0);
-  const pendingSpend = expenses
-    .filter((expense) => pendingStatuses.has(expense.status))
-    .reduce((total, expense) => total + expense.amount, 0);
 
   const monthlyTotals = new Map<string, number>();
   const typeTotals = new Map<ExpenseType, number>();
   const departmentTotals = new Map<string, number>();
   const teamTotals = new Map<string, number>();
-  const projectTotals = new Map<string, number>();
 
-  for (const expense of expenses) {
+  for (const expense of reimbursed) {
     const date = new Date(expense.expenseDate);
     const period = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
     addTotal(monthlyTotals, period, expense.amount);
@@ -146,7 +142,6 @@ export function buildAnalyticsSummary(
     typeTotals.set(expenseType, (typeTotals.get(expenseType) ?? 0) + expense.amount);
     addTotal(departmentTotals, expense.departmentId, expense.amount);
     addTotal(teamTotals, expense.teamId, expense.amount);
-    addTotal(projectTotals, expense.projectId, expense.amount);
   }
 
   const approvedCount = expenses.filter((expense) => approvedStatuses.has(expense.status)).length;
@@ -159,11 +154,9 @@ export function buildAnalyticsSummary(
     filters: query,
     kpis: {
       totalSpend,
-      averageExpense: expenses.length ? totalSpend / expenses.length : 0,
-      largestExpense: expenses.length ? Math.max(...expenses.map((expense) => expense.amount)) : 0,
-      approvedSpend,
-      pendingSpend,
-      expenseCount: expenses.length,
+      averageExpense: reimbursed.length ? totalSpend / reimbursed.length : 0,
+      largestExpense: reimbursed.length ? Math.max(...reimbursed.map((expense) => expense.amount)) : 0,
+      expenseCount: reimbursed.length,
     },
     spendingTrend: Array.from(monthlyTotals.entries())
       .sort(([first], [second]) => first.localeCompare(second))
@@ -173,7 +166,6 @@ export function buildAnalyticsSummary(
       .sort((first, second) => second.amount - first.amount),
     departmentSpending: toDimensions(departmentTotals, names?.departments),
     teamSpending: toDimensions(teamTotals, names?.teams),
-    projectSpending: toDimensions(projectTotals),
     approvalMetrics: {
       approvalRate: totalReviewed ? (approvedCount / totalReviewed) * 100 : 0,
       rejectionRate: totalReviewed ? (rejectedCount / totalReviewed) * 100 : 0,

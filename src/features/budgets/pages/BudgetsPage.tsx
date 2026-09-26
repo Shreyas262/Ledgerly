@@ -14,9 +14,9 @@ export function BudgetsPage() {
   const navigate = useNavigate();
   const { can } = usePermissions();
   const { user } = useAuth();
-  const { data: budgets, isLoading, isError } = useGetBudgetsQuery();
+  const { data: budgets, isLoading, isError, error, refetch } = useGetBudgetsQuery();
   if (isLoading) return <LoadingState />;
-  if (isError) return <ErrorState />;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
   const summary = calculateBudgetSummary(budgets ?? []);
   const isAdmin = user?.role === "admin";
   return (
@@ -31,8 +31,8 @@ export function BudgetsPage() {
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Organization Budget" value={`₹${summary.totalBudget.toLocaleString("en-IN")}`} /></Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Department Allocated" value={`₹${summary.totalAllocated.toLocaleString("en-IN")}`} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Derived Spend" value={`₹${summary.totalSpent.toLocaleString("en-IN")}`} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Utilization" value={`${summary.utilization.toFixed(1)}%`} description="Derived from approved financial expenses" /></Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Reimbursed Spend" value={`₹${summary.totalSpent.toLocaleString("en-IN")}`} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Utilization" value={`${summary.utilization.toFixed(1)}%`} description="Only reimbursed expenses consume budget" /></Grid>
       </Grid>
       <Grid container spacing={2}>
         {(budgets ?? []).map((budget) => <Grid key={budget.id} size={{ xs: 12, md: 6, lg: 4 }}><BudgetCard budget={budget} onView={(selected) => navigate(`/budgets/${selected.id}`)} /></Grid>)}

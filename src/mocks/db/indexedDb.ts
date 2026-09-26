@@ -1,5 +1,5 @@
 const DB_NAME = "ledgerly";
-export const DB_VERSION = 13;
+export const DB_VERSION = 16;
 
 export const MOCK_STORES = [
   "users",
@@ -326,7 +326,57 @@ const migrations: Record<number, Migration> = {
       });
     };
   },
+
+  14: (_database, transaction) => {
+    grantWorkflowPermissions(transaction);
+  },
+
+  15: (_database, transaction) => {
+    // Finance reviews managers' expenses.
+    grantWorkflowPermissions(transaction);
+  },
+
+  16: (_database, transaction) => {
+    // Finance users create and submit their own expenses.
+    grantWorkflowPermissions(transaction);
+  },
 };
+
+function grantWorkflowPermissions(transaction: IDBTransaction): void {
+  // Databases seeded by earlier builds (or edited through the Roles page) may
+  // lack the permissions the approval and reimbursement workflow requires.
+  // Additive only: existing permissions are never removed.
+  const roles = transaction.objectStore("roles");
+  const required: Record<string, string[]> = {
+    finance: [
+      "reimbursements.manage",
+      "documents.read",
+      "documents.create",
+      "documents.update",
+      "documents.delete",
+      "expenses.approve",
+      "expenses.reject",
+      "expenses.create",
+      "expenses.update",
+      "expenses.submit",
+    ],
+    manager: ["expenses.approve", "expenses.reject"],
+    admin: ["expenses.approve", "expenses.reject", "reimbursements.manage"],
+  };
+  const request = roles.getAll();
+  request.onsuccess = () => {
+    for (const role of request.result as Array<{ id: string; name: string; permissions?: string[] }>) {
+      const permissions = required[String(role.name).toLowerCase()];
+      const current = role.permissions ?? [];
+      if (!permissions || permissions.every((permission) => current.includes(permission))) continue;
+      roles.put({
+        ...role,
+        permissions: Array.from(new Set([...current, ...permissions])),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  };
+}
 
 function grantDocumentPermissions(transaction: IDBTransaction): void {
   const roles = transaction.objectStore("roles");

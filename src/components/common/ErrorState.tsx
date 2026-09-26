@@ -5,23 +5,50 @@ import {
   Button,
 } from "@mui/material";
 
+import { getApiError } from "../../services/api/apiErrors";
+
 interface ErrorStateProps {
   title?: string;
   message?: string;
+  /** The failed request's error; its status and message are shown to the user. */
+  error?: unknown;
   onRetry?: () => void;
 }
 
+const titlesByStatus: Record<number, string> = {
+  401: "Session expired",
+  403: "Access denied",
+  404: "Not found",
+  409: "Conflict",
+  422: "Request not accepted",
+};
+
 export function ErrorState({
-  title = "Something went wrong",
-  message = "We couldn't load this information. Please try again.",
+  title,
+  message,
+  error,
   onRetry,
 }: ErrorStateProps) {
+  const apiError = getApiError(error);
+  const resolvedTitle =
+    title ??
+    (apiError ? titlesByStatus[apiError.status] : undefined) ??
+    "Something went wrong";
+  const resolvedMessage =
+    message ??
+    apiError?.message ??
+    "We couldn't load this information. Please try again.";
+  // Retrying cannot fix authorization or missing-resource failures.
+  const canRetry =
+    Boolean(onRetry) &&
+    !(apiError && [401, 403, 404].includes(apiError.status));
+
   return (
     <Alert
       severity="error"
       icon={<ErrorOutlineOutlined />}
       action={
-        onRetry ? (
+        canRetry ? (
           <Button
             color="inherit"
             size="small"
@@ -33,9 +60,9 @@ export function ErrorState({
         ) : undefined
       }
     >
-      <AlertTitle>{title}</AlertTitle>
+      <AlertTitle>{resolvedTitle}</AlertTitle>
 
-      {message}
+      {resolvedMessage}
     </Alert>
   );
 }
