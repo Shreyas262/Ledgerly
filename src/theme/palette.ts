@@ -90,9 +90,22 @@ const lightPalette: PaletteOptions = {
     draft: { bg: "#F1F5F9", fg: "#475569" },
     info: { bg: "#EFF6FF", fg: "#1D4ED8" },
   },
+  // Categorical order validated for CVD separation (incl. donut wrap-around).
   chart: {
     series: "#1E293B",
+    reference: "#CBD5E1",
+    other: "#64748B",
     track: "#F1F5F9",
+    categorical: [
+      "#2563EB",
+      "#0D9488",
+      "#EA580C",
+      "#DB2777",
+      "#7C3AED",
+      "#CA8A04",
+      "#0891B2",
+      "#65A30D",
+    ],
   },
 };
 
@@ -170,7 +183,19 @@ const darkPalette: PaletteOptions = {
   },
   chart: {
     series: "#94A3B8",
+    reference: "#475569",
+    other: "#94A3B8",
     track: "rgba(148, 163, 184, 0.12)",
+    categorical: [
+      "#3B82F6",
+      "#0D9488",
+      "#EA580C",
+      "#DB2777",
+      "#8B5CF6",
+      "#A16207",
+      "#0891B2",
+      "#65A30D",
+    ],
   },
 };
 

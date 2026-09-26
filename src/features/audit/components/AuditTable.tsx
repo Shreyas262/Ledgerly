@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import type { AuditEvent } from "../types/audit";
+import { humanize } from "../../../utils/format";
 
 interface AuditTableProps {
   auditEvents: AuditEvent[];
@@ -22,7 +23,7 @@ export function AuditTable({ auditEvents }: AuditTableProps) {
 
   return (
     <TableContainer component={Paper}>
-      <Table>
+      <Table sx={{ minWidth: 960 }}>
         <TableHead>
           <TableRow>
             <TableCell>Action</TableCell>
@@ -31,15 +32,15 @@ export function AuditTable({ auditEvents }: AuditTableProps) {
             <TableCell>State</TableCell>
             <TableCell>Description</TableCell>
             <TableCell>Timestamp</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {auditEvents.map((event) => (
-            <TableRow key={event.id}>
-              <TableCell><Chip label={event.action} size="small" /></TableCell>
+            <TableRow key={event.id} hover>
+              <TableCell><Chip label={humanize(event.action)} size="small" /></TableCell>
               <TableCell>
-                <Typography variant="body2">{event.entityType}</Typography>
+                <Typography variant="body2">{humanize(event.entityType)}</Typography>
                 <Typography variant="caption" color="text.secondary">
                   {event.entityId}
                 </Typography>
@@ -53,10 +54,10 @@ export function AuditTable({ auditEvents }: AuditTableProps) {
                 ) : "—"}
               </TableCell>
               <TableCell>{event.description ?? "—"}</TableCell>
-              <TableCell>
+              <TableCell sx={{ whiteSpace: "nowrap" }}>
                 {new Date(event.timestamp).toLocaleString("en-IN")}
               </TableCell>
-              <TableCell>
+              <TableCell align="right">
                 <Button size="small" onClick={() => navigate(`/audit/${event.id}`)}>
                   View
                 </Button>

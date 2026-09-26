@@ -2,7 +2,8 @@ import {
   Box,
   Button,
   Chip,
-  Paper,
+  Card,
+  CardContent,
   Stack,
   Typography,
 } from "@mui/material";
@@ -102,7 +103,8 @@ export function ExpenseCard({
     can("expenses.approve");
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Card>
+      <CardContent>
       <Stack spacing={2}>
         <Box
           sx={{
@@ -116,7 +118,7 @@ export function ExpenseCard({
           }}
         >
           <Stack spacing={0.5}>
-            <Typography variant="h6">
+            <Typography variant="subtitle1">
               {expense.title}
             </Typography>
 
@@ -217,6 +219,7 @@ export function ExpenseCard({
           )}
         </Stack>
       </Stack>
-    </Paper>
+      </CardContent>
+    </Card>
   );
 }

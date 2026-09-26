@@ -142,7 +142,7 @@ export function UsersPage() {
                       }}
                     >
                       <Stack spacing={0.5}>
-                        <Typography variant="h6">{user.name}</Typography>
+                        <Typography variant="subtitle1">{user.name}</Typography>
 
                         <Typography variant="body2" color="text.secondary">
                           {user.email}

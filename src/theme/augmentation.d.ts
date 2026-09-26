@@ -16,8 +16,15 @@ interface LedgerlySidebarPalette {
 }
 
 interface LedgerlyChartPalette {
+  /** Single-series marks (spend lines, bars, sparklines). */
   series: string;
+  /** Comparison / reference marks, e.g. budget allocation. */
+  reference: string;
+  /** Neutral "Other" / inactive category. */
+  other: string;
   track: string;
+  /** Validated categorical order; assign by entity, never by rank. */
+  categorical: string[];
 }
 
 interface LedgerlyStatusTone {
@@ -48,18 +55,18 @@ declare module "@mui/material/styles" {
 
   interface TypographyVariants {
     kpi: React.CSSProperties;
-    amount: React.CSSProperties;
+    numeric: React.CSSProperties;
   }
 
   interface TypographyVariantsOptions {
     kpi?: React.CSSProperties;
-    amount?: React.CSSProperties;
+    numeric?: React.CSSProperties;
   }
 }
 
 declare module "@mui/material/Typography" {
   interface TypographyPropsVariantOverrides {
     kpi: true;
-    amount: true;
+    numeric: true;
   }
 }

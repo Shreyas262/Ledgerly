@@ -38,7 +38,8 @@ import {
   EXPENSE_TYPE_LABELS,
   type ExpenseType,
 } from "../../expenses/types/expense";
-import { BudgetProgress, formatMoney } from "../components/BudgetProgress";
+import { BudgetProgress } from "../components/BudgetProgress";
+import { formatCurrency } from "../../../utils/currency";
 import type { DepartmentBudgetView, OrganizationBudgetView } from "../types/budget";
 import { useConfirm, type ConfirmOptions } from "../../../components/common/ConfirmProvider";
 
@@ -205,7 +206,7 @@ export function BudgetDetailsPage() {
               <Stack direction="row" sx={{ justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
                 <Typography variant="h6">Organization</Typography>
                 <Typography color="text.secondary">
-                  {formatMoney(allocatedToDepartments)} allocated · {formatMoney(Math.max(budget.amount - allocatedToDepartments, 0))} unallocated
+                  {formatCurrency(allocatedToDepartments)} allocated · {formatCurrency(Math.max(budget.amount - allocatedToDepartments, 0))} unallocated
                 </Typography>
               </Stack>
               <BudgetProgress allocated={budget.amount} utilization={budget.utilization} />
@@ -241,7 +242,7 @@ export function BudgetDetailsPage() {
                           "Unable to save the department allocation.",
                           {
                             title: "Allocate to department",
-                            message: `Allocate ${formatMoney(Number(departmentAmount))} to ${departments.find((item) => item.id === departmentId)?.name ?? "this department"}?`,
+                            message: `Allocate ${formatCurrency(Number(departmentAmount))} to ${departments.find((item) => item.id === departmentId)?.name ?? "this department"}?`,
                             confirmLabel: "Allocate",
                           },
                         )) {
@@ -342,7 +343,7 @@ function DepartmentSection({ budget, department, canManage, showDepartmentTotals
               <Stack direction="row" sx={{ justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
                 <Typography variant="h6">{department.departmentName}</Typography>
                 <Typography color="text.secondary">
-                  {formatMoney(allocatedToTeams)} assigned to teams · {formatMoney(Math.max(department.amount - allocatedToTeams, 0))} unassigned
+                  {formatCurrency(allocatedToTeams)} assigned to teams · {formatCurrency(Math.max(department.amount - allocatedToTeams, 0))} unassigned
                 </Typography>
               </Stack>
               <BudgetProgress allocated={department.amount} utilization={department.utilization} />
@@ -363,7 +364,7 @@ function DepartmentSection({ budget, department, canManage, showDepartmentTotals
                 <Stack direction="row" sx={{ justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
                   <Typography sx={{ fontWeight: 600 }}>{team.teamName}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {formatMoney(typeTotal)} set for expense types
+                    {formatCurrency(typeTotal)} set for expense types
                   </Typography>
                 </Stack>
                 <BudgetProgress allocated={team.amount} utilization={team.utilization} dense />
@@ -425,7 +426,7 @@ function DepartmentSection({ budget, department, canManage, showDepartmentTotals
                       "Unable to save the team budget.",
                       {
                         title: "Allocate to team",
-                        message: `Allocate ${formatMoney(Number(teamAmount))} to ${department.departmentTeams.find((team) => team.id === teamId)?.name ?? "this team"}?`,
+                        message: `Allocate ${formatCurrency(Number(teamAmount))} to ${department.departmentTeams.find((team) => team.id === teamId)?.name ?? "this team"}?`,
                         confirmLabel: "Allocate",
                       },
                     )) {
@@ -444,7 +445,7 @@ function DepartmentSection({ budget, department, canManage, showDepartmentTotals
                   <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                     <TextField select label="Team" value={typeTeamAllocationId} onChange={(event) => setTypeTeamAllocationId(event.target.value)} fullWidth>
                       {department.teamAllocations.map((team) => (
-                        <MenuItem key={team.id} value={team.id}>{team.teamName} ({formatMoney(team.amount)})</MenuItem>
+                        <MenuItem key={team.id} value={team.id}>{team.teamName} ({formatCurrency(team.amount)})</MenuItem>
                       ))}
                     </TextField>
                     <TextField
@@ -476,7 +477,7 @@ function DepartmentSection({ budget, department, canManage, showDepartmentTotals
                           "Unable to save the expense-type budget.",
                           {
                             title: "Set expense-type budget",
-                            message: `Set the ${EXPENSE_TYPE_LABELS[expenseType]} budget for ${department.teamAllocations.find((team) => team.id === typeTeamAllocationId)?.teamName ?? "this team"} to ${formatMoney(Number(typeAmount))}?`,
+                            message: `Set the ${EXPENSE_TYPE_LABELS[expenseType]} budget for ${department.teamAllocations.find((team) => team.id === typeTeamAllocationId)?.teamName ?? "this team"} to ${formatCurrency(Number(typeAmount))}?`,
                             confirmLabel: "Save",
                           },
                         )) {

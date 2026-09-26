@@ -1,8 +1,6 @@
-import {
-  Button,
-  Stack,
-  TextField,
-} from "@mui/material";
+import { TextField } from "@mui/material";
+
+import { FilterBar } from "../../../components/common/FilterBar";
 
 export interface DashboardDateRange {
   startDate: string;
@@ -23,24 +21,26 @@ export function DashboardDateFilter({
     Boolean(value.endDate) &&
     value.startDate > value.endDate;
 
+  const activeCount = (value.startDate ? 1 : 0) + (value.endDate ? 1 : 0);
+
   return (
-    <Stack
-      direction={{
-        xs: "column",
-        sm: "row",
-      }}
-      spacing={2}
+    <FilterBar
+      label="Date range"
+      activeCount={activeCount}
+      onReset={() =>
+        onChange({
+          startDate: "",
+          endDate: "",
+        })
+      }
+      error={isInvalidRange ? "Start date must be before end date." : null}
     >
       <TextField
+        size="small"
         label="Start date"
         type="date"
         value={value.startDate}
         error={isInvalidRange}
-        helperText={
-          isInvalidRange
-            ? "Start date must be before end date."
-            : undefined
-        }
         onChange={(event) =>
           onChange({
             ...value,
@@ -55,6 +55,7 @@ export function DashboardDateFilter({
       />
 
       <TextField
+        size="small"
         label="End date"
         type="date"
         value={value.endDate}
@@ -71,29 +72,6 @@ export function DashboardDateFilter({
           },
         }}
       />
-
-      <Button
-        type="button"
-        onClick={() =>
-          onChange({
-            startDate: "",
-            endDate: "",
-          })
-        }
-        disabled={
-          !value.startDate &&
-          !value.endDate
-        }
-        sx={{
-          alignSelf: {
-            xs: "flex-start",
-            sm: "center",
-          },
-        }}
-        
-      >
-        Clear
-      </Button>
-    </Stack>
+    </FilterBar>
   );
 }

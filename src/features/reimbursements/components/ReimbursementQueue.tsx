@@ -4,7 +4,8 @@ import {
   Alert,
   Button,
   Chip,
-  Paper,
+  Card,
+  CardContent,
   Stack,
   Tab,
   Tabs,
@@ -145,14 +146,15 @@ export function ReimbursementQueue() {
               expense.status === "reimbursement_pending";
 
             return (
-              <Paper key={expense.id} sx={{ p: 2.5 }}>
+              <Card key={expense.id}>
+                <CardContent>
                 <Stack
                   direction={{ xs: "column", sm: "row" }}
                   spacing={2}
                   sx={{ justifyContent: "space-between" }}
                 >
                   <Stack spacing={0.5}>
-                    <Typography variant="h6">
+                    <Typography variant="subtitle1">
                       {expense.title}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
@@ -237,7 +239,8 @@ export function ReimbursementQueue() {
                     )}
                   </Stack>
                 </Stack>
-              </Paper>
+                </CardContent>
+              </Card>
             );
           })}
         </Stack>

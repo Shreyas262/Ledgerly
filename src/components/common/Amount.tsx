@@ -11,7 +11,7 @@ interface AmountProps {
 /** Inline monetary value with tabular numerals; inherits size and colour. */
 export function Amount({ value, currency }: AmountProps) {
   return (
-    <Typography variant="amount">
+    <Typography variant="numeric">
       {currency ? `${currency} ${formatAmount(value)}` : formatCurrency(value)}
     </Typography>
   );

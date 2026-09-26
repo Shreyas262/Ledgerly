@@ -131,7 +131,7 @@ export function RolesPage() {
                     }}
                     spacing={2}
                   >
-                    <Typography variant="h6">
+                    <Typography variant="subtitle1">
                       {formatRoleName(role.name)}
                     </Typography>
 

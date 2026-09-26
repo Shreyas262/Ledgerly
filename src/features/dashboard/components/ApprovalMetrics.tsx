@@ -1,11 +1,7 @@
-import {
-  Card,
-  CardContent,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { LinearProgress, Stack, Typography } from "@mui/material";
 
 import type { ApprovalMetrics as ApprovalMetricsData } from "../utils/calculateApprovalMetrics";
+import { ChartCard } from "../../../components/common/ChartCard";
 
 interface ApprovalMetricsProps {
   metrics: ApprovalMetricsData;
@@ -14,90 +10,49 @@ interface ApprovalMetricsProps {
 export function ApprovalMetrics({
   metrics,
 }: ApprovalMetricsProps) {
+  const rates = [
+    { label: "Approval Rate", value: metrics.approvalRate, color: "success" as const },
+    { label: "Rejection Rate", value: metrics.rejectionRate, color: "error" as const },
+  ];
+
+  const counts = [
+    { label: "Pending Review", value: metrics.pendingReview },
+    { label: "Total Reviewed", value: metrics.totalReviewed },
+  ];
+
   return (
-    <Card>
-      <CardContent>
-        <Stack spacing={3}>
-          <Stack spacing={0.5}>
-            <Typography variant="h6">
-              Approval Metrics
-            </Typography>
+    <ChartCard
+      title="Approval Metrics"
+      subtitle="Overview of expense approval activity"
+      minHeight={0}
+    >
+      <Stack spacing={2.5}>
+        {rates.map((rate) => (
+          <Stack key={rate.label} spacing={1}>
+            <Stack direction="row" sx={{ justifyContent: "space-between", gap: 2 }}>
+              <Typography variant="body2">{rate.label}</Typography>
+              <Typography variant="subtitle2">
+                <Typography variant="numeric">{rate.value.toFixed(1)}%</Typography>
+              </Typography>
+            </Stack>
+            <LinearProgress
+              variant="determinate"
+              color={rate.color}
+              value={Math.min(rate.value, 100)}
+              aria-label={`${rate.label} ${rate.value.toFixed(1)}%`}
+            />
+          </Stack>
+        ))}
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
-              Overview of expense approval activity
+        {counts.map((count) => (
+          <Stack key={count.label} direction="row" sx={{ justifyContent: "space-between", gap: 2 }}>
+            <Typography variant="body2">{count.label}</Typography>
+            <Typography variant="subtitle2">
+              <Typography variant="numeric">{count.value}</Typography>
             </Typography>
           </Stack>
-
-          <Stack spacing={2}>
-            <Stack
-              direction="row"
-              sx={{
-                justifyContent: "space-between",
-                gap: 2,
-              }}
-            >
-              <Typography variant="body2">
-                Approval Rate
-              </Typography>
-
-              <Typography variant="body2">
-                {metrics.approvalRate.toFixed(1)}%
-              </Typography>
-            </Stack>
-
-            <Stack
-              direction="row"
-              sx={{
-                justifyContent: "space-between",
-                gap: 2,
-              }}
-            >
-              <Typography variant="body2">
-                Rejection Rate
-              </Typography>
-
-              <Typography variant="body2">
-                {metrics.rejectionRate.toFixed(1)}%
-              </Typography>
-            </Stack>
-
-            <Stack
-              direction="row"
-              sx={{
-                justifyContent: "space-between",
-                gap: 2,
-              }}
-            >
-              <Typography variant="body2">
-                Pending Review
-              </Typography>
-
-              <Typography variant="body2">
-                {metrics.pendingReview}
-              </Typography>
-            </Stack>
-
-            <Stack
-              direction="row"
-              sx={{
-                justifyContent: "space-between",
-                gap: 2,
-              }}
-            >
-              <Typography variant="body2">
-                Total Reviewed
-              </Typography>
-
-              <Typography variant="body2">
-                {metrics.totalReviewed}
-              </Typography>
-            </Stack>
-          </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
+        ))}
+      </Stack>
+    </ChartCard>
   );
 }

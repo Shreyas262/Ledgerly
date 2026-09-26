@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useGetBudgetsQuery } from "../api/budgetsApi";
 import { BudgetCard } from "../components/BudgetCard";
 import { BudgetSummaryCard } from "../components/BudgetSummaryCard";
-import { formatMoney } from "../components/BudgetProgress";
+import { formatCurrency } from "../../../utils/currency";
 import { calculateBudgetSummary } from "../utils/calculateBudgetSummary";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
@@ -71,9 +71,9 @@ export function BudgetsPage() {
             <Alert severity="info">There is no active budget. Totals appear once a budget is activated.</Alert>
           ) : (
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label={copy.budget} value={formatMoney(summary.totalBudget)} description="Active budgets" /></Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label={copy.allocated} value={formatMoney(summary.totalAllocated)} description={`${formatMoney(Math.max(summary.totalBudget - summary.totalAllocated, 0))} unallocated`} /></Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Reimbursed spend" value={formatMoney(summary.totalSpent)} description={`${formatMoney(summary.totalRemaining)} remaining`} /></Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label={copy.budget} value={formatCurrency(summary.totalBudget)} description="Active budgets" /></Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label={copy.allocated} value={formatCurrency(summary.totalAllocated)} description={`${formatCurrency(Math.max(summary.totalBudget - summary.totalAllocated, 0))} unallocated`} /></Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Reimbursed spend" value={formatCurrency(summary.totalSpent)} description={`${formatCurrency(summary.totalRemaining)} remaining`} /></Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Utilization" value={`${summary.utilization.toFixed(1)}%`} description="Only reimbursed expenses consume budget" /></Grid>
             </Grid>
           )}

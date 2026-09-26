@@ -1,4 +1,5 @@
 import {
+  Button,
   Card,
   CardContent,
   Chip,
@@ -7,6 +8,8 @@ import {
 } from "@mui/material";
 
 import type { ExpensePolicy } from "../types/policy";
+import { Amount } from "../../../components/common/Amount";
+import { humanize } from "../../../utils/format";
 
 interface PolicyCardProps {
   policy: ExpensePolicy;
@@ -30,7 +33,7 @@ export function PolicyCard({
             }}
           >
             <Stack spacing={0.5}>
-              <Typography variant="h6">
+              <Typography variant="subtitle1">
                 {policy.name}
               </Typography>
 
@@ -45,7 +48,8 @@ export function PolicyCard({
             </Stack>
 
             <Chip
-              label={policy.status}
+              label={humanize(policy.status)}
+              color={policy.status === "active" ? "success" : "default"}
               size="small"
             />
           </Stack>
@@ -59,28 +63,17 @@ export function PolicyCard({
             </Typography>
 
             <Typography variant="h5">
-              ₹
-              {policy.approvalLimit.toLocaleString(
-                "en-IN",
-              )}
+              <Amount value={policy.approvalLimit} />
             </Typography>
           </Stack>
 
-          <Typography
-            component="button"
+          <Button
+            size="small"
             onClick={() => onView(policy)}
-            sx={{
-              border: 0,
-              background: "none",
-              padding: 0,
-              textAlign: "left",
-              cursor: "pointer",
-              color: "primary.main",
-              font: "inherit",
-            }}
+            sx={{ alignSelf: "flex-start" }}
           >
             View policy
-          </Typography>
+          </Button>
         </Stack>
       </CardContent>
     </Card>

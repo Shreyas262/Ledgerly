@@ -1,13 +1,8 @@
-import {
-  Card,
-  CardContent,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 
 import type { DimensionSpending } from "../utils/calculateDimensionSpending";
-import { ChartState } from "./ChartState";
 import { Amount } from "../../../components/common/Amount";
+import { ChartCard } from "../../../components/common/ChartCard";
 
 interface DimensionAnalysisProps {
   title: string;
@@ -28,82 +23,61 @@ export function DimensionAnalysis({
   );
 
   return (
-    <Card>
-      <CardContent>
-        <Stack spacing={3}>
-          <Stack spacing={0.5}>
-            <Typography variant="h6">
-              {title}
-            </Typography>
+    <ChartCard
+      title={title}
+      subtitle={description}
+      isEmpty={data.length === 0}
+      emptyMessage={emptyMessage}
+      minHeight={220}
+    >
+      <Stack spacing={2}>
+        {data.map((item) => {
+          const percentage =
+            maxAmount > 0
+              ? (item.amount / maxAmount) * 100
+              : 0;
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
+          return (
+            <Stack
+              key={item.name}
+              spacing={1}
             >
-              {description}
-            </Typography>
-          </Stack>
+              <Stack
+                direction="row"
+                sx={{
+                  justifyContent: "space-between",
+                  gap: 2,
+                }}
+              >
+                <Typography variant="body2">
+                  {item.name}
+                </Typography>
 
-          {data.length === 0 ? (
-            <ChartState
-                title="No data available"
-                message={emptyMessage}
-            />
-          ) : (
-            <Stack spacing={2}>
-              {data.map((item) => {
-                const percentage =
-                  maxAmount > 0
-                    ? (item.amount / maxAmount) * 100
-                    : 0;
+                <Typography variant="subtitle2">
+                  <Amount value={item.amount} />
+                </Typography>
+              </Stack>
 
-                return (
-                  <Stack
-                    key={item.name}
-                    spacing={1}
-                  >
-                    <Stack
-                      direction="row"
-                      sx={{
-                        justifyContent: "space-between",
-                        gap: 2,
-                      }}
-                    >
-                      <Typography variant="body2">
-                        {item.name}
-                      </Typography>
-
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                      >
-                        <Amount value={item.amount} />
-                      </Typography>
-                    </Stack>
-
-                    <Stack
-                      sx={{
-                        height: 8,
-                        borderRadius: 1,
-                        bgcolor: "chart.track",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <Stack
-                        sx={{
-                          width: `${percentage}%`,
-                          height: "100%",
-                          bgcolor: "chart.series",
-                        }}
-                      />
-                    </Stack>
-                  </Stack>
-                );
-              })}
+              <Stack
+                sx={{
+                  height: 8,
+                  borderRadius: 1,
+                  bgcolor: "chart.track",
+                  overflow: "hidden",
+                }}
+              >
+                <Stack
+                  sx={{
+                    width: `${percentage}%`,
+                    height: "100%",
+                    bgcolor: "chart.series",
+                  }}
+                />
+              </Stack>
             </Stack>
-          )}
-        </Stack>
-      </CardContent>
-    </Card>
+          );
+        })}
+      </Stack>
+    </ChartCard>
   );
 }

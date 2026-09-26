@@ -4,12 +4,11 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  Stack,
   TextField,
-  Button,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 
+import { FilterBar } from "../../../components/common/FilterBar";
 import type { ExpenseFilter as ExpenseFiltersState } from "../types/expense";
 import {
   EXPENSE_TYPES,
@@ -64,23 +63,24 @@ export function ExpenseFilters({
 
 
 
+  const activeCount = [
+    filters.search.trim() !== "",
+    filters.status !== "all",
+    filters.type !== "all",
+    filters.dateFrom !== "",
+    filters.dateTo !== "",
+  ].filter(Boolean).length;
+
   return (
-    <Stack
-      direction={{
-        xs: "column",
-        md: "row",
-      }}
-      sx={{ alignItems: "center",}}
-      spacing={2}
-    >
+    <FilterBar label="Expense filters" activeCount={activeCount} onReset={onReset}>
       <TextField
+        size="small"
         label="Search expenses"
         value={filters.search}
         onChange={handleSearchChange}
-        fullWidth
       />
 
-      <FormControl fullWidth>
+      <FormControl size="small">
         <InputLabel>Status</InputLabel>
         <Select
           label="Status"
@@ -95,7 +95,7 @@ export function ExpenseFilters({
         </Select>
       </FormControl>
 
-      <FormControl fullWidth>
+      <FormControl size="small">
         <InputLabel>Expense Type</InputLabel>
         <Select
           label="Expense Type"
@@ -117,6 +117,7 @@ export function ExpenseFilters({
       </FormControl>
 
       <TextField
+        size="small"
         label="From"
         type="date"
         value={filters.dateFrom}
@@ -131,10 +132,10 @@ export function ExpenseFilters({
             shrink: true,
           },
         }}
-        fullWidth
       />
 
       <TextField
+        size="small"
         label="To"
         type="date"
         value={filters.dateTo}
@@ -149,16 +150,7 @@ export function ExpenseFilters({
             shrink: true,
           },
         }}
-        fullWidth
       />
-
-      <Button
-        variant="text"
-        onClick={onReset}
-        sx={{ whitespace: "nowrap" }}
-      >
-        Reset Filters
-      </Button>
-    </Stack>
+    </FilterBar>
   );
 }

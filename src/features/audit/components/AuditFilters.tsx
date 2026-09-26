@@ -1,12 +1,12 @@
 import {
-  Button,
   FormControl,
   InputLabel,
   MenuItem,
   Select,
-  Stack,
 } from "@mui/material";
 
+import { FilterBar } from "../../../components/common/FilterBar";
+import { humanize } from "../../../utils/format";
 import type { AuditAction, AuditEntityType } from "../types/audit";
 
 interface AuditFiltersProps {
@@ -67,11 +67,11 @@ export function AuditFilters({
   onEntityTypeChange,
   onReset,
 }: AuditFiltersProps) {
+  const activeCount = (action ? 1 : 0) + (entityType ? 1 : 0);
+
   return (
-    <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{
-      alignItems: { xs: "stretch", sm: "center" },
-    }}>
-      <FormControl sx={{ minWidth: 220 }}>
+    <FilterBar label="Audit filters" activeCount={activeCount} onReset={onReset}>
+      <FormControl size="small">
         <InputLabel id="audit-action-label">Action</InputLabel>
         <Select
           labelId="audit-action-label"
@@ -81,12 +81,12 @@ export function AuditFilters({
         >
           <MenuItem value="">All actions</MenuItem>
           {actions.map((item) => (
-            <MenuItem key={item} value={item}>{item}</MenuItem>
+            <MenuItem key={item} value={item}>{humanize(item)}</MenuItem>
           ))}
         </Select>
       </FormControl>
 
-      <FormControl sx={{ minWidth: 200 }}>
+      <FormControl size="small">
         <InputLabel id="audit-entity-type-label">Entity</InputLabel>
         <Select
           labelId="audit-entity-type-label"
@@ -98,12 +98,10 @@ export function AuditFilters({
         >
           <MenuItem value="">All entities</MenuItem>
           {entityTypes.map((item) => (
-            <MenuItem key={item} value={item}>{item}</MenuItem>
+            <MenuItem key={item} value={item}>{humanize(item)}</MenuItem>
           ))}
         </Select>
       </FormControl>
-
-      <Button variant="outlined" onClick={onReset}>Reset</Button>
-    </Stack>
+    </FilterBar>
   );
 }

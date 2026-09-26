@@ -50,7 +50,7 @@ export function BudgetCard({ budget, onView }: BudgetCardProps) {
           <Stack spacing={2}>
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", gap: 2 }}>
               <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-                <Typography variant="h6" noWrap>{budget.name}</Typography>
+                <Typography variant="subtitle1" noWrap>{budget.name}</Typography>
                 <Typography variant="body2" color="text.secondary">
                   {formatDate(budget.startDate)} – {formatDate(budget.endDate)}
                 </Typography>

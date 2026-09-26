@@ -37,6 +37,7 @@ import { useGetUsersQuery } from "../../users/api/usersApi";
 import { useConfirm, type ConfirmOptions } from "../../../components/common/ConfirmProvider";
 import type { User } from "../../users/types/user";
 import type { Department, Team } from "../types/organization";
+import { humanize } from "../../../utils/format";
 
 type Status = "active" | "inactive";
 
@@ -465,7 +466,7 @@ function TeamCard({ team, teams, departments, users, run }: {
               <Stack key={user.id} direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
                 <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                   <Typography>{user.name}</Typography>
-                  <Chip size="small" label={user.role} color={isRole(user, "manager") ? "primary" : "default"} />
+                  <Chip size="small" label={humanize(user.role)} color={isRole(user, "manager") ? "primary" : "default"} />
                   {user.status === "inactive" && <Chip size="small" label="Inactive" />}
                 </Stack>
                 <FormControl size="small" sx={{ minWidth: 200 }}>

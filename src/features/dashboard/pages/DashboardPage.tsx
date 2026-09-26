@@ -70,17 +70,10 @@ export function DashboardPage() {
         </Typography>
       </Stack>
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        sx={{ display: "flex", justifyContent: "flex-start" }}
-        spacing={2}
-      >
-        <Typography>Filters:</Typography>
-        <DashboardDateFilter
-          value={dateRange}
-          onChange={setDateRange}
-        />
-      </Stack>
+      <DashboardDateFilter
+        value={dateRange}
+        onChange={setDateRange}
+      />
 
       {isInvalidRange && (
         <Alert severity="warning">

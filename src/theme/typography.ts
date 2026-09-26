@@ -47,8 +47,8 @@ export const typography: TypographyVariantsOptions = {
     letterSpacing: "-0.01em",
     fontVariantNumeric: "tabular-nums",
   },
-  // Inline monetary values: inherits size and colour from the surrounding text
-  amount: {
+  // Inline figures (money, counts, rates): inherits size and colour
+  numeric: {
     fontVariantNumeric: "tabular-nums",
   },
 };

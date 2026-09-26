@@ -39,7 +39,7 @@ export const components: Components<Omit<Theme, "components">> = {
         // h4 is the page-title style; render it as the page's single h1.
         h4: "h1",
         kpi: "p",
-        amount: "span",
+        numeric: "span",
       },
     },
   },
@@ -82,9 +82,14 @@ export const components: Components<Omit<Theme, "components">> = {
 
   MuiPaper: {
     styleOverrides: {
-      root: {
+      root: ({ theme, ownerState }) => ({
         backgroundImage: "none",
-      },
+        // Default-elevation panels read as bordered surfaces, not floating cards.
+        ...(ownerState.variant === "elevation" &&
+          ownerState.elevation === 1 && {
+            border: `1px solid ${theme.palette.divider}`,
+          }),
+      }),
       outlined: ({ theme }) => ({
         borderColor: theme.palette.divider,
       }),
@@ -316,6 +321,33 @@ export const components: Components<Omit<Theme, "components">> = {
         color: theme.palette.text.secondary,
         "&.Mui-selected": {
           color: theme.palette.text.primary,
+        },
+      }),
+    },
+  },
+
+  MuiTableContainer: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        border: `1px solid ${theme.palette.divider}`,
+        borderRadius: 12,
+        boxShadow: "none",
+      }),
+    },
+  },
+
+  MuiToggleButton: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        fontWeight: 600,
+        color: theme.palette.text.secondary,
+        borderColor: theme.palette.divider,
+        "&.Mui-selected": {
+          color: theme.palette.text.primary,
+          backgroundColor: theme.palette.action.selected,
+        },
+        "&.Mui-selected:hover": {
+          backgroundColor: theme.palette.action.selected,
         },
       }),
     },
