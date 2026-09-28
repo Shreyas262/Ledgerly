@@ -10,7 +10,7 @@ import { buildSession, resolveSession, revokeSession, revokeSessionInTransaction
 import { buildAuthenticatedPrincipal, resolveAuthenticatedPrincipal } from "../services/authorizationService";
 import { runAuditedTransaction } from "../services/auditService";
 import { hashPassword, isPasswordHash, verifyPassword } from "../services/passwordService";
-import type { Session } from "../../features/auth/types/auth";
+import type { AccountType, Session } from "../../features/auth/types/auth";
 
 interface NamedRecord {
   id: string;
@@ -19,6 +19,8 @@ interface NamedRecord {
 
 /** Display names for the user's organization context, so clients never show raw IDs. */
 async function resolveContextNames(user: MockUser, authorizedDepartmentIds: string[] = []) {
+  // Personal accounts have no organization context to name.
+  if (user.accountType === "personal") return {};
   const [organization, departments, team] = await Promise.all([
     getRecord<NamedRecord>("organizations", user.organizationId),
     listRecords<NamedRecord>("departments"),
@@ -38,6 +40,7 @@ async function resolveContextNames(user: MockUser, authorizedDepartmentIds: stri
 
 interface MockUser {
   id: string;
+  accountType?: AccountType;
   organizationId: string;
   departmentId: string;
   teamId: string;
@@ -56,6 +59,8 @@ interface MockCredential {
 }
 
 const API_BASE_URL = "/api";
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
 
 /** Active, unexpired sessions of a user other than the given one. */
 async function otherActiveSessions(userId: string, currentSessionId: string): Promise<Session[]> {
@@ -155,10 +160,80 @@ export const authHandlers = [
     );
     return HttpResponse.json({ data: { revokedSessions: others.length } });
   }),
+  // §5.15: self-service sign-up creates personal accounts only. Organization
+  // users are created by their organization's administrators.
+  http.post(`${API_BASE_URL}/auth/register`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { name?: unknown; email?: unknown; password?: unknown };
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const email = typeof body.email === "string" ? body.email.trim() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    const fieldErrors: Record<string, string> = {};
+
+    if (!name) fieldErrors.name = "Name is required.";
+    if (!EMAIL_PATTERN.test(email)) fieldErrors.email = "A valid email address is required.";
+    if (password.length < MIN_PASSWORD_LENGTH) fieldErrors.password = `Use at least ${MIN_PASSWORD_LENGTH} characters.`;
+    if (Object.keys(fieldErrors).length) {
+      return apiError(422, "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors });
+    }
+
+    const [users, credentials] = await Promise.all([
+      listRecords<MockUser>("users"),
+      listRecords<MockCredential>("credentials"),
+    ]);
+    const normalizedEmail = email.toLowerCase();
+    if (
+      users.some((item) => item.email.toLowerCase() === normalizedEmail) ||
+      credentials.some((item) => item.email.toLowerCase() === normalizedEmail)
+    ) {
+      return apiError(409, "An account with this email already exists.", "CONFLICT", {
+        fieldErrors: { email: "An account with this email already exists." },
+      });
+    }
+
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const user: MockUser & { createdAt: string; updatedAt: string } = {
+      id,
+      accountType: "personal",
+      organizationId: `personal:${id}`,
+      departmentId: "",
+      teamId: "",
+      roleId: "",
+      name,
+      email,
+      role: "personal",
+      permissions: [],
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    };
+    const credential: MockCredential = { userId: id, email, password: await hashPassword(password) };
+
+    await runAuditedTransaction(
+      ["users", "credentials"],
+      {
+        organizationId: user.organizationId,
+        actorId: id,
+        action: "USER_CREATED",
+        entityType: "USER",
+        entityId: id,
+        newState: "active",
+        description: "Created a personal Ledgerly account.",
+      },
+      (transaction) => {
+        transaction.objectStore("users").put(user);
+        transaction.objectStore("credentials").put(credential);
+      },
+    );
+
+    return HttpResponse.json({ data: { id, email } }, { status: 201 });
+  }),
+
   http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as {
       email?: unknown;
       password?: unknown;
+      accountType?: unknown;
     };
 
     if (typeof body.email !== "string" || typeof body.password !== "string" || !body.email.trim() || !body.password) {
@@ -212,6 +287,18 @@ export const authHandlers = [
       return apiError(403, "This user account is inactive.", "ACCOUNT_INACTIVE");
     }
 
+    // Each sign-in path accepts only its own kind of account (§5.15).
+    const accountType: AccountType = user.accountType ?? "organization";
+    if ((body.accountType === "personal" || body.accountType === "organization") && body.accountType !== accountType) {
+      return apiError(
+        403,
+        accountType === "personal"
+          ? "This is a personal account. Use Personal Login to sign in."
+          : "This is an organization account. Use Organization Login to sign in.",
+        "ACCOUNT_TYPE_MISMATCH",
+      );
+    }
+
     const session = buildSession(user);
     const principal = await buildAuthenticatedPrincipal(user);
 
@@ -221,6 +308,7 @@ export const authHandlers = [
 
     const authenticatedUser = {
       ...user,
+      accountType: principal.accountType,
       role: principal.role,
       permissions: principal.effectivePermissions,
       authorizedDepartmentIds: principal.authorizedDepartmentIds,
@@ -320,6 +408,7 @@ export const authHandlers = [
     return HttpResponse.json({
       data: {
         ...user,
+        accountType: principal.accountType,
         role: principal.role,
         permissions: principal.effectivePermissions,
         authorizedDepartmentIds: principal.authorizedDepartmentIds,
@@ -352,7 +441,7 @@ export const authHandlers = [
     const fieldErrors: Record<string, string> = {};
 
     if (!name) fieldErrors.name = "Name is required.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fieldErrors.email = "A valid email address is required.";
+    if (!EMAIL_PATTERN.test(email)) fieldErrors.email = "A valid email address is required.";
     if (Object.keys(fieldErrors).length) {
       return apiError(422, "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors });
     }
@@ -396,6 +485,7 @@ export const authHandlers = [
     return HttpResponse.json({
       data: {
         ...updatedUser,
+        accountType: principal.accountType,
         role: principal.role,
         permissions: principal.effectivePermissions,
         authorizedDepartmentIds: principal.authorizedDepartmentIds,

@@ -25,6 +25,7 @@ import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { usePermissions } from "../../auth/hooks/usePermissions";
 import { useAuth } from "../../auth/context/AuthContext";
+import { isPersonalAccount } from "../../auth/utils/accountType";
 import { useSettings } from "../hooks/useSettings";
 import { resetSettings } from "../utils/settingsStorage";
 import { useChangePasswordMutation, useGetSessionsQuery, useRevokeOtherSessionsMutation } from "../api/securityApi";
@@ -63,6 +64,11 @@ export function SettingsPage() {
   const confirm = useConfirm();
   const [saved, setSaved] = useState<string | null>(null);
   const isReviewer = can("expenses.approve") || can("reimbursements.manage");
+  const personal = isPersonalAccount(user);
+  // Organization defaults do not apply to personal accounts, and vice versa.
+  const startPage = personal
+    ? (settings.startPage.startsWith("/personal/") ? settings.startPage : "/personal/dashboard")
+    : (settings.startPage.startsWith("/personal/") ? "/dashboard" : settings.startPage);
 
   const { data: sessions } = useGetSessionsQuery();
   const [changePassword, { isLoading: changing, error: passwordError, reset: resetPasswordState }] = useChangePasswordMutation();
@@ -81,7 +87,9 @@ export function SettingsPage() {
   const handleReset = async () => {
     if (!(await confirm({
       title: "Reset Preferences",
-      message: "Restore theme, start page and notification preferences to their defaults?",
+      message: personal
+        ? "Restore theme and start page preferences to their defaults?"
+        : "Restore theme, start page and notification preferences to their defaults?",
       confirmLabel: "Reset",
       destructive: true,
     }))) return;
@@ -157,17 +165,25 @@ export function SettingsPage() {
         <TextField
           select
           label="Start page"
-          value={settings.startPage}
+          value={startPage}
           onChange={(event) => change({ startPage: event.target.value as StartPage })}
           sx={{ maxWidth: 360 }}
         >
-          <MenuItem value="/dashboard">Dashboard</MenuItem>
-          {can("expenses.read") && <MenuItem value="/expenses">Expenses</MenuItem>}
-          {isReviewer && <MenuItem value="/approvals">Approvals</MenuItem>}
+          {personal
+            ? [
+                <MenuItem key="dashboard" value="/personal/dashboard">Dashboard</MenuItem>,
+                <MenuItem key="expenses" value="/personal/expenses">Expenses</MenuItem>,
+              ]
+            : [
+                <MenuItem key="dashboard" value="/dashboard">Dashboard</MenuItem>,
+                can("expenses.read") && <MenuItem key="expenses" value="/expenses">Expenses</MenuItem>,
+                isReviewer && <MenuItem key="approvals" value="/approvals">Approvals</MenuItem>,
+              ]}
         </TextField>
       </Section>
 
-      <Section title="Notifications" description="Choose which notifications appear under the bell in the top bar.">
+      {/* Notifications cover organization workflows only. */}
+      {!personal && <Section title="Notifications" description="Choose which notifications appear under the bell in the top bar.">
         <Stack spacing={1.5}>
           {NOTIFICATION_OPTIONS.filter((option) => !option.reviewersOnly || isReviewer).map((option) => (
             <FormControlLabel
@@ -188,7 +204,7 @@ export function SettingsPage() {
             />
           ))}
         </Stack>
-      </Section>
+      </Section>}
 
       <Section title="Security" description={`Password and sign-in sessions for ${user?.email ?? "your account"}.`}>
         <Stack component="form" spacing={2} onSubmit={handlePasswordChange} sx={{ maxWidth: 480 }} noValidate>

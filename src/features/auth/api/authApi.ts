@@ -1,6 +1,6 @@
 import { baseApi } from "../../../services/api/baseApi";
 import type { ApiResponse } from "../../../types/api";
-import type { LoginRequest, UpdateProfileRequest } from "../types/requests";
+import type { LoginRequest, RegisterPersonalRequest, UpdateProfileRequest } from "../types/requests";
 import type { AuthSession, AuthUser } from "../types/auth";
 import { clearSessionCookie, setSessionCookie } from "../../../services/auth/sessionCookie";
 
@@ -21,6 +21,15 @@ export const authApi = baseApi.injectEndpoints({
         }
       },
       invalidatesTags: ["User"],
+    }),
+
+    // Creates a personal account; the user then signs in with it.
+    registerPersonal: builder.mutation<ApiResponse<{ id: string; email: string }>, RegisterPersonalRequest>({
+      query: (body) => ({
+        url: "/auth/register",
+        method: "POST",
+        body,
+      }),
     }),
 
     logout: builder.mutation<ApiResponse<null>, void>({
@@ -63,6 +72,7 @@ export const authApi = baseApi.injectEndpoints({
 
 export const {
   useLoginMutation,
+  useRegisterPersonalMutation,
   useLogoutMutation,
   useGetCurrentUserQuery,
   useUpdateCurrentUserMutation,

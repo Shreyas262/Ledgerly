@@ -1,5 +1,5 @@
 const DB_NAME = "ledgerly";
-export const DB_VERSION = 20;
+export const DB_VERSION = 21;
 
 export const MOCK_STORES = [
   "users",
@@ -18,6 +18,9 @@ export const MOCK_STORES = [
   "auditEvents",
   "sessions",
   "credentials",
+  "personalExpenses",
+  "personalBudgets",
+  "personalDocuments",
 ] as const;
 
 export type MockStoreName = (typeof MOCK_STORES)[number];
@@ -396,6 +399,22 @@ const migrations: Record<number, Migration> = {
         });
       }
     };
+  },
+
+  21: (database, transaction) => {
+    // Personal accounts (§5.15): their records live in their own stores,
+    // separate from organization data, and are always read by owner.
+    for (const storeName of ["personalExpenses", "personalBudgets", "personalDocuments"] as const) {
+      createStoreIfMissing(database, storeName);
+      const store = transaction.objectStore(storeName);
+      if (!store.indexNames.contains("ownerId")) {
+        store.createIndex("ownerId", "ownerId", { unique: false });
+      }
+    }
+    const documents = transaction.objectStore("personalDocuments");
+    if (!documents.indexNames.contains("expenseId")) {
+      documents.createIndex("expenseId", "expenseId", { unique: false });
+    }
   },
 };
 

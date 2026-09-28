@@ -7,6 +7,8 @@ import {
   bootstrapCredentials,
   bootstrapDepartments,
   bootstrapOrganizations,
+  bootstrapPersonalCredentials,
+  bootstrapPersonalUsers,
   bootstrapRoles,
   bootstrapTeams,
   bootstrapUsers,
@@ -103,6 +105,26 @@ async function seedCredentials(): Promise<void> {
   }
 }
 
+/**
+ * The demo personal account is added by id rather than on an empty store, so
+ * databases seeded before personal accounts existed receive it too.
+ */
+async function ensurePersonalDemoAccounts(): Promise<void> {
+  for (const user of bootstrapPersonalUsers) {
+    if (!(await indexedDbRepository.getById("users", user.id))) {
+      await indexedDbRepository.save("users", { ...user, permissions: [] });
+    }
+  }
+  for (const credential of bootstrapPersonalCredentials) {
+    if (!(await indexedDbRepository.getById("credentials", credential.userId))) {
+      await indexedDbRepository.save("credentials", {
+        ...credential,
+        password: await hashPassword(credential.password),
+      });
+    }
+  }
+}
+
 export function initializeMockDatabase(): Promise<void> {
   if (!initializationPromise) {
     initializationPromise = Promise.all([
@@ -114,6 +136,7 @@ export function initializeMockDatabase(): Promise<void> {
       seedCredentials(),
     ])
       .then(() => migrateUserOrganizationContext())
+      .then(() => ensurePersonalDemoAccounts())
       .then(() => undefined);
   }
 

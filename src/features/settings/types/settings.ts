@@ -1,7 +1,12 @@
 export type ThemePreference = "system" | "light" | "dark";
 
 /** Where the user lands after signing in. */
-export type StartPage = "/dashboard" | "/expenses" | "/approvals";
+export type StartPage =
+  | "/dashboard"
+  | "/expenses"
+  | "/approvals"
+  | "/personal/dashboard"
+  | "/personal/expenses";
 
 /** Notification categories the user can switch on or off. */
 export type NotificationCategory =

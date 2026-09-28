@@ -13,9 +13,11 @@ export function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
+    // Personal pages lead back to the personal sign-in.
+    const personal = location.pathname.startsWith("/personal");
     return (
       <Navigate
-        to="/auth/login"
+        to={personal ? "/auth/login?type=personal" : "/auth/login"}
         replace
         state={{
           from: location,

@@ -13,8 +13,16 @@ export interface Session {
 
 export type SessionStatus = "active" | "expired" | "revoked";
 
+/**
+ * Organization accounts belong to an organization; personal accounts manage
+ * their own spending and have no organization, role or permissions (§5.15).
+ */
+export type AccountType = "organization" | "personal";
+
 export interface AuthUser {
   id: EntityId;
+  /** Missing on records created before personal accounts; treated as organization. */
+  accountType?: AccountType;
   organizationId: EntityId;
   departmentId: EntityId;
   teamId: EntityId;
@@ -41,6 +49,7 @@ export interface AuthSession {
 
 export interface AuthenticatedPrincipal {
   userId: EntityId;
+  accountType: AccountType;
   organizationId: EntityId;
   departmentId: EntityId;
   teamId: EntityId;
