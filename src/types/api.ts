@@ -1,29 +1,30 @@
-
-import type { AuthSession, User } from "./auth"
+export interface ApiError {
+  status: number;
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+}
 
 export interface ApiResponse<T> {
   data: T;
 }
 
-export interface ApiListResponse<T> {
+export type CollectionFilterValue = string | number | boolean;
+
+export interface CollectionQuery {
+  filter?: Record<string, CollectionFilterValue>;
+  search?: string;
+  sort?: string;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+  from?: string;
+  to?: string;
+}
+
+export interface CollectionQueryResult<T> {
   data: T[];
+  page: number;
+  pageSize: number;
   total: number;
-}
-
-export interface ApiError {
-  message: string;
-  code: string;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  data: AuthSession;
-}
-
-export interface GetCurrentUserResponse {
-  data: User;
 }

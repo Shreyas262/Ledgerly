@@ -1,18 +1,39 @@
-import { Alert, Button, Stack, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Button,
+  IconButton,
+  InputAdornment,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import {
+  LockOutlined,
+  MailOutlined,
+  VisibilityOffOutlined,
+  VisibilityOutlined,
+} from "@mui/icons-material";
 import { useState, type SyntheticEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, type Location } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLoginMutation } from "../api/authApi";
 import AuthLayout from "../../../layouts/AuthLayout/AuthLayout";
+import { getApiErrorMessage } from "../../../services/api/apiErrors";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo =
+    // Without a page to return to, "/" opens the user's chosen start page.
+    (location.state as { from?: Location } | null)?.from?.pathname ??
+    "/";
 
-  const [login, { isLoading, isError }] = useLoginMutation();
+  const [login, { isLoading, isError, error }] = useLoginMutation();
   const { refetchUser } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -25,7 +46,7 @@ export function LoginPage() {
 
       await refetchUser().unwrap();
 
-      navigate("/dashboard", { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch {
       // Error state is rendered below.
     }
@@ -34,17 +55,21 @@ export function LoginPage() {
   return (
     <AuthLayout>
       <Stack component="form" onSubmit={handleSubmit} spacing={3} noValidate>
-        <Stack spacing={0.5}>
-          <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
-            Sign in
+        <Stack spacing={0.75}>
+          <Typography variant="h4" component="h1">
+            Welcome back
           </Typography>
 
-          <Typography variant="body2" color="text.secondary">
-            Enter your credentials to access your account.
+          <Typography color="text.secondary">
+            Sign in to your Ledgerly account.
           </Typography>
         </Stack>
 
-        {isError && <Alert severity="error">Invalid email or password.</Alert>}
+        {isError && (
+          <Alert severity="error">
+            {getApiErrorMessage(error, "Invalid email or password.")}
+          </Alert>
+        )}
 
         <TextField
           label="Email"
@@ -55,26 +80,56 @@ export function LoginPage() {
           fullWidth
           autoComplete="email"
           autoFocus
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <MailOutlined fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
         />
 
         <TextField
           label="Password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
           fullWidth
           autoComplete="current-password"
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockOutlined fontSize="small" />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    edge="end"
+                    size="small"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword((current) => !current)}
+                  >
+                    {showPassword ? <VisibilityOffOutlined fontSize="small" /> : <VisibilityOutlined fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
         />
 
         <Button
           type="submit"
           variant="contained"
           size="large"
-          disabled={isLoading}
+          loading={isLoading}
           fullWidth
         >
-          {isLoading ? "Signing in..." : "Sign in"}
+          Sign in
         </Button>
       </Stack>
     </AuthLayout>

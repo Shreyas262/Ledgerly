@@ -1,8 +1,8 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
   Stack,
-  Typography,
 } from "@mui/material";
 
 import PolicyForm from "../components/PolicyForm";
@@ -10,18 +10,24 @@ import {
   useGetPolicyByIdQuery,
   useUpdatePolicyMutation,
 } from "../api/policiesApi";
-import type { CreateExpensePolicyRequest } from "../../../types/policy";
+import type { CreateExpensePolicyRequest } from "../types/policy";
 import {LoadingState} from "../../../components/common/LoadingState";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import {ErrorState} from "../../../components/common/ErrorState";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
 export function EditPolicyPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   const {
     data: policy,
     isLoading: isPolicyLoading,
     isError: isPolicyError,
+    error: policyError,
+    refetch: refetchPolicy,
   } = useGetPolicyByIdQuery(id ?? "", {
     skip: !id,
   });
@@ -30,7 +36,7 @@ export function EditPolicyPage() {
     updatePolicy,
     {
       isLoading: isUpdating,
-      isError: isUpdateError,
+      error: updateError,
     },
   ] = useUpdatePolicyMutation();
 
@@ -39,7 +45,7 @@ export function EditPolicyPage() {
   }
 
   if (isPolicyError) {
-    return <ErrorState message="Unable to load policy." />;
+    return <ErrorState error={policyError} onRetry={refetchPolicy} />;
   }
 
   if (!policy) {
@@ -49,13 +55,16 @@ export function EditPolicyPage() {
   const initialValues: CreateExpensePolicyRequest = {
     name: policy.name,
     description: policy.description,
-    approvalLimit: policy.approvalLimit,
+    expenseType: policy.expenseType,
+    departmentIds: policy.departmentIds ?? [],
+    rules: policy.rules,
     status: policy.status,
   };
 
   const handleSubmit = async (
     values: CreateExpensePolicyRequest,
   ) => {
+    if (!(await confirm({ title: "Save Policy", message: `Save changes to "${values.name}"? New evaluations use the updated rules.`, confirmLabel: "Save" }))) return;
     try {
       const updatedPolicy = await updatePolicy({
         id: policy.id,
@@ -70,21 +79,13 @@ export function EditPolicyPage() {
 
   return (
     <Stack spacing={3}>
-      <div>
-        <Typography variant="h4">
-          Edit Policy
-        </Typography>
+      <BackLink to={`/policies/${id}`} label="Policy" />
+      <PageHeader
+        title="Edit Policy"
+        description="New checks use the updated rules; expenses already submitted keep the result they were checked with."
+      />
 
-        <Typography color="text.secondary">
-          Update the expense approval policy.
-        </Typography>
-      </div>
-
-      {isUpdateError && (
-        <Alert severity="error">
-          Unable to update policy. Please try again.
-        </Alert>
-      )}
+      {updateError && <ApiFeedback error={updateError} />}
 
       <PolicyForm
         initialValues={initialValues}

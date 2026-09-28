@@ -1,15 +1,12 @@
-import {
-  Card,
-  CardContent,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 
-import type { CategorySpending } from "../utils/calculateCategorySpending";
-import { ChartState } from "./ChartState";
+import type { DashboardExpenseTypeSpending } from "../types/dashboard";
+import { EXPENSE_TYPE_LABELS } from "../../expenses/types/expense";
+import { Amount } from "../../../components/common/Amount";
+import { ChartCard } from "../../../components/common/ChartCard";
 
 interface CategoryAnalysisProps {
-  data: CategorySpending[];
+  data: DashboardExpenseTypeSpending[];
 }
 
 export function CategoryAnalysis({
@@ -21,82 +18,61 @@ export function CategoryAnalysis({
   );
 
   return (
-    <Card>
-      <CardContent>
-        <Stack spacing={3}>
-          <Stack spacing={0.5}>
-            <Typography variant="h6">
-              Spending by Category
-            </Typography>
+    <ChartCard
+      title="Spending by expense type"
+      subtitle="Share of spend by expense type"
+      isEmpty={data.length === 0}
+      emptyMessage="No spend in the selected date range."
+      minHeight={220}
+    >
+      <Stack spacing={2}>
+        {data.map((item) => {
+          const percentage =
+            maxAmount > 0
+              ? (item.amount / maxAmount) * 100
+              : 0;
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
+          return (
+            <Stack
+              key={item.expenseType}
+              spacing={1}
             >
-              Breakdown of expenses by category
-            </Typography>
-          </Stack>
+              <Stack
+                direction="row"
+                sx={{
+                  gap: 2,
+                  justifyContent: "space-between",
+                }}
+              >
+                <Typography variant="body2">
+                  {EXPENSE_TYPE_LABELS[item.expenseType] ?? item.expenseType}
+                </Typography>
 
-          {data.length === 0 ? (
-            <ChartState
-              title="No category data"
-              message="There are no categorized expenses in the selected date range."
-            />
-          ) : (
-            <Stack spacing={2}>
-              {data.map((item) => {
-                const percentage =
-                  maxAmount > 0
-                    ? (item.amount / maxAmount) * 100
-                    : 0;
+                <Typography variant="subtitle2">
+                  <Amount value={item.amount} />
+                </Typography>
+              </Stack>
 
-                return (
-                  <Stack
-                    key={item.category}
-                    spacing={1}
-                  >
-                    <Stack
-                      direction="row"
-                      sx={{
-                        gap: 2,
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <Typography variant="body2">
-                        {item.category}
-                      </Typography>
-
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                      >
-                        ₹{item.amount.toLocaleString("en-IN")}
-                      </Typography>
-                    </Stack>
-
-                    <Stack
-                      sx={{
-                        height: 8,
-                        borderRadius: 1,
-                        bgcolor: "action.hover",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <Stack
-                        sx={{
-                          width: `${percentage}%`,
-                          height: "100%",
-                          bgcolor: "primary.main",
-                        }}
-                      />
-                    </Stack>
-                  </Stack>
-                );
-              })}
+              <Stack
+                sx={{
+                  height: 8,
+                  borderRadius: 1,
+                  bgcolor: "chart.track",
+                  overflow: "hidden",
+                }}
+              >
+                <Stack
+                  sx={{
+                    width: `${percentage}%`,
+                    height: "100%",
+                    bgcolor: "chart.series",
+                  }}
+                />
+              </Stack>
             </Stack>
-          )}
-        </Stack>
-      </CardContent>
-    </Card>
+          );
+        })}
+      </Stack>
+    </ChartCard>
   );
 }

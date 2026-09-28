@@ -1,11 +1,9 @@
-export type ID = string;
+export type EntityId = string;
+export type ID = EntityId;
+export type ISODateString = string;
+export type CurrencyCode = "INR";
 
-export type ExpenseStatus =
-  | "draft"
-  | "submitted"
-  | "under_review"
-  | "rejected"
-  | "approved"
-  | "reimbursement_pending"
-  | "reimbursed"
-  | "cancelled";
+export interface ResourceTimestamps {
+  createdAt: ISODateString;
+  updatedAt: ISODateString;
+}

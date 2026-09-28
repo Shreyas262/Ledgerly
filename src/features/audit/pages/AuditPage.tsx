@@ -1,67 +1,76 @@
-import { useMemo, useState } from "react";
-import { Alert, Stack, Typography } from "@mui/material";
+import { BackLink } from "../../../components/navigation/BackLink";
+import { useState } from "react";
+import { Alert, Pagination, Stack } from "@mui/material";
 
-import { useGetAuditLogsQuery } from "../api/auditApi";
+import { useGetAuditEventsQuery } from "../api/auditApi";
 import { AuditFilters } from "../components/AuditFilters";
 import { AuditTable } from "../components/AuditTable";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
-import type { AuditAction, AuditResource } from "../../../types/audit";
+import type { AuditAction, AuditEntityType } from "../types/audit";
+import { PageHeader } from "../../../components/common/PageHeader";
 
 function AuditPage() {
-  const { data: auditLogs = [], isLoading, isError } = useGetAuditLogsQuery();
-
   const [action, setAction] = useState<AuditAction | "">("");
+  const [entityType, setEntityType] = useState<AuditEntityType | "">("");
+  const [page, setPage] = useState(1);
 
-  const [resource, setResource] = useState<AuditResource | "">("");
+  // Every business mutation appends audit events, so the log is refreshed
+  // whenever the page is opened rather than served from a stale cache.
+  const { data: auditResult, isLoading, isError, error, refetch } = useGetAuditEventsQuery(
+    {
+      page,
+      pageSize: 50,
+      filter: {
+        ...(action ? { action } : {}),
+        ...(entityType ? { entityType } : {}),
+      },
+    },
+    { refetchOnMountOrArgChange: true },
+  );
 
-  const filteredAuditLogs = useMemo(() => {
-    return auditLogs.filter((auditLog) => {
-      const matchesAction = !action || auditLog.action === action;
+  const auditEvents = auditResult?.data ?? [];
 
-      const matchesResource = !resource || auditLog.resource === resource;
 
-      return matchesAction && matchesResource;
-    });
-  }, [auditLogs, action, resource]);
 
-  const handleReset = () => {
-    setAction("");
-    setResource("");
-  };
-
-  if (isLoading) {
-    return <LoadingState />;
-  }
-
-  if (isError) {
-    return <ErrorState message="Unable to load audit logs." />;
-  }
+  if (isLoading) return <LoadingState />;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   return (
     <Stack spacing={3}>
-      <div>
-        <Typography variant="h4">Audit Log</Typography>
-
-        <Typography color="text.secondary">
-          Review important activity across your organization.
-        </Typography>
-      </div>
+      <BackLink to="/admin" label="Administration" />
+      <PageHeader
+        title="Audit Log"
+        description="A permanent, read-only record of sign-ins and changes across the organization."
+      />
 
       <AuditFilters
         action={action}
-        resource={resource}
-        onActionChange={setAction}
-        onResourceChange={setResource}
-        onReset={handleReset}
+        entityType={entityType}
+        onActionChange={(nextAction) => { setAction(nextAction); setPage(1); }}
+        onEntityTypeChange={(nextEntityType) => { setEntityType(nextEntityType); setPage(1); }}
+        onReset={() => {
+          setAction("");
+          setEntityType("");
+          setPage(1);
+        }}
       />
 
-      {filteredAuditLogs.length === 0 ? (
-        <Alert severity="info">
-          No audit activity matches the selected filters.
-        </Alert>
+      {auditEvents.length === 0 ? (
+        <Alert severity="info">No audit activity matches the selected filters.</Alert>
       ) : (
-        <AuditTable auditLogs={filteredAuditLogs} />
+        <AuditTable auditEvents={auditEvents} />
+      )}
+
+      {auditResult && auditResult.total > auditResult.pageSize && (
+        <Stack sx={{ alignItems: "center" }}>
+          <Pagination
+            page={auditResult.page}
+            count={Math.ceil(auditResult.total / auditResult.pageSize)}
+            onChange={(_event, nextPage) => setPage(nextPage)}
+            color="primary"
+          />
+        </Stack>
       )}
     </Stack>
   );

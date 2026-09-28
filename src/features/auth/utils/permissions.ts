@@ -1,7 +1,8 @@
-import type { Permission, User } from "../../../types/auth";
+import type { Permission } from "../../roles/types/role";
+import type { AuthUser } from "../types/auth";
 
 export function hasPermission(
-  user: User | null,
+  user: AuthUser | null,
   permission: Permission,
 ): boolean {
   if (!user) {

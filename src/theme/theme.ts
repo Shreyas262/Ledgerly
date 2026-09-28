@@ -1,36 +1,20 @@
 import { createTheme } from "@mui/material/styles";
 
+import { components } from "./components";
+import { getPalette } from "./palette";
+import { getShadows } from "./shadows";
+import { typography } from "./typography";
+
 export const createAppTheme = (
   mode: "light" | "dark",
 ) =>
   createTheme({
-    palette: {
-      mode,
-      primary: {
-        main: "#2563EB",
-      },
-      background:
-        mode === "light"
-          ? {
-              default: "#F8FAFC",
-              paper: "#FFFFFF",
-            }
-          : {
-              default: "#0F172A",
-              paper: "#1E293B",
-            },
+    palette: getPalette(mode),
+    typography,
+    shape: {
+      borderRadius: 8,
     },
-
-    components: {
-      MuiButtonBase: {
-        styleOverrides: {
-          root: {
-            "&:focus-visible": {
-              outline: "3px solid",
-              outlineOffset: "2px",
-            },
-          },
-        },
-      },
-    },
+    spacing: 8,
+    shadows: getShadows(mode),
+    components,
   });

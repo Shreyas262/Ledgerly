@@ -1,17 +1,22 @@
+import { formatDate } from "../../../utils/format";
+import { EXPENSE_STATUS_LABELS } from "../types/expense";
 import {
   Box,
   Button,
   Chip,
-  Paper,
+  Card,
+  CardContent,
   Stack,
   Typography,
 } from "@mui/material";
 import type { ChipProps } from "@mui/material";
 
-import type { ExpenseStatus } from "../../../types/common";
-import type { Expense } from "../../../types/expense";
+import { EXPENSE_TYPE_LABELS, type ExpenseStatus } from "../types/expense";
+import type { Expense } from "../types/expense";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
+import { useAuth } from "../../../features/auth/context/AuthContext";
+import { Amount } from "../../../components/common/Amount";
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -33,42 +38,42 @@ const statusConfig: Record<
   StatusConfig
 > = {
   draft: {
-    label: "Draft",
+    label: EXPENSE_STATUS_LABELS.draft,
     color: "default",
   },
 
   submitted: {
-    label: "Submitted",
+    label: EXPENSE_STATUS_LABELS.submitted,
     color: "info",
   },
 
   under_review: {
-    label: "Under Review",
+    label: EXPENSE_STATUS_LABELS.under_review,
     color: "warning",
   },
 
   rejected: {
-    label: "Rejected",
+    label: EXPENSE_STATUS_LABELS.rejected,
     color: "error",
   },
 
   approved: {
-    label: "Approved",
+    label: EXPENSE_STATUS_LABELS.approved,
     color: "success",
   },
 
   reimbursement_pending: {
-    label: "Reimbursement Pending",
+    label: EXPENSE_STATUS_LABELS.reimbursement_pending,
     color: "warning",
   },
 
   reimbursed: {
-    label: "Reimbursed",
+    label: EXPENSE_STATUS_LABELS.reimbursed,
     color: "success",
   },
 
   cancelled: {
-    label: "Cancelled",
+    label: EXPENSE_STATUS_LABELS.cancelled,
     color: "default",
   },
 };
@@ -82,22 +87,30 @@ export function ExpenseCard({
   isSubmitting = false,
   isStartingReview = false,
 }: ExpenseCardProps) {
+  const policyFlags = {
+    escalated: expense.policyEvaluation?.details.escalated === true,
+    warnings: expense.policyEvaluation?.details.warnings?.length ?? 0,
+  };
   const { can } = usePermissions();
+  const { user } = useAuth();
 
   const status = statusConfig[expense.status];
 
   const canSubmit =
     variant === "default" &&
     expense.status === "draft" &&
+    expense.employeeId === user?.id &&
     can("expenses.submit");
 
   const canStartReview =
     variant === "approval" &&
+    (expense.employeeId !== user?.id || user?.role === "admin") &&
     expense.status === "submitted" &&
     can("expenses.approve");
 
   return (
-    <Paper sx={{ p: 2 }}>
+    <Card>
+      <CardContent>
       <Stack spacing={2}>
         <Box
           sx={{
@@ -111,7 +124,7 @@ export function ExpenseCard({
           }}
         >
           <Stack spacing={0.5}>
-            <Typography variant="h6">
+            <Typography variant="subtitle1">
               {expense.title}
             </Typography>
 
@@ -119,14 +132,31 @@ export function ExpenseCard({
               variant="body2"
               color="text.secondary"
             >
-              {expense.category}
+              {EXPENSE_TYPE_LABELS[expense.type] ?? expense.type}
+            </Typography>
+
+            {expense.employeeId !== user?.id && expense.employeeName && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                Submitted by {expense.employeeName}
+                {expense.employeeRemoved ? " (removed)" : ""}
+              </Typography>
+            )}
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+            >
+              {expense.teamName ?? expense.teamId} · {expense.departmentName ?? expense.departmentId}
             </Typography>
 
             <Typography
               variant="body2"
               color="text.secondary"
             >
-              {expense.expenseDate}
+              {formatDate(expense.expenseDate)}
             </Typography>
           </Stack>
 
@@ -141,12 +171,8 @@ export function ExpenseCard({
               gap: 1,
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 600 }}
-            >
-              {expense.currency}{" "}
-              {expense.amount.toLocaleString()}
+            <Typography variant="h6">
+              <Amount value={expense.amount} currency={expense.currency} />
             </Typography>
 
             <Chip
@@ -154,6 +180,16 @@ export function ExpenseCard({
               color={status.color}
               size="small"
             />
+
+            {/* Policy flags for reviewers (§21.10, §22.3). */}
+            {variant === "approval" && (policyFlags.escalated || policyFlags.warnings > 0) && (
+              <Stack direction="row" spacing={0.75}>
+                {policyFlags.escalated && <Chip size="small" color="info" variant="outlined" label="Above policy threshold" />}
+                {policyFlags.warnings > 0 && (
+                  <Chip size="small" color="warning" variant="outlined" label={`${policyFlags.warnings} policy ${policyFlags.warnings === 1 ? "warning" : "warnings"}`} />
+                )}
+              </Stack>
+            )}
           </Box>
         </Box>
 
@@ -179,8 +215,10 @@ export function ExpenseCard({
               variant="contained"
               onClick={() => onSubmit?.(expense)}
               loading={isSubmitting}
+              disabled={!expense.documentIds?.length}
+              title={expense.documentIds?.length ? undefined : "Attach a receipt before submitting"}
             >
-              Submit
+              {expense.documentIds?.length ? "Submit" : "Receipt required"}
             </Button>
           )}
 
@@ -197,6 +235,7 @@ export function ExpenseCard({
           )}
         </Stack>
       </Stack>
-    </Paper>
+      </CardContent>
+    </Card>
   );
 }

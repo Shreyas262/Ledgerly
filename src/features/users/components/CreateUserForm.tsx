@@ -1,13 +1,11 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useState } from "react";
 import type { SyntheticEvent } from "react";
 
 import {
-  Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
   FormControl,
+  FormHelperText,
   InputLabel,
   MenuItem,
   Select,
@@ -16,26 +14,31 @@ import {
   Typography,
 } from "@mui/material";
 
-import type { RoleName } from "../../../types/auth";
+import type { RoleName } from "../../roles/types/role";
 
 import { useCreateUserMutation } from "../api/usersApi";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useGetRolesQuery } from "../../../features/roles/api/rolesApi";
 
-import { permissionGroups } from "../../../mocks/data/permissions";
+import { GroupedPermissions } from "../../roles/components/GroupedPermissions";
+import { useGetDepartmentsQuery, useGetTeamsQuery } from "../../organizations/api/organizationApi";
 
 interface CreateUserFormProps {
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
-
-const ORGANIZATION_ID = "org-1";
 
 export function CreateUserForm({
   onSuccess,
+  onCancel,
 }: CreateUserFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<RoleName>("employee");
+  const [departmentId, setDepartmentId] = useState("");
+  const [teamId, setTeamId] = useState("");
+  const [financeDepartmentIds, setFinanceDepartmentIds] = useState<string[]>([]);
 
   const {
     data: roles,
@@ -43,13 +46,17 @@ export function CreateUserForm({
     isError: rolesError,
   } = useGetRolesQuery();
 
+  const { data: departments } = useGetDepartmentsQuery();
+  const { data: teams } = useGetTeamsQuery();
+
   const [
     createUser,
     {
       isLoading: isCreating,
-      isError: createUserError,
+      error: createUserError,
     },
   ] = useCreateUserMutation();
+  const confirm = useConfirm();
 
   const selectedRole = roles?.find(
     (item) => item.name === role,
@@ -63,20 +70,30 @@ export function CreateUserForm({
   ) {
     event.preventDefault();
 
+    if (!departmentId || !teamId) {
+      return;
+    }
+    if (!(await confirm({ title: "Create User", message: `Create an account for ${name} (${email})?`, confirmLabel: "Create" }))) return;
+
     try {
       await createUser({
-        organizationId: ORGANIZATION_ID,
         name,
         email,
         password,
         role,
         permissions: selectedPermissions,
+        departmentId,
+        teamId,
+        ...(role === "finance" ? { financeDepartmentIds } : {}),
       }).unwrap();
 
       setName("");
       setEmail("");
       setPassword("");
       setRole("employee");
+      setFinanceDepartmentIds([]);
+      setDepartmentId("");
+      setTeamId("");
 
       onSuccess?.();
     } catch {
@@ -153,10 +170,54 @@ export function CreateUserForm({
         </Select>
       </FormControl>
 
+      <FormControl fullWidth required>
+        <InputLabel id="user-department-label">Department</InputLabel>
+        <Select labelId="user-department-label" value={departmentId} label="Department" onChange={(event) => { setDepartmentId(event.target.value); setTeamId(""); }}>
+          {departments?.map((department) => <MenuItem key={department.id} value={department.id}>{department.name}</MenuItem>)}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth required>
+        <InputLabel id="user-team-label">Team</InputLabel>
+        <Select labelId="user-team-label" value={teamId} label="Team" disabled={!departmentId} onChange={(event) => setTeamId(event.target.value)}>
+          {teams?.filter((team) => team.departmentId === departmentId).map((team) => <MenuItem key={team.id} value={team.id}>{team.name}</MenuItem>)}
+        </Select>
+      </FormControl>
+
+      {role === "finance" && (
+        <FormControl fullWidth>
+          <InputLabel id="finance-departments-label">Authorized departments</InputLabel>
+          <Select
+            labelId="finance-departments-label"
+            label="Authorized departments"
+            multiple
+            value={financeDepartmentIds}
+            onChange={(event) => {
+              const value = event.target.value;
+              setFinanceDepartmentIds(typeof value === "string" ? value.split(",") : value);
+            }}
+            renderValue={(selected) =>
+              selected
+                .map((id) => departments?.find((department) => department.id === id)?.name ?? id)
+                .join(", ")
+            }
+          >
+            {departments?.map((department) => (
+              <MenuItem key={department.id} value={department.id}>
+                {department.name}
+              </MenuItem>
+            ))}
+          </Select>
+          <FormHelperText>
+            Departments whose approved expenses this Finance user may reimburse. Leave empty to use the user's own department.
+          </FormHelperText>
+        </FormControl>
+      )}
+
       {/* Permissions */}
       <Stack spacing={2}>
         <Stack spacing={0.5}>
-          <Typography variant="subtitle1" sx={{fontWeight: 600}}>
+          <Typography variant="subtitle1">
             Permissions
           </Typography>
 
@@ -169,82 +230,39 @@ export function CreateUserForm({
           </Typography>
         </Stack>
 
-        {Object.entries(permissionGroups).map(
-          ([groupName, groupPermissions]) => {
-            const availablePermissions =
-              groupPermissions.filter((permission) =>
-                selectedPermissions.includes(permission),
-              );
-
-            if (!availablePermissions.length) {
-              return null;
-            }
-
-            return (
-              <Card
-                key={groupName}
-                variant="outlined"
-              >
-                <CardContent>
-                  <Stack spacing={1.5}>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{fontWeight: 700}}
-                    >
-                      {groupName}
-                    </Typography>
-
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 1,
-                      }}
-                    >
-                      {availablePermissions.map(
-                        (permission) => (
-                          <Chip
-                            key={permission}
-                            label={permission.split(".")[1]}
-                            size="small"
-                          />
-                        ),
-                      )}
-                    </Box>
-                  </Stack>
-                </CardContent>
-              </Card>
-            );
-          },
-        )}
+        <GroupedPermissions permissions={selectedPermissions} />
       </Stack>
 
       {/* Errors */}
       {rolesError && (
         <Typography color="error">
-          Failed to load roles.
+          Roles could not be loaded. Refresh the page to try again.
         </Typography>
       )}
 
-      {createUserError && (
-        <Typography color="error">
-          Failed to create user.
-        </Typography>
-      )}
+      {createUserError && <ApiFeedback error={createUserError} />}
 
-      {/* Submit */}
-      <Button
-        type="submit"
-        variant="contained"
-        disabled={
-          isCreating ||
-          rolesLoading ||
-          rolesError ||
-          !selectedRole
-        }
-      >
-        {isCreating ? "Creating..." : "Create User"}
-      </Button>
+      {/* Actions */}
+      <Stack direction="row" spacing={1.5} sx={{ justifyContent: "flex-end" }}>
+        {onCancel && (
+          <Button variant="outlined" onClick={onCancel} disabled={isCreating} sx={{ minWidth: 120 }}>
+            Cancel
+          </Button>
+        )}
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={
+            isCreating ||
+            rolesLoading ||
+            rolesError ||
+            !selectedRole
+          }
+          sx={{ minWidth: 140 }}
+        >
+          {isCreating ? "Creating…" : "Create User"}
+        </Button>
+      </Stack>
     </Stack>
   );
 }

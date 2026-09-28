@@ -1,3 +1,5 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState, type SyntheticEvent } from "react";
 import {
   Button,
@@ -9,16 +11,19 @@ import {
   Typography,
 } from "@mui/material";
 
-import { allPermissions } from "../../../mocks/data/permissions";
+import { allPermissions } from "../constants/permissions";
 
-import type { Permission, RoleName } from "../../../types/auth";
+import type { Permission, RoleName } from "../types/role";
 import { useCreateRoleMutation } from "../../roles/api/rolesApi";
 
-export function CreateRoleForm() {
+interface CreateRoleFormProps { onSuccess?: () => void; }
+
+export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
   const [name, setName] = useState<RoleName>("employee");
   const [permissions, setPermissions] = useState<Permission[]>([]);
 
   const [createRole, { isLoading, isError, error }] = useCreateRoleMutation();
+  const confirm = useConfirm();
 
   function handlePermissionChange(permission: Permission) {
     setPermissions((currentPermissions) => {
@@ -37,11 +42,19 @@ export function CreateRoleForm() {
 
   async function handleSubmit(event: SyntheticEvent) {
     event.preventDefault();
+    if (!(await confirm({ title: "Create Role", message: `Create the role "${name}" with ${permissions.length} permission(s)?`, confirmLabel: "Create" }))) return;
 
-    await createRole({
-      name,
-      permissions,
-    }).unwrap();
+    try {
+      await createRole({
+        name,
+        permissions,
+      }).unwrap();
+      setName("employee");
+      setPermissions([]);
+      onSuccess?.();
+    } catch {
+      // Error is exposed through the mutation state.
+    }
   }
 
   return (
@@ -79,18 +92,15 @@ export function CreateRoleForm() {
         ))}
       </FormGroup>
 
-      {isError && (
-        <Typography color="error">
-          Failed to create role.
-        </Typography>
-      )}
+      {isError && <ApiFeedback error={error} />}
 
       <Button
         type="submit"
         variant="contained"
         disabled={isLoading}
+        sx={{ alignSelf: "flex-end" }}
       >
-        {isLoading ? "Creating..." : "Create Role"}
+        {isLoading ? "Creating…" : "Create Role"}
       </Button>
     </Stack>
   );

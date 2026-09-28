@@ -1,3 +1,8 @@
+import { PolicyEvaluationPanel } from "../../policies/components/PolicyEvaluationPanel";
+import { formatCurrency } from "../../../utils/currency";
+import { formatDate } from "../../../utils/format";
+import { EXPENSE_STATUS_LABELS } from "../types/expense";
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import {
   Alert,
   Button,
@@ -13,56 +18,61 @@ import {
   TextField,
 } from "@mui/material";
 
-import { ArrowBackOutlined } from "@mui/icons-material";
 
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
   useGetExpenseByIdQuery,
   useSubmitExpenseMutation,
   useApproveExpenseMutation,
   useRejectExpenseMutation,
+  useRestoreExpenseMutation,
+  useStartReimbursementMutation,
+  useReimburseExpenseMutation,
+  useCancelExpenseMutation,
+  useStartExpenseReviewMutation,
 } from "../../../features/expenses/api/expenseApi";
 
-import { evaluateExpensePolicy } from "../../approvals/utils/evaluateExpensePolicy";
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
+import { useAuth } from "../../../features/auth/context/AuthContext";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
+import { ConfirmDialog } from "../../../components/common/ConfirmDialog";
 import { useState } from "react";
 
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
+import { ForbiddenPage } from "../../auth/pages/ForbiddenPage";
+import { isForbiddenError } from "../../auth/utils/authErrors";
 
-import type { ExpenseStatus } from "../../../types/common";
+import { EXPENSE_TYPE_LABELS } from "../types/expense";
+import { isStatus } from "../../../services/api/apiErrors";
+import { DocumentPanel } from "../../documents/components/DocumentPanel";
+import { Amount } from "../../../components/common/Amount";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
-export type ExpenseDetailsMode =
-  | "default"
-  | "review";
+const reimbursementStatusLabels: Record<string, string> = {
+  PENDING: "Pending",
+  PROCESSING: "Processing",
+  REIMBURSED: "Reimbursed",
+  CANCELLED: "Cancelled",
+  NOT_APPLICABLE: "Not applicable",
+};
+
+export type ExpenseDetailsMode = "default" | "review";
 
 interface ExpenseDetailsPageProps {
   mode?: ExpenseDetailsMode;
 }
 
-const statusLabels: Record<
-  ExpenseStatus,
-  string
-> = {
-  draft: "Draft",
-  submitted: "Submitted",
-  under_review: "Under Review",
-  rejected: "Rejected",
-  approved: "Approved",
-  reimbursement_pending:
-    "Reimbursement Pending",
-  reimbursed: "Reimbursed",
-  cancelled: "Cancelled",
-};
 
-export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps) {
-
+export function ExpenseDetailsPage({
+  mode = "default",
+}: ExpenseDetailsPageProps) {
   const navigate = useNavigate();
   const { can } = usePermissions();
+  const { user } = useAuth();
+  const confirm = useConfirm();
 
   const { id } = useParams<{
     id: string;
@@ -70,44 +80,64 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
 
   const {
     data: expense,
+    error: expenseError,
+    refetch: refetchExpense,
     isLoading,
     isError,
   } = useGetExpenseByIdQuery(id ?? "", {
     skip: !id,
   });
 
-  const [
-    submitExpense,
-    {
-      isLoading: isSubmitting,
-      isError: isSubmitError,
-    },
-  ] = useSubmitExpenseMutation();
+  const [submitExpense, { isLoading: isSubmitting, error: submitError }] =
+    useSubmitExpenseMutation();
+
+  const [rejectExpense, { isLoading: isRejecting, error: rejectError }] =
+    useRejectExpenseMutation();
 
   const [
-    rejectExpense,
-    {
-      isLoading: isRejecting,
-      isError: isRejectError,
-    },
-  ] = useRejectExpenseMutation();
+    startExpenseReview,
+    { isLoading: isStartingReview, error: startReviewError },
+  ] = useStartExpenseReviewMutation();
+
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [budgetWarnings, setBudgetWarnings] = useState<string[]>([]);
 
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
   const [rejectionReason, setRejectionReason] = useState("");
 
+  const [approveExpense, { isLoading: isApproving, error: approveError }] =
+    useApproveExpenseMutation();
+
+  const [restoreExpense, { isLoading: isRestoring, error: restoreError }] =
+    useRestoreExpenseMutation();
+
   const [
-    approveExpense,
-    {
-      isLoading: isApproving,
-      isError: isApproveError,
-    },
-  ] = useApproveExpenseMutation();
+    startReimbursement,
+    { isLoading: isStartingReimbursement, error: startReimbursementError },
+  ] = useStartReimbursementMutation();
+
+  const [
+    reimburseExpense,
+    { isLoading: isReimbursing, error: reimburseError },
+  ] = useReimburseExpenseMutation();
+
+  const [cancelExpense, { isLoading: isCancelling, error: cancelError }] =
+    useCancelExpenseMutation();
+
+  const mutationError =
+    submitError ??
+    startReviewError ??
+    approveError ??
+    restoreError ??
+    startReimbursementError ??
+    reimburseError ??
+    cancelError;
 
   const isReviewMode = mode === "review";
 
   if (!id) {
-    return <ErrorState />;
+    return <ErrorState title="Not found" message="No expense was specified." />;
   }
 
   if (isLoading) {
@@ -115,20 +145,42 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
   }
 
   if (isError || !expense) {
-    return <ErrorState />;
+    if (isForbiddenError(expenseError)) {
+      return <ForbiddenPage />;
+    }
+
+    if (isStatus(expenseError, 404)) {
+      return (
+        <ErrorState message="This expense does not exist or is not available to you." />
+      );
+    }
+
+    return <ErrorState error={expenseError} onRetry={refetchExpense} />;
   }
 
-  const policyResult = evaluateExpensePolicy(expense);
+  const policyResult = expense.policyEvaluation;
 
   const handleSubmitExpense = async () => {
+    if (!(await confirm({ title: "Submit Expense", message: `Submit "${expense.title}" for approval? You will not be able to edit it while it is being reviewed.`, confirmLabel: "Submit" }))) return;
     try {
-      await submitExpense(expense.id).unwrap();
+      const submitted = await submitExpense(expense.id).unwrap();
+      setBudgetWarnings(submitted.budgetWarnings ?? []);
     } catch {
-      // Error is exposed through isSubmitError.
+      // Error is exposed through submitError.
+    }
+  };
+
+  const handleStartReview = async () => {
+    if (!(await confirm({ title: "Start Review", message: `Start reviewing "${expense.title}"?`, confirmLabel: "Start Review" }))) return;
+    try {
+      await startExpenseReview(expense.id).unwrap();
+    } catch {
+      // Error is exposed through startReviewError.
     }
   };
 
   const handleApproveExpense = async () => {
+    if (!(await confirm({ title: "Approve Expense", message: `Approve "${expense.title}" for ${formatCurrency(expense.amount)}? It moves to Finance for reimbursement.`, confirmLabel: "Approve" }))) return;
     try {
       await approveExpense(expense.id).unwrap();
     } catch {
@@ -156,51 +208,173 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
     }
   };
 
+  const handleRestoreExpense = async () => {
+    if (!(await confirm({ title: "Restore to Draft", message: "Move this rejected expense back to draft so you can fix and resubmit it?", confirmLabel: "Restore" }))) return;
+    try {
+      await restoreExpense(expense.id).unwrap();
+    } catch {
+      // Error is exposed through isRestoreError.
+    }
+  };
+
+  const handleStartReimbursement = async () => {
+    if (!(await confirm({ title: "Start Reimbursement", message: `Start reimbursing "${expense.title}"?`, confirmLabel: "Start" }))) return;
+    try {
+      await startReimbursement(expense.id).unwrap();
+    } catch {
+      // Error is exposed through isStartReimbursementError.
+    }
+  };
+
+  const handleReimburseExpense = async () => {
+    if (!(await confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatCurrency(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark Reimbursed" }))) return;
+    try {
+      await reimburseExpense(expense.id).unwrap();
+    } catch {
+      // Error is exposed through isReimburseError.
+    }
+  };
+
+  const handleCancelExpense = async (reason?: string) => {
+    try {
+      await cancelExpense({ id: expense.id, reason }).unwrap();
+    } catch {
+      // Error is exposed through cancelError.
+    } finally {
+      setIsCancelDialogOpen(false);
+    }
+  };
+
+  // Draft and rejected expenses can only be changed by their owner (§13).
+  const isOwner = Boolean(user) && expense.employeeId === user?.id;
+
   const canEdit =
     !isReviewMode &&
+    isOwner &&
     expense.status === "draft" &&
     can("expenses.update");
 
   const canSubmit =
     !isReviewMode &&
+    isOwner &&
     expense.status === "draft" &&
     can("expenses.submit");
 
+  // A receipt or supporting document is required before submission.
+  const needsReceipt = canSubmit && (expense.documentIds?.length ?? 0) === 0;
+
+  // Only administrators may review their own expenses.
+  const canReviewThis = !isOwner || user?.role === "admin";
+
+  const canStartReview =
+    isReviewMode &&
+    canReviewThis &&
+    expense.status === "submitted" &&
+    can("expenses.approve");
+
   const canApprove =
     isReviewMode &&
+    canReviewThis &&
     expense.status === "under_review" &&
-    can("expenses.approve") &&
-    policyResult.allowed;
+    can("expenses.approve");
 
   const canReject =
     isReviewMode &&
+    canReviewThis &&
     expense.status === "under_review" &&
     can("expenses.reject");
 
+  const canRestore =
+    !isReviewMode &&
+    isOwner &&
+    expense.status === "rejected" &&
+    can("expenses.update");
+
+  // Separation of duties: Finance cannot reimburse an expense it approved.
+  const approvedBySelf = user?.role === "finance" && expense.approvedBy === user.id;
+
+  const canStartReimbursement =
+    !isReviewMode &&
+    !approvedBySelf &&
+    expense.status === "approved" &&
+    can("reimbursements.manage");
+
+  const canReimburse =
+    !isReviewMode &&
+    !approvedBySelf &&
+    expense.status === "reimbursement_pending" &&
+    can("reimbursements.manage");
+
+  const canCancel =
+    !isReviewMode &&
+    ((expense.status === "draft" && isOwner && can("expenses.update")) ||
+      ((expense.status === "approved" ||
+        expense.status === "reimbursement_pending") &&
+        can("reimbursements.manage")));
+
+  const canManageDocuments =
+    !isReviewMode &&
+    isOwner &&
+    expense.status === "draft" &&
+    can("documents.create") &&
+    can("documents.delete");
+
   return (
     <Stack spacing={3}>
-      <Button
-        variant="text"
-        startIcon={<ArrowBackOutlined />}
-        onClick={() => navigate(isReviewMode ? "/approvals" : "/expenses")}
-        sx={{
-          alignSelf: "flex-start",
-        }}
-      >
-        Back
-      </Button>
+      {isReviewMode ? (
+        <BackLink to="/approvals" label="Approvals" />
+      ) : (
+        <BackLink to="/expenses" label="Expenses" />
+      )}
 
-      {isSubmitError && (
-        <Alert severity="error">
-          Failed to submit expense.
+      <PageHeader title={isReviewMode ? "Expense Review" : "Expense Details"} />
+
+      {mutationError && <ApiFeedback error={mutationError} />}
+
+      {budgetWarnings.length > 0 && (
+        <Alert severity="warning" onClose={() => setBudgetWarnings([])}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>Budget notice</Typography>
+          {budgetWarnings.map((warning) => (
+            <Typography key={warning} variant="body2">{warning}</Typography>
+          ))}
         </Alert>
       )}
 
-      {isApproveError && (
-        <Alert severity="error">
-          Failed to approve expense.
+      {needsReceipt && (
+        <Alert severity="info">
+          Attach a receipt or supporting document below before submitting this expense.
         </Alert>
       )}
+
+      {expense.rejectionReason &&
+        (expense.status === "rejected" || expense.status === "draft") && (
+          <Alert severity="warning">
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {expense.status === "rejected"
+                ? "Rejection reason"
+                : "Previously rejected"}
+            </Typography>
+            <Typography variant="body2">{expense.rejectionReason}</Typography>
+          </Alert>
+        )}
+
+      {expense.status === "cancelled" &&
+        (expense.cancellationReason || expense.cancelledByName) && (
+          <Alert severity="warning">
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              Cancelled
+              {expense.cancelledByName ? ` by ${expense.cancelledByName}` : ""}
+              {expense.cancelledAt
+                ? ` on ${formatDate(expense.cancelledAt)}`
+                : ""}
+            </Typography>
+            {expense.cancellationReason && (
+              <Typography variant="body2">
+                {expense.cancellationReason}
+              </Typography>
+            )}
+          </Alert>
+        )}
 
       <Paper sx={{ p: 3 }}>
         <Stack spacing={3}>
@@ -216,29 +390,34 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
             spacing={2}
           >
             <Stack spacing={0.5}>
-              <Typography variant="h5">
-                {expense.title}
-              </Typography>
+              <Typography variant="h5">{expense.title}</Typography>
 
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                {expense.category}
+              <Typography variant="body2" color="text.secondary">
+                {EXPENSE_TYPE_LABELS[expense.type] ?? expense.type}
               </Typography>
             </Stack>
 
-            <Chip
-              label={statusLabels[expense.status]}
-              size="small"
-            />
+            <Chip label={EXPENSE_STATUS_LABELS[expense.status]} size="small" />
           </Stack>
+
+          {/* Policy check (§21.10) */}
+          {policyResult && expense.status !== "cancelled" && (
+            <PolicyEvaluationPanel
+              evaluation={policyResult}
+              note={expense.status === "draft" ? "Preliminary check. The rules are checked again when the expense is submitted." : undefined}
+            />
+          )}
 
           {/* Actions */}
           {(canEdit ||
             canSubmit ||
+            canStartReview ||
             canApprove ||
-            canReject) && (
+            canReject ||
+            canRestore ||
+            canStartReimbursement ||
+            canReimburse ||
+            canCancel) && (
             <Stack
               direction={{
                 xs: "column",
@@ -246,28 +425,11 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
               }}
               spacing={2}
             >
-              {isReviewMode && expense.status === "under_review" && (
-                  <Alert
-                    severity={
-                      policyResult.allowed
-                        ? "success"
-                        : "warning"
-                    }
-                  >
-                    {policyResult.allowed
-                      ? "This expense passes the current approval policy."
-                      : policyResult.reason}
-                  </Alert>
-              )}
-              
+
               {canEdit && (
                 <Button
                   variant="contained"
-                  onClick={() =>
-                    navigate(
-                      `/expenses/${expense.id}/edit`,
-                    )
-                  }
+                  onClick={() => navigate(`/expenses/${expense.id}/edit`)}
                 >
                   Edit Expense
                 </Button>
@@ -278,8 +440,19 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
                   variant="contained"
                   onClick={handleSubmitExpense}
                   loading={isSubmitting}
+                  disabled={needsReceipt}
                 >
                   Submit Expense
+                </Button>
+              )}
+
+              {canStartReview && (
+                <Button
+                  variant="contained"
+                  onClick={handleStartReview}
+                  loading={isStartingReview}
+                >
+                  Start Review
                 </Button>
               )}
 
@@ -302,6 +475,47 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
                   Reject
                 </Button>
               )}
+
+              {canRestore && (
+                <Button
+                  variant="outlined"
+                  onClick={handleRestoreExpense}
+                  loading={isRestoring}
+                >
+                  Restore to Draft
+                </Button>
+              )}
+
+              {canStartReimbursement && (
+                <Button
+                  variant="contained"
+                  onClick={handleStartReimbursement}
+                  loading={isStartingReimbursement}
+                >
+                  Start Reimbursement
+                </Button>
+              )}
+
+              {canReimburse && (
+                <Button
+                  variant="contained"
+                  onClick={handleReimburseExpense}
+                  loading={isReimbursing}
+                >
+                  Mark Reimbursed
+                </Button>
+              )}
+
+              {canCancel && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => setIsCancelDialogOpen(true)}
+                  disabled={isCancelling}
+                >
+                  Cancel Expense
+                </Button>
+              )}
             </Stack>
           )}
 
@@ -316,42 +530,51 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
             spacing={4}
           >
             <Stack spacing={0.5}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Amount
               </Typography>
 
               <Typography variant="h6">
-                {expense.currency}{" "}
-                {expense.amount.toLocaleString()}
+                <Amount value={expense.amount} currency={expense.currency} />
               </Typography>
             </Stack>
 
             <Stack spacing={0.5}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Expense Date
               </Typography>
 
-              <Typography variant="body1">
-                {expense.expenseDate}
-              </Typography>
+              <Typography variant="body1">{formatDate(expense.expenseDate)}</Typography>
             </Stack>
 
             <Stack spacing={0.5}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
+              <Typography variant="body2" color="text.secondary">
                 Employee
               </Typography>
 
               <Typography variant="body1">
-                {expense.employeeId}
+                {expense.employeeName ?? expense.employeeId}
+                {expense.employeeRemoved ? " (removed)" : ""}
+              </Typography>
+            </Stack>
+
+            <Stack spacing={0.5}>
+              <Typography variant="body2" color="text.secondary">
+                Team
+              </Typography>
+
+              <Typography variant="body1">
+                {expense.teamName ?? expense.teamId}
+              </Typography>
+            </Stack>
+
+            <Stack spacing={0.5}>
+              <Typography variant="body2" color="text.secondary">
+                Department
+              </Typography>
+
+              <Typography variant="body1">
+                {expense.departmentName ?? expense.departmentId}
               </Typography>
             </Stack>
           </Stack>
@@ -369,25 +592,81 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
               Description
             </Typography>
 
-            <Typography
-              variant="body1"
-              color="text.secondary"
-            >
+            <Typography variant="body1" color="text.secondary">
               {expense.description}
             </Typography>
           </Stack>
+
+          {/* Reimbursement (§22.10) */}
+          {expense.reimbursement && (
+            <>
+              <Divider />
+              <Stack spacing={1}>
+                <Typography variant="subtitle1">
+                  Reimbursement
+                </Typography>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={4}>
+                  <Stack spacing={0.5}>
+                    <Typography variant="body2" color="text.secondary">
+                      Status
+                    </Typography>
+                    <Typography variant="body1">
+                      {reimbursementStatusLabels[
+                        expense.reimbursement.status
+                      ] ?? expense.reimbursement.status}
+                    </Typography>
+                  </Stack>
+                  {expense.reimbursement.amount !== undefined && (
+                    <Stack spacing={0.5}>
+                      <Typography variant="body2" color="text.secondary">
+                        Amount
+                      </Typography>
+                      <Typography variant="body1">
+                        <Amount
+                          value={expense.reimbursement.amount}
+                          currency={expense.currency}
+                        />
+                      </Typography>
+                    </Stack>
+                  )}
+                  {expense.reimbursement.processedAt && (
+                    <Stack spacing={0.5}>
+                      <Typography variant="body2" color="text.secondary">
+                        Reimbursed on
+                      </Typography>
+                      <Typography variant="body1">
+                        {formatDate(expense.reimbursement.processedAt)}
+                      </Typography>
+                    </Stack>
+                  )}
+                  {(expense.reimbursement.processedByName ||
+                    expense.reimbursement.processedBy) && (
+                    <Stack spacing={0.5}>
+                      <Typography variant="body2" color="text.secondary">
+                        Processed by
+                      </Typography>
+                      <Typography variant="body1">
+                        {expense.reimbursement.processedByName ??
+                          expense.reimbursement.processedBy}
+                      </Typography>
+                    </Stack>
+                  )}
+                </Stack>
+              </Stack>
+            </>
+          )}
         </Stack>
       </Paper>
 
       {/* Review-mode warning */}
       {isReviewMode &&
-        expense.status !== "under_review" && (
+        expense.status !== "under_review" &&
+        expense.status !== "submitted" && (
           <Alert severity="info">
-            This expense is not currently
-            available for review.
+            This expense is not currently available for review.
           </Alert>
         )}
-      
+
       <Dialog
         open={isRejectDialogOpen}
         onClose={() => {
@@ -398,9 +677,7 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>
-          Reject Expense
-        </DialogTitle>
+        <DialogTitle>Reject Expense</DialogTitle>
 
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
@@ -410,11 +687,9 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
 
             <TextField
               label="Rejection reason"
-              placeholder="Enter the reason..."
+              placeholder="Enter the reason"
               value={rejectionReason}
-              onChange={(event) =>
-                setRejectionReason(event.target.value)
-              }
+              onChange={(event) => setRejectionReason(event.target.value)}
               multiline
               minRows={4}
               fullWidth
@@ -428,11 +703,7 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
               helperText="A rejection reason is required."
             />
 
-            {isRejectError && (
-              <Alert severity="error">
-                Failed to reject the expense. Please try again.
-              </Alert>
-            )}
+            {rejectError && <ApiFeedback error={rejectError} />}
           </Stack>
         </DialogContent>
 
@@ -455,6 +726,21 @@ export function ExpenseDetailsPage({mode = "default",}: ExpenseDetailsPageProps)
           </Button>
         </DialogActions>
       </Dialog>
+      <ConfirmDialog
+        open={isCancelDialogOpen}
+        title="Cancel Expense"
+        message="Cancelling keeps the expense as a historical record, but it can no longer be submitted or processed. Continue?"
+        reasonLabel={
+          expense.status === "draft" ? undefined : "Cancellation reason"
+        }
+        confirmLabel="Cancel Expense"
+        cancelLabel="Keep Expense"
+        loadingLabel="Cancelling…"
+        loading={isCancelling}
+        onConfirm={handleCancelExpense}
+        onCancel={() => setIsCancelDialogOpen(false)}
+      />
+      <DocumentPanel expenseId={expense.id} canManage={canManageDocuments} />
     </Stack>
   );
 }

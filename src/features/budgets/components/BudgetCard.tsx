@@ -1,158 +1,79 @@
-import {
-  Card,
-  CardContent,
-  Chip,
-  LinearProgress,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Card, CardActionArea, CardContent, Chip, Stack, Typography } from "@mui/material";
+import type { ChipProps } from "@mui/material";
+import { formatDate } from "../../../utils/format";
+import { budgetViewTitle } from "../utils/budgetViewTitle";
 
-import type { Budget } from "../../../types/budget";
-import {
-  calculateBudgetRemaining,
-  calculateBudgetUtilization,
-} from "../utils/budgetCalculations";
+import type { BudgetStatus, OrganizationBudgetView } from "../types/budget";
+import { BudgetProgress } from "./BudgetProgress";
 
 interface BudgetCardProps {
-  budget: Budget;
-  onView: (budget: Budget) => void;
+  budget: OrganizationBudgetView;
+  onView: (budget: OrganizationBudgetView) => void;
 }
 
-export function BudgetCard({
-  budget,
-  onView,
-}: BudgetCardProps) {
+const statusChip: Record<BudgetStatus, { label: string; color: ChipProps["color"] }> = {
+  draft: { label: "Draft", color: "default" },
+  active: { label: "Active", color: "success" },
+  closed: { label: "Closed", color: "default" },
+};
 
-  const remainingAmount = calculateBudgetRemaining(budget);
-  const utilization = calculateBudgetUtilization(budget);
+
+/** The viewer's level of the budget: organization, their departments or team. */
+function scopedTotals(budget: OrganizationBudgetView) {
+  if (budget.viewScope === "ORGANIZATION") {
+    return { allocated: budget.amount, utilization: budget.utilization };
+  }
+  const items = budget.viewScope === "DEPARTMENT"
+    ? budget.departmentAllocations
+    : budget.departmentAllocations.flatMap((department) => department.teamAllocations);
+  const allocated = items.reduce((sum, item) => sum + item.amount, 0);
+  const spentAmount = items.reduce((sum, item) => sum + item.utilization.spentAmount, 0);
+  return {
+    allocated,
+    utilization: {
+      spentAmount,
+      remainingAmount: Math.max(allocated - spentAmount, 0),
+      utilizationPercent: allocated > 0 ? (spentAmount / allocated) * 100 : 0,
+    },
+  };
+}
+
+export function BudgetCard({ budget, onView }: BudgetCardProps) {
+  const totals = scopedTotals(budget);
+  const viewTitle = budgetViewTitle(budget);
+  const status = statusChip[budget.status];
 
   return (
-    <Card>
-      <CardContent>
-        <Stack spacing={2}>
-          <Stack
-            direction="row"
-            sx={{
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              gap: 2,
-            }}
-          >
-            <Stack spacing={0.5}>
-              <Typography variant="h6">
-                {budget.name}
-              </Typography>
-
-              {budget.description && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                >
-                  {budget.description}
+    <Card sx={{ height: "100%" }}>
+      <CardActionArea onClick={() => onView(budget)} sx={{ height: "100%" }}>
+        <CardContent>
+          <Stack spacing={2}>
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", gap: 2 }}>
+              <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                <Typography variant="subtitle1" noWrap>{viewTitle.title}</Typography>
+                {viewTitle.parentName && (
+                  <Typography variant="caption" color="text.secondary" noWrap>Part of {viewTitle.parentName}</Typography>
+                )}
+                <Typography variant="body2" color="text.secondary">
+                  {formatDate(budget.startDate)} – {formatDate(budget.endDate)}
                 </Typography>
-              )}
+              </Stack>
+              <Chip label={status.label} color={status.color} size="small" />
             </Stack>
 
-            <Chip
-              label={budget.status}
-              size="small"
-            />
-          </Stack>
-
-          <Stack spacing={1}>
-            <Stack
-              direction="row"
-              sx={{
-                justifyContent: "space-between",
-                gap: 2,
-              }}
-            >
-              <Typography variant="body2">
-                Spent
-              </Typography>
-
-              <Typography variant="body2">
-                ₹
-                {budget.spentAmount.toLocaleString(
-                  "en-IN",
-                )}
-                {" / "}
-                ₹
-                {budget.amount.toLocaleString(
-                  "en-IN",
-                )}
-              </Typography>
-            </Stack>
-
-            <LinearProgress
-              variant="determinate"
-              value={utilization}
-            />
-
-            <Stack
-              direction="row"
-              sx={{
-                justifyContent: "space-between",
-                gap: 2,
-              }}
-            >
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
-                {utilization.toFixed(1)}% utilized
-              </Typography>
-
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
-                ₹
-                {remainingAmount.toLocaleString(
-                  "en-IN",
-                )}{" "}
-                remaining
-              </Typography>
-            </Stack>
-          </Stack>
-
-          <Stack spacing={0.5}>
-            {budget.department && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Department: {budget.department}
-              </Typography>
+            {budget.description && (
+              <Typography variant="body2" color="text.secondary">{budget.description}</Typography>
             )}
 
-            {budget.project && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-              >
-                Project: {budget.project}
-              </Typography>
-            )}
-          </Stack>
+            <Stack spacing={0.5}>
+              <Typography variant="caption" color="text.secondary">{viewTitle.scopeLabel}</Typography>
+              <BudgetProgress allocated={totals.allocated} utilization={totals.utilization} />
+            </Stack>
 
-          <Typography
-            component="button"
-            onClick={() => onView(budget)}
-            sx={{
-              border: 0,
-              background: "none",
-              padding: 0,
-              textAlign: "left",
-              cursor: "pointer",
-              color: "primary.main",
-              font: "inherit",
-            }}
-          >
-            View budget
-          </Typography>
-        </Stack>
-      </CardContent>
+            <Typography variant="body2" color="primary">View breakdown</Typography>
+          </Stack>
+        </CardContent>
+      </CardActionArea>
     </Card>
   );
 }

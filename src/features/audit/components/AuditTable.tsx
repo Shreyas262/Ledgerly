@@ -11,63 +11,63 @@ import {
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import type { AuditAction, AuditLog } from "../../../types/audit";
+import type { AuditEvent } from "../types/audit";
+import { formatDateTime, humanize } from "../../../utils/format";
 
 interface AuditTableProps {
-  auditLogs: AuditLog[];
+  auditEvents: AuditEvent[];
 }
 
-const actionLabels: Record<AuditAction, string> = {
-  create: "Created",
-  update: "Updated",
-  delete: "Deleted",
-  submit: "Submitted",
-  approve: "Approved",
-  reject: "Rejected",
-  login: "Login",
-  logout: "Logout",
-};
-
-export function AuditTable({ auditLogs }: AuditTableProps) {
+export function AuditTable({ auditEvents }: AuditTableProps) {
   const navigate = useNavigate();
 
   return (
     <TableContainer component={Paper}>
-      <Table>
+      <Table sx={{ minWidth: 960 }}>
         <TableHead>
           <TableRow>
-            <TableCell>Actor</TableCell>
             <TableCell>Action</TableCell>
-            <TableCell>Resource</TableCell>
+            <TableCell>Record</TableCell>
+            <TableCell>Performed by</TableCell>
+            <TableCell>Status</TableCell>
             <TableCell>Description</TableCell>
-            <TableCell>Timestamp</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableCell>Date and time</TableCell>
+            <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
-
         <TableBody>
-          {auditLogs.map((auditLog) => (
-            <TableRow key={auditLog.id}>
+          {auditEvents.map((event) => (
+            <TableRow key={event.id} hover>
               <TableCell>
-                <Typography variant="body2">{auditLog.actorName}</Typography>
+                <Chip label={humanize(event.action)} size="small" />
               </TableCell>
-
               <TableCell>
-                <Chip label={actionLabels[auditLog.action]} size="small" />
+                <Typography variant="body2">
+                  {humanize(event.entityType)}
+                </Typography>
               </TableCell>
-
-              <TableCell>{auditLog.resource}</TableCell>
-
-              <TableCell>{auditLog.description}</TableCell>
-
+              <TableCell>{event.actorName ?? "Unknown user"}</TableCell>
               <TableCell>
-                {new Date(auditLog.createdAt).toLocaleString("en-IN")}
+                {/* A single status when the record was created or did not change. */}
+                {event.previousState && event.newState && event.previousState !== event.newState ? (
+                  <Typography variant="body2">
+                    {humanize(event.previousState)} → {humanize(event.newState)}
+                  </Typography>
+                ) : event.newState || event.previousState ? (
+                  <Typography variant="body2">{humanize(event.newState ?? event.previousState)}</Typography>
+                ) : (
+                  "—"
+                )}
               </TableCell>
-
-              <TableCell>
+              <TableCell>{event.description ?? "—"}</TableCell>
+              <TableCell sx={{ whiteSpace: "nowrap" }}>
+                {formatDateTime(event.timestamp)}
+              </TableCell>
+              <TableCell align="right">
                 <Button
+                  variant="outlined"
                   size="small"
-                  onClick={() => navigate(`/audit/${auditLog.id}`)}
+                  onClick={() => navigate(`/audit/${event.id}`)}
                 >
                   View
                 </Button>

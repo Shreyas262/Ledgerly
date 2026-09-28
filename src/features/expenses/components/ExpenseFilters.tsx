@@ -4,18 +4,22 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  Stack,
   TextField,
-  Button,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 
-import type { ExpenseFilter as ExpenseFiltersState } from "../../../types/expense";
-import type { ExpenseStatus } from "../../../types/common";
+import { FilterBar } from "../../../components/common/FilterBar";
+import type { ExpenseFilter as ExpenseFiltersState } from "../types/expense";
+import {
+  EXPENSE_STATUS_LABELS,
+  EXPENSE_TYPES,
+  EXPENSE_TYPE_LABELS,
+  type ExpenseStatus,
+  type ExpenseType,
+} from "../types/expense";
 
 interface ExpenseFiltersProps {
   filters: ExpenseFiltersState;
-  categories: string[];
   onChange: (filters: ExpenseFiltersState) => void;
   onReset: () => void;
 }
@@ -25,19 +29,11 @@ const statusOptions: {
   label: string;
 }[] = [
   { value: "all", label: "All statuses" },
-  { value: "draft", label: "Draft" },
-  { value: "submitted", label: "Submitted" },
-  { value: "under_review", label: "Under Review" },
-  { value: "rejected", label: "Rejected" },
-  { value: "approved", label: "Approved" },
-  { value: "reimbursement_pending", label: "Reimbursement Pending" },
-  { value: "reimbursed", label: "Reimbursed" },
-  { value: "cancelled", label: "Cancelled" },
+  ...(Object.entries(EXPENSE_STATUS_LABELS) as Array<[ExpenseStatus, string]>).map(([value, label]) => ({ value, label })),
 ];
 
 export function ExpenseFilters({
   filters,
-  categories,
   onChange,
   onReset,
 }: ExpenseFiltersProps) {
@@ -59,31 +55,26 @@ export function ExpenseFilters({
     });
   };
 
-  // Fixed: Uses SelectChangeEvent instead of React.ChangeEvent<HTMLInputElement>
-  const handleCategoryChange = (event: SelectChangeEvent<string>) => {
-    onChange({
-      ...filters,
-      category: event.target.value,
-    });
-  };
+
+
+  const activeCount = [
+    filters.search.trim() !== "",
+    filters.status !== "all",
+    filters.type !== "all",
+    filters.dateFrom !== "",
+    filters.dateTo !== "",
+  ].filter(Boolean).length;
 
   return (
-    <Stack
-      direction={{
-        xs: "column",
-        md: "row",
-      }}
-      sx={{ alignItems: "center",}}
-      spacing={2}
-    >
+    <FilterBar label="Expense filters" activeCount={activeCount} onReset={onReset}>
       <TextField
+        size="small"
         label="Search expenses"
         value={filters.search}
         onChange={handleSearchChange}
-        fullWidth
       />
 
-      <FormControl fullWidth>
+      <FormControl size="small">
         <InputLabel>Status</InputLabel>
         <Select
           label="Status"
@@ -98,23 +89,29 @@ export function ExpenseFilters({
         </Select>
       </FormControl>
 
-      <FormControl fullWidth>
-        <InputLabel>Category</InputLabel>
+      <FormControl size="small">
+        <InputLabel>Expense Type</InputLabel>
         <Select
-          label="Category"
-          value={filters.category}
-          onChange={handleCategoryChange}
+          label="Expense Type"
+          value={filters.type}
+          onChange={(event: SelectChangeEvent<string>) =>
+            onChange({
+              ...filters,
+              type: event.target.value as ExpenseType | "all",
+            })
+          }
         >
-          <MenuItem value="all">All categories</MenuItem>
-          {categories.map((category) => (
-            <MenuItem key={category} value={category}>
-              {category}
+          <MenuItem value="all">All expense types</MenuItem>
+          {EXPENSE_TYPES.map((type) => (
+            <MenuItem key={type} value={type}>
+              {EXPENSE_TYPE_LABELS[type]}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
 
       <TextField
+        size="small"
         label="From"
         type="date"
         value={filters.dateFrom}
@@ -129,10 +126,10 @@ export function ExpenseFilters({
             shrink: true,
           },
         }}
-        fullWidth
       />
 
       <TextField
+        size="small"
         label="To"
         type="date"
         value={filters.dateTo}
@@ -147,16 +144,7 @@ export function ExpenseFilters({
             shrink: true,
           },
         }}
-        fullWidth
       />
-
-      <Button
-        variant="text"
-        onClick={onReset}
-        sx={{ whitespace: "nowrap" }}
-      >
-        Reset Filters
-      </Button>
-    </Stack>
+    </FilterBar>
   );
 }

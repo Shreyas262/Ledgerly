@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Button,
   Dialog,
@@ -5,6 +6,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  TextField,
 } from "@mui/material";
 
 interface ConfirmDialogProps {
@@ -13,8 +15,13 @@ interface ConfirmDialogProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  loadingLabel?: string;
   loading?: boolean;
-  onConfirm: () => void;
+  /** When set, a non-empty reason is required and passed to onConfirm. */
+  reasonLabel?: string;
+  /** Red confirm button for destructive actions (default). */
+  destructive?: boolean;
+  onConfirm: (reason?: string) => void;
   onCancel: () => void;
 }
 
@@ -24,14 +31,31 @@ export function ConfirmDialog({
   message,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
+  loadingLabel = "Deleting…",
   loading = false,
+  reasonLabel,
+  destructive = true,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const [reason, setReason] = useState("");
+  const isReasonMissing = Boolean(reasonLabel) && !reason.trim();
+
+  const handleCancel = () => {
+    setReason("");
+    onCancel();
+  };
+
+  const handleConfirm = () => {
+    if (isReasonMissing) return;
+    onConfirm(reasonLabel ? reason.trim() : undefined);
+    setReason("");
+  };
+
   return (
     <Dialog
       open={open}
-      onClose={loading ? undefined : onCancel}
+      onClose={loading ? undefined : handleCancel}
       maxWidth="sm"
       fullWidth
     >
@@ -43,24 +67,39 @@ export function ConfirmDialog({
         <DialogContentText>
           {message}
         </DialogContentText>
+
+        {reasonLabel && (
+          <TextField
+            label={reasonLabel}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            required
+            fullWidth
+            multiline
+            minRows={3}
+            autoFocus
+            disabled={loading}
+            sx={{ mt: 2 }}
+          />
+        )}
       </DialogContent>
 
       <DialogActions>
         <Button
-          onClick={onCancel}
+          onClick={handleCancel}
           disabled={loading}
         >
           {cancelLabel}
         </Button>
 
         <Button
-          onClick={onConfirm}
-          color="error"
+          onClick={handleConfirm}
+          color={destructive ? "error" : "primary"}
           variant="contained"
-          disabled={loading}
+          disabled={loading || isReasonMissing}
         >
           {loading
-            ? "Deleting..."
+            ? loadingLabel
             : confirmLabel}
         </Button>
       </DialogActions>

@@ -1,3 +1,5 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState } from "react";
 import type { SyntheticEvent } from "react";
 
@@ -9,8 +11,7 @@ import {
   DialogTitle,
   FormControlLabel,
   FormGroup,
-  MenuItem,
-  Select,
+  TextField,
   Stack,
   Typography,
 } from "@mui/material";
@@ -19,9 +20,9 @@ import type {
   Permission,
   Role,
   RoleName,
-} from "../../../types/auth";
+} from "../types/role";
 
-import { allPermissions } from "../../../mocks/data/permissions";
+import { allPermissions } from "../constants/permissions";
 
 import { useUpdateRoleMutation } from "../api/rolesApi";
 
@@ -30,13 +31,6 @@ interface EditRoleFormProps {
   onSuccess: () => void;
   onCancel: () => void;
 }
-
-const roleNames: RoleName[] = [
-  "employee",
-  "manager",
-  "finance",
-  "admin",
-];
 
 export function EditRoleForm({
   role,
@@ -50,8 +44,9 @@ export function EditRoleForm({
 
   const [
     updateRole,
-    { isLoading, isError },
+    { isLoading, isError, error },
   ] = useUpdateRoleMutation();
+  const confirm = useConfirm();
 
   function handlePermissionChange(
     permission: Permission,
@@ -72,6 +67,7 @@ export function EditRoleForm({
     event: SyntheticEvent,
   ) {
     event.preventDefault();
+    if (!(await confirm({ title: "Save Role", message: `Save changes to the role "${name}"? Users with this role get the updated permissions immediately.`, confirmLabel: "Save" }))) return;
 
     try {
       await updateRole({
@@ -90,29 +86,17 @@ export function EditRoleForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      <DialogTitle>
-        Edit Role
-      </DialogTitle>
+      <DialogTitle>Edit Role</DialogTitle>
 
       <DialogContent>
         <Stack spacing={3} sx={{ pt: 1 }}>
-          <Select
+          <TextField
+            label="Role name"
             value={name}
-            onChange={(event) =>
-              setName(event.target.value as RoleName)
-            }
+            onChange={(event) => setName(event.target.value as RoleName)}
             fullWidth
-          >
-            {roleNames.map((roleName) => (
-              <MenuItem
-                key={roleName}
-                value={roleName}
-              >
-                {roleName.charAt(0).toUpperCase() +
-                  roleName.slice(1)}
-              </MenuItem>
-            ))}
-          </Select>
+            required
+          />
 
           <Stack spacing={1}>
             <Typography variant="subtitle1">
@@ -139,11 +123,7 @@ export function EditRoleForm({
             </FormGroup>
           </Stack>
 
-          {isError && (
-            <Typography color="error">
-              Failed to update role.
-            </Typography>
-          )}
+          {isError && <ApiFeedback error={error} />}
         </Stack>
       </DialogContent>
 
@@ -160,7 +140,7 @@ export function EditRoleForm({
           variant="contained"
           disabled={isLoading}
         >
-          {isLoading ? "Saving..." : "Save Changes"}
+          {isLoading ? "Saving…" : "Save Changes"}
         </Button>
       </DialogActions>
     </form>

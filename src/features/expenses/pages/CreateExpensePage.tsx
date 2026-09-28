@@ -1,44 +1,53 @@
+import { ExpensePolicyPreview } from "../../policies/components/ExpensePolicyPreview";
+import { formatDate } from "../../../utils/format";
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useState, type FormEvent } from "react";
 import {
-  Alert,
   Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   TextField,
-  Typography,
 } from "@mui/material";
-import { ArrowBackOutlined } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useCreateExpenseMutation } from "../api/expenseApi";
-import { ReceiptUpload } from "../components/ReceiptUpload";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useGetActiveBudgetPeriodQuery } from "../../budgets/api/budgetsApi";
+import { Alert } from "@mui/material";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
+import { getApiErrorDetails } from "../../../services/api/apiErrors";
+import { EXPENSE_TYPES, EXPENSE_TYPE_LABELS, type ExpenseType } from "../types/expense";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
 interface ExpenseFormData {
+  type: ExpenseType;
   title: string;
   description: string;
   amount: string;
-  category: string;
   expenseDate: string;
 }
 
 const initialFormData: ExpenseFormData = {
+  type: "OTHER",
   title: "",
   description: "",
   amount: "",
-  category: "",
   expenseDate: "",
 };
 
 export function CreateExpensePage() {
-  const [receipt, setReceipt] = useState<File | null>(null);
   const navigate = useNavigate();
-  const { user } = useAuth();
-
+  const confirm = useConfirm();
   const [formData, setFormData] = useState<ExpenseFormData>(initialFormData);
 
-  const [createExpense, { isLoading, isError }] = useCreateExpenseMutation();
-
-  if (!user) return;
+  const [createExpense, { isLoading, error }] = useCreateExpenseMutation();
+  const { data: eligibility } = useGetActiveBudgetPeriodQuery(undefined, { refetchOnMountOrArgChange: true });
+  const activePeriod = eligibility?.period;
+  const creationBlocked = eligibility ? !eligibility.canCreateExpense : false;
+  const details = getApiErrorDetails(error);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -52,44 +61,80 @@ export function CreateExpensePage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const createdExpense = await createExpense({
+    if (!formData.title.trim() || !formData.description.trim() || !formData.amount || !formData.expenseDate) {
+      return;
+    }
+
+    if (!Number.isFinite(Number(formData.amount)) || Number(formData.amount) <= 0) {
+      return;
+    }
+
+    if (!(await confirm({ title: "Create Expense", message: `Create "${formData.title.trim()}" for ₹${Number(formData.amount).toLocaleString("en-IN")} as a draft?`, confirmLabel: "Create" }))) return;
+
+    try {
+      const createdExpense = await createExpense({
+      type: formData.type,
       title: formData.title.trim(),
-      employeeId: user.id,
       description: formData.description.trim(),
       amount: Number(formData.amount),
       currency: "INR",
-      category: formData.category.trim(),
       expenseDate: formData.expenseDate,
-    }).unwrap();
+      }).unwrap();
 
-    navigate(`/expenses/${createdExpense.id}`);
+      navigate(`/expenses/${createdExpense.id}`);
+    } catch {
+      // Preserve form input so the user can correct or retry after a server failure.
+    }
   };
 
   return (
     <Stack spacing={3}>
-      <Stack
-        direction={"row"}
-        sx={{ justifyContent: "flex-start", alignItems: "center" }}
-      >
-        <Button
-          variant="text"
-          startIcon={<ArrowBackOutlined />}
-          onClick={() => navigate(-1)}
-        >
-          Back to Expenses
-        </Button>
-      </Stack>
+      <BackLink to="/expenses" label="Expenses" />
 
-      <Typography variant="h4">Create Expense</Typography>
+      <PageHeader title="Create Expense" />
+
+      {creationBlocked && (
+        <Alert severity="warning">
+          {eligibility?.reason}
+        </Alert>
+      )}
+      {activePeriod && (
+        <Alert severity="info">
+          The expense date must fall within the active budget period ({formatDate(activePeriod.startDate)} to {formatDate(activePeriod.endDate)}).
+        </Alert>
+      )}
 
       <Paper sx={{ p: 3 }}>
         <Stack component="form" spacing={3} onSubmit={handleSubmit}>
-          {isError && <Alert severity="error">Failed to create expense.</Alert>}
+          {error && <ApiFeedback error={error} />}
+
+          <FormControl fullWidth required>
+            <InputLabel id="expense-type-label">Expense Type</InputLabel>
+            <Select
+              labelId="expense-type-label"
+              label="Expense Type"
+              value={formData.type}
+              onChange={(event) =>
+                setFormData((current) => ({
+                  ...current,
+                  type: event.target.value as ExpenseType,
+                }))
+              }
+            >
+              {EXPENSE_TYPES.map((value) => (
+                <MenuItem key={value} value={value}>
+                  {EXPENSE_TYPE_LABELS[value]}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           <TextField
             label="Title"
             name="title"
             value={formData.title}
+            error={Boolean(details.fieldErrors?.title)}
+            helperText={details.fieldErrors?.title?.toString()}
             onChange={handleChange}
             required
             fullWidth
@@ -99,6 +144,8 @@ export function CreateExpensePage() {
             label="Description"
             name="description"
             value={formData.description}
+            error={Boolean(details.fieldErrors?.description)}
+            helperText={details.fieldErrors?.description?.toString()}
             onChange={handleChange}
             multiline
             rows={4}
@@ -111,6 +158,8 @@ export function CreateExpensePage() {
             name="amount"
             type="number"
             value={formData.amount}
+            error={Boolean(details.fieldErrors?.amount)}
+            helperText={details.fieldErrors?.amount?.toString()}
             onChange={handleChange}
             required
             fullWidth
@@ -123,19 +172,12 @@ export function CreateExpensePage() {
           />
 
           <TextField
-            label="Category"
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            required
-            fullWidth
-          />
-
-          <TextField
             label="Expense Date"
             name="expenseDate"
             type="date"
             value={formData.expenseDate}
+            error={Boolean(details.fieldErrors?.expenseDate)}
+            helperText={details.fieldErrors?.expenseDate?.toString()}
             onChange={handleChange}
             required
             fullWidth
@@ -143,10 +185,16 @@ export function CreateExpensePage() {
               inputLabel: {
                 shrink: true,
               },
+              htmlInput: activePeriod ? { min: activePeriod.startDate, max: activePeriod.endDate } : undefined,
             }}
           />
 
-          <ReceiptUpload value={receipt} onChange={setReceipt} />
+          <ExpensePolicyPreview
+            type={formData.type}
+            amount={formData.amount}
+            expenseDate={formData.expenseDate}
+            description={formData.description}
+          />
 
           <Stack
             direction="row"
@@ -161,7 +209,7 @@ export function CreateExpensePage() {
               Cancel
             </Button>
 
-            <Button type="submit" variant="contained" loading={isLoading}>
+            <Button type="submit" variant="contained" loading={isLoading} disabled={creationBlocked}>
               Create Expense
             </Button>
           </Stack>

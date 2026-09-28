@@ -1,31 +1,87 @@
-import {
-  Stack,
-  Typography,
-  Button,
-  Alert,
-} from "@mui/material";
+import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { Stack, Typography, Button, Alert, Pagination, Tab, Tabs } from "@mui/material";
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import { ExpenseCard } from "../components/ExpenseCard";
 
-import { useGetExpensesQuery, useSubmitExpenseMutation } from "../../expenses/api/expenseApi";
+import {
+  useGetExpensesQuery,
+  useSubmitExpenseMutation,
+} from "../../expenses/api/expenseApi";
 
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
+import { useAuth } from "../../../features/auth/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
-import { type ExpenseFilter as ExpenseFiltersState, initialExpenseFilters } from "../../../types/expense";
+import { useState } from "react";
+import {
+  type ExpenseFilter as ExpenseFiltersState,
+  type ExpenseScope,
+  initialExpenseFilters,
+} from "../types/expense";
 import { ExpenseFilters } from "../components/ExpenseFilters";
+import { useGetActiveBudgetPeriodQuery } from "../../budgets/api/budgetsApi";
+import { PageHeader } from "../../../components/common/PageHeader";
+
+/**
+ * The wider view a role is authorized for. The API enforces this scope; the
+ * UI only uses it to decide which views to offer.
+ */
+function getAuthorizedWiderScope(role: string | undefined): Exclude<ExpenseScope, "OWN"> | null {
+  switch (role) {
+    case "admin":
+      return "ORGANIZATION";
+    case "finance":
+      return "DEPARTMENT";
+    case "manager":
+      return "TEAM";
+    default:
+      return null;
+  }
+}
+
+const scopeViews: Record<ExpenseScope, { label: string; description: string }> = {
+  OWN: { label: "My Expenses", description: "Expenses you have created." },
+  TEAM: { label: "Team Expenses", description: "Expenses submitted by members of your team." },
+  DEPARTMENT: { label: "Department Expenses", description: "Expenses submitted across the departments you are authorized for." },
+  ORGANIZATION: { label: "Organization Expenses", description: "Expenses submitted across the organization." },
+};
+
+interface ScopeViewState {
+  filters: ExpenseFiltersState;
+  page: number;
+}
+
+const initialViewState: ScopeViewState = { filters: initialExpenseFilters, page: 1 };
 
 export function ExpensesPage() {
-
-  const [submittingExpenseId, setSubmittingExpenseId] = useState<string | null>(null);
+  const [submittingExpenseId, setSubmittingExpenseId] = useState<string | null>(
+    null,
+  );
+  const [budgetWarnings, setBudgetWarnings] = useState<string[]>([]);
   const { can } = usePermissions();
+  const { user } = useAuth();
+  // Expenses can be created only while an active budget covers today.
+  const { data: eligibility } = useGetActiveBudgetPeriodQuery(undefined, { refetchOnMountOrArgChange: true });
+  const creationBlocked = eligibility ? !eligibility.canCreateExpense : false;
+  const confirm = useConfirm();
   const navigate = useNavigate();
-  const [filters, setFilters] = useState<ExpenseFiltersState>(initialExpenseFilters);
+  const widerScope = getAuthorizedWiderScope(user?.role);
+  const [selectedScope, setSelectedScope] = useState<ExpenseScope>("OWN");
+  const scope: ExpenseScope = selectedScope === "OWN" || selectedScope === widerScope ? selectedScope : "OWN";
+  // Each view keeps its own filters and page.
+  const [viewStates, setViewStates] = useState<Partial<Record<ExpenseScope, ScopeViewState>>>({});
+  const { filters, page } = viewStates[scope] ?? initialViewState;
+  const updateView = (next: Partial<ScopeViewState>) =>
+    setViewStates((current) => ({
+      ...current,
+      [scope]: { ...(current[scope] ?? initialViewState), ...next },
+    }));
+  const setPage = (nextPage: number) => updateView({ page: nextPage });
 
   const hasInvalidDateRange =
     filters.dateFrom !== "" &&
@@ -33,73 +89,36 @@ export function ExpensesPage() {
     filters.dateFrom > filters.dateTo;
 
   const {
-    data: expenses,
+    data: expenseResult,
     isLoading,
     isError,
-  } = useGetExpensesQuery();
+    error: loadError,
+    refetch,
+  } = useGetExpensesQuery(
+    {
+      scope,
+      query: {
+        page,
+        pageSize: 25,
+        search: filters.search || undefined,
+        filter: {
+          ...(filters.status !== "all" ? { status: filters.status } : {}),
+          ...(filters.type !== "all" ? { type: filters.type } : {}),
+        },
+        from: filters.dateFrom || undefined,
+        to: filters.dateTo || undefined,
+        sort: "expenseDate",
+        sortOrder: "desc",
+      },
+    },
+    { skip: hasInvalidDateRange },
+  );
 
-  const [submitExpense] = useSubmitExpenseMutation();
-  const categories = useMemo(() => {
-    if (!expenses) {
-      return [];
-    }
+  const expenses = expenseResult?.data ?? [];
 
-    return Array.from(
-      new Set(
-        expenses.map(
-          (expense) => expense.category,
-        ),
-      ),
-    );
-  }, [expenses]);
-
-  const filteredExpenses = useMemo(() => {
-    if (!expenses || hasInvalidDateRange) {
-      return [];
-    }
-
-    const search = filters.search
-      .trim()
-      .toLowerCase();
-
-    return expenses.filter((expense) => {
-      const matchesSearch =
-        search === "" ||
-        expense.title
-          .toLowerCase()
-          .includes(search) ||
-        expense.description
-          .toLowerCase()
-          .includes(search);
-
-      const matchesStatus =
-        filters.status === "all" ||
-        expense.status === filters.status;
-
-      const matchesCategory =
-        filters.category === "all" ||
-        expense.category === filters.category;
-
-      const matchesDateFrom =
-        filters.dateFrom === "" ||
-        expense.expenseDate >= filters.dateFrom;
-
-      const matchesDateTo =
-        filters.dateTo === "" ||
-        expense.expenseDate <= filters.dateTo;
-
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesCategory &&
-        matchesDateFrom &&
-        matchesDateTo
-      );
-    });
-  }, [expenses, filters, hasInvalidDateRange]);
-
+  const [submitExpense, { error: submitError }] = useSubmitExpenseMutation();
   if (!can("expenses.read")) {
-    return <ErrorState />;
+    return <ErrorState title="Access denied" message="You do not have permission to view expenses." />;
   }
 
   if (isLoading) {
@@ -107,62 +126,81 @@ export function ExpensesPage() {
   }
 
   if (isError) {
-    return <ErrorState />;
+    return <ErrorState error={loadError} onRetry={refetch} />;
   }
 
   const handleSubmitExpense = async (expenseId: string) => {
+    if (!(await confirm({ title: "Submit Expense", message: "Submit this expense for approval? You will not be able to edit it while it is being reviewed.", confirmLabel: "Submit" }))) return;
     try {
       setSubmittingExpenseId(expenseId);
 
-      await submitExpense(expenseId).unwrap();
+      const submitted = await submitExpense(expenseId).unwrap();
+      setBudgetWarnings(submitted.budgetWarnings ?? []);
+    } catch {
+      // Error (e.g. a policy violation) is exposed through submitError.
     } finally {
       setSubmittingExpenseId(null);
     }
   };
 
   const handleResetFilters = () => {
-    setFilters(initialExpenseFilters);
+    updateView(initialViewState);
   };
 
   return (
     <Stack spacing={3}>
-      {/* Header */}
-      <Stack
-        sx={{
-          display: "flex",
-          flexDirection: {
-            xs: "column",
-            sm: "row",
-          },
-          justifyContent: "space-between",
-          alignItems: {
-            xs: "flex-start",
-            sm: "center",
-          },
-          gap: 2,
-        }}
-      >
-        <Typography variant="h4">
-          Expenses
-        </Typography>
-
-        {can("expenses.create") && (
+      <PageHeader
+        title="Expenses"
+        actions={can("expenses.create") && (
           <Button
             variant="contained"
             startIcon={<AddOutlinedIcon />}
             onClick={() => navigate("/expenses/new")}
+            disabled={creationBlocked}
           >
             Create Expense
           </Button>
         )}
-      </Stack>
+      />
+
+      {can("expenses.create") && creationBlocked && (
+        <Alert severity="info">
+          {eligibility?.reason} Existing drafts can still be submitted.
+        </Alert>
+      )}
+
+      {widerScope && (
+        <Tabs
+          value={scope}
+          onChange={(_event, nextScope: ExpenseScope) => setSelectedScope(nextScope)}
+          aria-label="Expense scope"
+        >
+          <Tab value="OWN" label={scopeViews.OWN.label} />
+          <Tab value={widerScope} label={scopeViews[widerScope].label} />
+        </Tabs>
+      )}
+
+      <Typography color="text.secondary">
+        {scopeViews[scope].description}
+      </Typography>
 
       <ExpenseFilters
         filters={filters}
-        categories={categories}
-        onChange={setFilters}
+        onChange={(nextFilters) => {
+          updateView({ filters: nextFilters, page: 1 });
+        }}
         onReset={handleResetFilters}
       />
+
+      {submitError && <ApiFeedback error={submitError} />}
+
+      {budgetWarnings.length > 0 && (
+        <Alert severity="warning" onClose={() => setBudgetWarnings([])}>
+          {budgetWarnings.map((warning) => (
+            <Typography key={warning} variant="body2">{warning}</Typography>
+          ))}
+        </Alert>
+      )}
 
       {hasInvalidDateRange && (
         <Alert severity="warning">
@@ -171,33 +209,30 @@ export function ExpensesPage() {
       )}
 
       {/* Expense list */}
-      {!expenses?.length ? (
+      {!expenseResult || expenseResult.total === 0 ? (
         <EmptyState />
       ) : (
         <Stack spacing={2}>
-            {filteredExpenses.length > 0 ?
-              filteredExpenses.map((expense) => (
-                <ExpenseCard
-                  key={expense.id}
-                  expense={expense}
-                  onView={() =>
-                    navigate(`/expenses/${expense.id}`)
-                  }
-                  onSubmit={() =>
-                    handleSubmitExpense(expense.id)
-                  }
-                  isSubmitting={
-                    submittingExpenseId === expense.id
-                  }
-                />
-              )) :
-              expenses.length > 0 &&
-                filteredExpenses.length === 0 && (
-                  <Alert severity="info">
-                    No expenses match your filters.
-                  </Alert>
-                )
-            }
+          {expenses.map((expense) => (
+            <ExpenseCard
+              key={expense.id}
+              expense={expense}
+              onView={() => navigate(`/expenses/${expense.id}`)}
+              onSubmit={() => handleSubmitExpense(expense.id)}
+              isSubmitting={submittingExpenseId === expense.id}
+            />
+          ))}
+        </Stack>
+      )}
+
+      {expenseResult && expenseResult.total > expenseResult.pageSize && (
+        <Stack sx={{ alignItems: "center" }}>
+          <Pagination
+            page={expenseResult.page}
+            count={Math.ceil(expenseResult.total / expenseResult.pageSize)}
+            onChange={(_event, nextPage) => setPage(nextPage)}
+            color="primary"
+          />
         </Stack>
       )}
     </Stack>

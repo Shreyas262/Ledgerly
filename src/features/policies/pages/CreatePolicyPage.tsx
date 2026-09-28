@@ -1,27 +1,31 @@
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useNavigate } from "react-router-dom";
 import {
-  Alert,
   Stack,
-  Typography,
 } from "@mui/material";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 
 import PolicyForm from "../components/PolicyForm";
 import {
   useCreatePolicyMutation,
 } from "../api/policiesApi";
-import type { CreateExpensePolicyRequest } from "../../../types/policy";
+import type { CreateExpensePolicyRequest } from "../types/policy";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
 export function CreatePolicyPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   const [
     createPolicy,
-    { isLoading, isError },
+    { isLoading, error },
   ] = useCreatePolicyMutation();
 
   const handleSubmit = async (
     values: CreateExpensePolicyRequest,
   ) => {
+    if (!(await confirm({ title: "Create Policy", message: `Create the policy "${values.name}"?`, confirmLabel: "Create" }))) return;
     try {
       const policy = await createPolicy(values).unwrap();
 
@@ -33,21 +37,13 @@ export function CreatePolicyPage() {
 
   return (
     <Stack spacing={3}>
-      <div>
-        <Typography variant="h4">
-          Create Policy
-        </Typography>
+      <BackLink to="/policies" label="Policies" />
+      <PageHeader
+        title="Create Policy"
+        description="Define spending rules for an expense type, for the whole organization or specific departments."
+      />
 
-        <Typography color="text.secondary">
-          Define an expense approval policy.
-        </Typography>
-      </div>
-
-      {isError && (
-        <Alert severity="error">
-          Unable to create policy. Please try again.
-        </Alert>
-      )}
+      {error && <ApiFeedback error={error} />}
 
       <PolicyForm
         onSubmit={handleSubmit}

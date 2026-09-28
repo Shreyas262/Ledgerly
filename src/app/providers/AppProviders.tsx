@@ -2,95 +2,47 @@ import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { Provider } from "react-redux";
 
-import { AuthProvider } from "../../features/auth/context/AuthContext";
+import { AuthProvider, useAuth } from "../../features/auth/context/AuthContext";
+import { ConfirmProvider } from "../../components/common/ConfirmProvider";
 import { store } from "../../store/store";
 import { createAppTheme } from "../../theme/theme";
-import { getSettings } from "../../features/settings/utils/settingsStorage";
-import type { ThemePreference } from "../../types/settings";
+import { setSettingsUser } from "../../features/settings/utils/settingsStorage";
+import { useSettings } from "../../features/settings/hooks/useSettings";
 
-function resolveTheme(preference: ThemePreference): "light" | "dark" {
-  if (preference === "light") {
-    return "light";
-  }
+const prefersDark = () => window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  if (preference === "dark") {
-    return "dark";
-  }
+/** Applies the signed-in user's theme preference (§30.12). */
+function ThemedApp({ children }: PropsWithChildren) {
+  const { user } = useAuth();
+  // Preferences are per user; switch storage before reading them.
+  setSettingsUser(user?.id ?? null, false);
+  const { settings } = useSettings();
+  const [systemDark, setSystemDark] = useState(prefersDark);
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => setSystemDark(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  const mode = settings.theme === "system" ? (systemDark ? "dark" : "light") : settings.theme;
+  const theme = useMemo(() => createAppTheme(mode), [mode]);
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <ConfirmProvider>{children}</ConfirmProvider>
+    </ThemeProvider>
+  );
 }
 
 export function AppProviders({ children }: PropsWithChildren) {
-  const [themePreference, setThemePreference] = useState<ThemePreference>(
-    () => getSettings().theme,
-  );
-
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
-    resolveTheme(themePreference),
-  );
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const settings = getSettings();
-
-      setThemePreference(settings.theme);
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    setResolvedTheme(resolveTheme(themePreference));
-  }, [themePreference]);
-
-  useEffect(() => {
-    if (themePreference !== "system") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const handleSystemThemeChange = () => {
-      setResolvedTheme(mediaQuery.matches ? "dark" : "light");
-    };
-
-    mediaQuery.addEventListener("change", handleSystemThemeChange);
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleSystemThemeChange);
-    };
-  }, [themePreference]);
-
-  useEffect(() => {
-    const handleSettingsChange = () => {
-      setThemePreference(getSettings().theme);
-    };
-
-    window.addEventListener("ledgerly-settings-change", handleSettingsChange);
-
-    return () => {
-      window.removeEventListener(
-        "ledgerly-settings-change",
-        handleSettingsChange,
-      );
-    };
-  }, []);
-
-  const theme = useMemo(() => createAppTheme(resolvedTheme), [resolvedTheme]);
-
   return (
     <Provider store={store}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-
-        <AuthProvider>{children}</AuthProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemedApp>{children}</ThemedApp>
+      </AuthProvider>
     </Provider>
   );
 }

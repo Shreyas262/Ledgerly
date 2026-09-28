@@ -1,3 +1,5 @@
+import { ExpensePolicyPreview } from "../../policies/components/ExpensePolicyPreview";
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import {
   useEffect,
   useState,
@@ -8,15 +10,14 @@ import {
 import {
   Alert,
   Button,
+  FormControl,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   TextField,
-  Typography,
 } from "@mui/material";
-
-import {
-  ArrowBackOutlined,
-} from "@mui/icons-material";
 
 import {
   useNavigate,
@@ -30,23 +31,29 @@ import {
 
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
+import { ForbiddenPage } from "../../auth/pages/ForbiddenPage";
+import { isForbiddenError } from "../../auth/utils/authErrors";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
+import { getApiErrorDetails, isStatus } from "../../../services/api/apiErrors";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
-import { ReceiptUpload } from "../components/ReceiptUpload";
+import { EXPENSE_TYPES, EXPENSE_TYPE_LABELS, type ExpenseType } from "../types/expense";
+import { PageHeader } from "../../../components/common/PageHeader";
+import { BackLink } from "../../../components/navigation/BackLink";
 
 interface ExpenseFormData {
+  type: ExpenseType;
   title: string;
   description: string;
   amount: string;
-  category: string;
   expenseDate: string;
 }
 
 const emptyForm: ExpenseFormData = {
+  type: "OTHER",
   title: "",
   description: "",
   amount: "",
-  category: "",
   expenseDate: "",
 };
 
@@ -58,12 +65,14 @@ export function EditExpensePage() {
   }>();
 
   const { can } = usePermissions();
-  const [receipt, setReceipt] = useState<File | null>(null);
+  const confirm = useConfirm();
 
   const {
     data: expense,
+    error: expenseError,
     isLoading: isExpenseLoading,
     isError: isExpenseError,
+    refetch: refetchExpense,
   } = useGetExpenseByIdQuery(id ?? "");
 
   const [
@@ -71,11 +80,14 @@ export function EditExpensePage() {
     {
       isLoading: isUpdating,
       isError: isUpdateError,
+      error: updateError,
     },
   ] = useUpdateExpenseMutation();
 
   const [formData, setFormData] =
     useState<ExpenseFormData>(emptyForm);
+
+  const updateDetails = getApiErrorDetails(updateError);
 
   useEffect(() => {
     if (!expense) {
@@ -83,20 +95,20 @@ export function EditExpensePage() {
     }
 
     setFormData({
+      type: expense.type,
       title: expense.title,
       description: expense.description,
       amount: String(expense.amount),
-      category: expense.category,
       expenseDate: expense.expenseDate,
     });
   }, [expense]);
 
   if (!id) {
-    return <ErrorState />;
+    return <ErrorState title="Not found" message="No expense was specified." />;
   }
 
   if (!can("expenses.update")) {
-    return <ErrorState />;
+    return <ErrorState title="Access denied" message="You do not have permission to edit expenses." />;
   }
 
   if (isExpenseLoading) {
@@ -104,21 +116,21 @@ export function EditExpensePage() {
   }
 
   if (isExpenseError || !expense) {
-    return <ErrorState />;
+    if (isForbiddenError(expenseError)) {
+      return <ForbiddenPage />;
+    }
+
+    if (isStatus(expenseError, 404)) {
+      return <ErrorState message="This expense does not exist or is not available to you." />;
+    }
+
+    return <ErrorState error={expenseError} onRetry={refetchExpense} />;
   }
 
   if (expense.status !== "draft") {
     return (
       <Stack spacing={3}>
-        <Button
-          variant="text"
-          startIcon={<ArrowBackOutlined />}
-          onClick={() =>
-            navigate(`/expenses/${expense.id}`)
-          }
-        >
-          Back to Expense
-        </Button>
+        <BackLink to={`/expenses/${expense.id}`} label="Expense" />
 
         <Alert severity="warning">
           Only draft expenses can be edited.
@@ -142,42 +154,31 @@ export function EditExpensePage() {
     event: FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
+    if (!(await confirm({ title: "Save Changes", message: "Save your changes to this expense?", confirmLabel: "Save" }))) return;
 
     try {
       const updatedExpense =
         await updateExpense({
           id: expense.id,
+          type: formData.type,
           title: formData.title.trim(),
           description: formData.description.trim(),
           amount: Number(formData.amount),
           currency: "INR",
-          category: formData.category.trim(),
           expenseDate: formData.expenseDate,
         }).unwrap();
 
       navigate(`/expenses/${updatedExpense.id}`);
     } catch {
-      // RTK Query exposes the mutation error through isUpdateError.
+      // Preserve local form state after server failure.
     }
   };
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" sx={{justifyContent: "flex-start"}}>
-      <Button
-        variant="text"
-        startIcon={<ArrowBackOutlined />}
-        onClick={() =>
-          navigate(`/expenses/${expense.id}`)
-        }
-      >
-        Back to Expense
-      </Button>
-      </Stack>
+      <BackLink to={`/expenses/${expense.id}`} label="Expense" />
 
-      <Typography variant="h4">
-        Edit Expense
-      </Typography>
+      <PageHeader title="Edit Expense" />
 
       <Paper sx={{ p: 3 }}>
         <Stack
@@ -185,16 +186,35 @@ export function EditExpensePage() {
           spacing={3}
           onSubmit={handleSubmit}
         >
-          {isUpdateError && (
-            <Alert severity="error">
-              Failed to update expense.
-            </Alert>
-          )}
+          {isUpdateError && <ApiFeedback error={updateError} onReconcile={isStatus(updateError, 409) ? () => refetchExpense() : undefined} />}
+
+          <FormControl fullWidth required>
+            <InputLabel id="expense-type-label">Expense Type</InputLabel>
+            <Select
+              labelId="expense-type-label"
+              label="Expense Type"
+              value={formData.type}
+              onChange={(event) =>
+                setFormData((current) => ({
+                  ...current,
+                  type: event.target.value as ExpenseType,
+                }))
+              }
+            >
+              {EXPENSE_TYPES.map((value) => (
+                <MenuItem key={value} value={value}>
+                  {EXPENSE_TYPE_LABELS[value]}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           <TextField
             label="Title"
             name="title"
             value={formData.title}
+            error={Boolean(updateDetails.fieldErrors?.title)}
+            helperText={updateDetails.fieldErrors?.title?.toString()}
             onChange={handleChange}
             required
             fullWidth
@@ -204,6 +224,8 @@ export function EditExpensePage() {
             label="Description"
             name="description"
             value={formData.description}
+            error={Boolean(updateDetails.fieldErrors?.description)}
+            helperText={updateDetails.fieldErrors?.description?.toString()}
             onChange={handleChange}
             multiline
             rows={4}
@@ -216,6 +238,8 @@ export function EditExpensePage() {
             name="amount"
             type="number"
             value={formData.amount}
+            error={Boolean(updateDetails.fieldErrors?.amount)}
+            helperText={updateDetails.fieldErrors?.amount?.toString()}
             onChange={handleChange}
             required
             fullWidth
@@ -228,19 +252,12 @@ export function EditExpensePage() {
           />
 
           <TextField
-            label="Category"
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            required
-            fullWidth
-          />
-
-          <TextField
             label="Expense Date"
             name="expenseDate"
             type="date"
             value={formData.expenseDate}
+            error={Boolean(updateDetails.fieldErrors?.expenseDate)}
+            helperText={updateDetails.fieldErrors?.expenseDate?.toString()}
             onChange={handleChange}
             required
             fullWidth
@@ -251,9 +268,12 @@ export function EditExpensePage() {
             }}
           />
 
-          <ReceiptUpload
-            value={receipt}
-            onChange={setReceipt}
+          <ExpensePolicyPreview
+            type={formData.type}
+            amount={formData.amount}
+            expenseDate={formData.expenseDate}
+            description={formData.description}
+            expenseId={expense.id}
           />
 
           <Stack

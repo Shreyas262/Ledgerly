@@ -1,356 +1,522 @@
+import { apiError } from "../services/apiError";
+import { formatDate } from "../../utils/format";
+import { applyCollectionQueryResult, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
+import type { ExpenseType } from "../../features/expenses/types/expense";
+import type { PolicyEvaluation } from "../../features/policies/types/policy";
 
-import { expenses } from "../data/expenses";
+import type { ExpenseStatus } from "../../features/expenses/types/expense";
+import { transitionExpenseState } from "../../features/expenses/domain/expenseStateMachine";
+import {
+  authorizeRequest,
+  isExpenseVisibleToPrincipal,
+  resolveExpenseScope,
+  type AuthorizationScope,
+} from "../services/authorizationService";
+import {
+  getAuthorizedExpenseRecords,
+  isExpenseScopeAllowed,
+  withEmployeeNames,
+} from "../services/authorizedExpenseRecords";
+import { authorizationError } from "../services/authorizationHttp";
+import { runAuditedTransaction } from "../services/auditService";
+import {
+  evaluateExpensePolicy,
+  isSubmissionAllowed,
+  persistExpenseSubmissionEvaluation,
+} from "../services/policyService";
+import { getRecord } from "../services/mockDataService";
+import { findActiveBudgetForDate, getBudgetWarnings, getExpenseCreationEligibility, todayDate } from "../services/budgetService";
 
-import type {
-  CreateExpenseRequest,
-  Expense,
-  UpdateExpenseRequest,
-} from "../../types/expense";
+/**
+ * Expenses may be created only while an active budget covers today, and must
+ * be dated within that budget's period so they count against it.
+ */
+async function checkBudgetPeriod(
+  principal: { organizationId: string; departmentId: string; teamId: string },
+  expenseDate: string,
+  requireCreationEligibility: boolean,
+) {
+  let budget;
+  if (requireCreationEligibility) {
+    const eligibility = await getExpenseCreationEligibility(principal);
+    if (!eligibility.allowed) return apiError(422, eligibility.reason!, eligibility.code);
+    budget = eligibility.budget!;
+  } else {
+    budget = await findActiveBudgetForDate(principal.organizationId, todayDate());
+    if (!budget) return null;
+  }
+  if (expenseDate < budget.startDate || expenseDate > budget.endDate) {
+    const message = `The expense date must fall within the active budget period (${formatDate(budget.startDate)} to ${formatDate(budget.endDate)}).`;
+    return apiError(422, message, "OUTSIDE_BUDGET_PERIOD", { fieldErrors: { expenseDate: message } });
+  }
+  return null;
+}
+
+interface MockExpense {
+  id: string;
+  organizationId: string;
+  departmentId: string;
+  teamId: string;
+  employeeId: string;
+  type?: ExpenseType;
+  title: string;
+  description: string;
+  amount: number;
+  currency: "INR";
+  status: string;
+  expenseDate: string;
+  createdAt: string;
+  updatedAt: string;
+  rejectionReason?: string;
+  policyId?: string;
+  policyEvaluation?: PolicyEvaluation;
+  submittedAt?: string;
+  documentIds?: string[];
+  [key: string]: unknown;
+}
+
+
+const EXPENSE_TYPES = new Set<ExpenseType>([
+  "MEALS",
+  "TRAVEL",
+  "ACCOMMODATION",
+  "TRANSPORTATION",
+  "ENTERTAINMENT",
+  "OFFICE_SUPPLIES",
+  "COMMUNICATION",
+  "TRAINING",
+  "OTHER",
+]);
+
+function isValidDateOnly(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+function validateExpenseBody(body: unknown): {
+  type: ExpenseType;
+  title: string;
+  description: string;
+  amount: number;
+  currency: "INR";
+  expenseDate: string;
+} | { fieldErrors: Record<string, string> } {
+  const value = body && typeof body === "object" ? body as Record<string, unknown> : {};
+  const fieldErrors: Record<string, string> = {};
+
+  const type = value.type;
+  const title = typeof value.title === "string" ? value.title.trim() : "";
+  const description = typeof value.description === "string" ? value.description.trim() : "";
+  const amount = typeof value.amount === "number" ? value.amount : Number(value.amount);
+  const currency = value.currency;
+  const expenseDate = typeof value.expenseDate === "string" ? value.expenseDate : "";
+
+  if (typeof type !== "string" || !EXPENSE_TYPES.has(type as ExpenseType)) fieldErrors.type = "A valid expense type is required.";
+  if (!title) fieldErrors.title = "Title is required.";
+  if (!description) fieldErrors.description = "Description is required.";
+  if (!Number.isFinite(amount) || amount <= 0) fieldErrors.amount = "Amount must be greater than zero.";
+  if (currency !== "INR") fieldErrors.currency = "Only INR is supported.";
+  if (!isValidDateOnly(expenseDate)) {
+    fieldErrors.expenseDate = "A valid expense date is required.";
+  }
+
+  if (Object.keys(fieldErrors).length) return { fieldErrors };
+
+  return {
+    type: type as ExpenseType,
+    title,
+    description,
+    amount,
+    currency: "INR",
+    expenseDate,
+  };
+}
+
+function getExpenseResource(expense: MockExpense) {
+  return {
+    organizationId: expense.organizationId,
+    ownerId: expense.employeeId,
+    teamId: expense.teamId,
+    departmentId: expense.departmentId,
+    state: expense.status,
+  };
+}
+
+const EXPENSE_SCOPES = new Set<AuthorizationScope>([
+  "OWN",
+  "TEAM",
+  "DEPARTMENT",
+  "ORGANIZATION",
+]);
+
+function expenseNotFound() {
+  return apiError(404, "Expense not found.");
+}
+
+/**
+ * Authorizes an owner-only lifecycle operation (§13, §35.2). A draft that is
+ * not visible to the principal is concealed as not found.
+ */
+async function authorizeOwnerOperation(
+  request: Request,
+  expense: MockExpense,
+  permission: "expenses.update" | "expenses.submit",
+  allowedStates: readonly ExpenseStatus[],
+) {
+  const principalAuthorization = await authorizeRequest(request, {
+    permission,
+    scope: "ORGANIZATION",
+  });
+
+  if (principalAuthorization.allowed === false) {
+    return { error: authorizationError(principalAuthorization) } as const;
+  }
+
+  if (!isExpenseVisibleToPrincipal(principalAuthorization.principal, expense)) {
+    return { error: expenseNotFound() } as const;
+  }
+
+  const authorization = await authorizeRequest(request, {
+    permission,
+    scope: "OWN",
+    resource: getExpenseResource(expense),
+    allowedStates,
+  });
+
+  if (authorization.allowed === false) {
+    return { error: authorizationError(authorization) } as const;
+  }
+
+  return { principal: authorization.principal } as const;
+}
 
 export const expensesHandlers = [
-  // ---------------------------------------------------------------------------
-  // GET /api/expenses
-  // ---------------------------------------------------------------------------
+  http.get("/api/expenses", async ({ request }) => {
+    const principalAuthorization = await authorizeRequest(request, {
+      permission: "expenses.read",
+      scope: "ORGANIZATION",
+    });
 
-  http.get("/api/expenses", () => {
-    return HttpResponse.json(expenses);
+    if (principalAuthorization.allowed === false) {
+      return authorizationError(principalAuthorization);
+    }
+
+    const { principal } = principalAuthorization;
+    const requestedScope = new URL(request.url).searchParams.get("scope");
+    const scope = (requestedScope ?? resolveExpenseScope(principal)) as AuthorizationScope;
+
+    if (!EXPENSE_SCOPES.has(scope)) {
+      return apiError(422, "The requested expense view is not valid.", "INVALID_FILTER");
+    }
+
+    // Filters may narrow the authorized scope but never expand it (§20.5).
+    if (!isExpenseScopeAllowed(principal, scope)) {
+      return apiError(403, "You are not authorized to view expenses in this scope.");
+    }
+
+    const records = await getAuthorizedExpenseRecords(principal, scope);
+    const result = applyCollectionQueryResult(records, parseCollectionQuery(request));
+
+    return HttpResponse.json({ ...result, data: await withEmployeeNames(result.data) });
   }),
 
-  // ---------------------------------------------------------------------------
-  // GET /api/expenses/:id
-  // ---------------------------------------------------------------------------
-
-  http.get("/api/expenses/:id", ({ params }) => {
-    const expenseId = String(params.id);
-
-    const expense = expenses.find(
-      (item) => item.id === expenseId,
+  http.get("/api/expenses/:id", async ({ params, request }) => {
+    const expense = await getRecord<MockExpense>(
+      "expenses",
+      String(params.id),
     );
 
     if (!expense) {
-      return HttpResponse.json(
-        {
-          message: "Expense not found.",
-        },
-        {
-          status: 404,
-        },
-      );
+      return expenseNotFound();
     }
 
-    return HttpResponse.json(expense);
+    const principalAuthorization = await authorizeRequest(request, {
+      permission: "expenses.read",
+      scope: "ORGANIZATION",
+    });
+
+    if (principalAuthorization.allowed === false) {
+      return authorizationError(principalAuthorization);
+    }
+
+    if (!isExpenseVisibleToPrincipal(principalAuthorization.principal, expense)) {
+      return expenseNotFound();
+    }
+
+    const authorization = await authorizeRequest(request, {
+      permission: "expenses.read",
+      scope: resolveExpenseScope(principalAuthorization.principal),
+      resource: getExpenseResource(expense),
+    });
+
+    if (authorization.allowed === false) {
+      return authorizationError(authorization);
+    }
+
+    const [namedExpense] = await withEmployeeNames([expense]);
+    return HttpResponse.json(namedExpense);
   }),
 
-  // ---------------------------------------------------------------------------
-  // POST /api/expenses
-  // ---------------------------------------------------------------------------
+  http.post("/api/expenses", async ({ request }) => {
+    const authorization = await authorizeRequest(request, {
+      permission: "expenses.create",
+      scope: "ORGANIZATION",
+    });
 
-  http.post(
-    "/api/expenses",
-    async ({ request }) => {
-      const body =
-        (await request.json()) as CreateExpenseRequest;
+    if (authorization.allowed === false) {
+      return authorizationError(authorization);
+    }
 
-      const now = new Date().toISOString();
+    const body = validateExpenseBody(await request.json());
+    if ("fieldErrors" in body) {
+      return apiError(422, "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors: body.fieldErrors });
+    }
 
-      const newExpense: Expense = {
-        id: crypto.randomUUID(),
-        organizationId: "org-001",
-        employeeId: "user-001",
+    const periodError = await checkBudgetPeriod(authorization.principal, body.expenseDate, true);
+    if (periodError) return periodError;
 
-        title: body.title,
-        description: body.description,
-        amount: body.amount,
-        currency: "INR",
-        category: body.category,
-        expenseDate: body.expenseDate,
+    const now = new Date().toISOString();
 
-        status: "draft",
+    const newExpense: MockExpense = {
+      id: crypto.randomUUID(),
+      organizationId: authorization.principal.organizationId,
+      departmentId: authorization.principal.departmentId,
+      teamId: authorization.principal.teamId,
+      employeeId: authorization.principal.userId,
+      type: body.type,
+      title: body.title,
+      description: body.description,
+      amount: body.amount,
+      currency: body.currency,
+      expenseDate: body.expenseDate,
+      status: "draft",
+      documentIds: [],
+      createdAt: now,
+      updatedAt: now,
+    };
 
-        createdAt: now,
-        updatedAt: now,
-      };
+    // §21.7: creation participates in policy evaluation; submission remains
+    // the authoritative enforcement point.
+    const evaluation = await evaluateExpensePolicy(newExpense);
+    newExpense.policyId = evaluation.policyId;
+    newExpense.policyEvaluation = evaluation;
 
-      expenses.push(newExpense);
-
-      return HttpResponse.json(
-        newExpense,
-        {
-          status: 201,
-        },
-      );
-    },
-  ),
-
-  // ---------------------------------------------------------------------------
-  // PUT /api/expenses/:id
-  // ---------------------------------------------------------------------------
-
-  http.put(
-    "/api/expenses/:id",
-    async ({ params, request }) => {
-      const expenseId = String(params.id);
-
-      const expenseIndex = expenses.findIndex(
-        (item) => item.id === expenseId,
-      );
-
-      if (expenseIndex === -1) {
-        return HttpResponse.json(
-          {
-            message: "Expense not found.",
-          },
-          {
-            status: 404,
-          },
-        );
-      }
-
-      const body =
-        (await request.json()) as Omit<
-          UpdateExpenseRequest,
-          "id"
-        >;
-
-      const existingExpense =
-        expenses[expenseIndex];
-
-      if (existingExpense.status !== "draft") {
-        return HttpResponse.json(
-          {
-            message:
-              "Only draft expenses can be edited.",
-          },
-          {
-            status: 409,
-          },
-        );
-      }
-
-      const updatedExpense: Expense = {
-        ...existingExpense,
-
-        title: body.title,
-        description: body.description,
-        amount: body.amount,
-        currency: "INR",
-        category: body.category,
-        expenseDate: body.expenseDate,
-
-        updatedAt: new Date().toISOString(),
-      };
-
-      expenses[expenseIndex] = updatedExpense;
-
-      return HttpResponse.json(updatedExpense);
-    },
-  ),
-
-  // ---------------------------------------------------------------------------
-  // POST /api/expenses/:id/submit
-  // ---------------------------------------------------------------------------
-
-  http.post(
-    "/api/expenses/:id/submit",
-    ({ params }) => {
-      const expenseId = String(params.id);
-
-      const expenseIndex = expenses.findIndex(
-        (item) => item.id === expenseId,
-      );
-
-      if (expenseIndex === -1) {
-        return HttpResponse.json(
-          {
-            message: "Expense not found.",
-          },
-          {
-            status: 404,
-          },
-        );
-      }
-
-      const expense = expenses[expenseIndex];
-
-      if (expense.status !== "draft") {
-        return HttpResponse.json(
-          {
-            message:
-              "Only draft expenses can be submitted.",
-          },
-          {
-            status: 409,
-          },
-        );
-      }
-
-      const updatedExpense: Expense = {
-        ...expense,
-        status: "submitted",
-        updatedAt: new Date().toISOString(),
-      };
-
-      expenses[expenseIndex] = updatedExpense;
-
-      return HttpResponse.json(updatedExpense);
-    },
-  ),
-
-  // ---------------------------------------------------------------------------
-  // POST /api/expenses/:id/review
-  // ---------------------------------------------------------------------------
-
-  http.post(
-    "/api/expenses/:id/review",
-    ({ params }) => {
-      const expenseId = String(params.id);
-
-      const expenseIndex = expenses.findIndex(
-        (item) => item.id === expenseId,
-      );
-
-      if (expenseIndex === -1) {
-        return HttpResponse.json(
-          {
-            message: "Expense not found.",
-          },
-          {
-            status: 404,
-          },
-        );
-      }
-
-      const expense = expenses[expenseIndex];
-
-      if (expense.status !== "submitted") {
-        return HttpResponse.json(
-          {
-            message:
-              "Only submitted expenses can enter review.",
-          },
-          {
-            status: 409,
-          },
-        );
-      }
-
-      const updatedExpense: Expense = {
-        ...expense,
-        status: "under_review",
-        updatedAt: new Date().toISOString(),
-      };
-
-      expenses[expenseIndex] = updatedExpense;
-
-      return HttpResponse.json(updatedExpense);
-    },
-  ),
-
-  http.post("/api/expenses/:id/approve", ({ params }) =>
-  {
-    const expenseId = String(params.id);
-
-    const expenseIndex = expenses.findIndex(
-      (item) => item.id === expenseId,
+    await runAuditedTransaction(
+      ["expenses"],
+      {
+        organizationId: newExpense.organizationId,
+        actorId: authorization.principal.userId,
+        action: "EXPENSE_CREATED",
+        entityType: "EXPENSE",
+        entityId: newExpense.id,
+        newState: newExpense.status,
+        metadata: { amount: newExpense.amount, currency: newExpense.currency },
+        description: `Created expense ${newExpense.title}.`,
+      },
+      (transaction) => {
+        transaction.objectStore("expenses").put(newExpense);
+      },
     );
 
-    if (expenseIndex === -1) {
-      return HttpResponse.json(
-        {
-          message: "Expense not found.",
-        },
-        {
-          status: 404,
-        },
-      );
+    return HttpResponse.json(newExpense, { status: 201 });
+  }),
+
+  http.put("/api/expenses/:id", async ({ params, request }) => {
+    const expenseId = String(params.id);
+    const existingExpense = await getRecord<MockExpense>(
+      "expenses",
+      expenseId,
+    );
+
+    if (!existingExpense) {
+      return expenseNotFound();
     }
 
-    const expense = expenses[expenseIndex];
+    const authorization = await authorizeOwnerOperation(
+      request,
+      existingExpense,
+      "expenses.update",
+      ["draft"],
+    );
 
-    if (expense.status !== "under_review") {
-      return HttpResponse.json(
-        {
-          message:
-            "Only expenses under review can be approved.",
-        },
-        {
-          status: 409,
-        },
-      );
+    if ("error" in authorization) {
+      return authorization.error;
     }
 
-    const updatedExpense: Expense = {
-      ...expense,
-      status: "approved",
+    const body = validateExpenseBody(await request.json());
+    if ("fieldErrors" in body) {
+      return apiError(422, "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors: body.fieldErrors });
+    }
+
+    const periodError = await checkBudgetPeriod(existingExpense, body.expenseDate, false);
+    if (periodError) return periodError;
+
+    const updatedExpense: MockExpense = {
+      ...existingExpense,
+      ...body,
+      organizationId: existingExpense.organizationId,
+      departmentId: existingExpense.departmentId,
+      teamId: existingExpense.teamId,
+      employeeId: existingExpense.employeeId,
+      currency: body.currency,
       updatedAt: new Date().toISOString(),
     };
 
-    expenses[expenseIndex] = updatedExpense;
+    // §21.7: updates participate in policy evaluation.
+    const evaluation = await evaluateExpensePolicy(updatedExpense);
+    updatedExpense.policyId = evaluation.policyId;
+    updatedExpense.policyEvaluation = evaluation;
+
+    await runAuditedTransaction(
+      ["expenses"],
+      {
+        organizationId: updatedExpense.organizationId,
+        actorId: authorization.principal.userId,
+        action: "EXPENSE_UPDATED",
+        entityType: "EXPENSE",
+        entityId: updatedExpense.id,
+        previousState: existingExpense.status,
+        newState: updatedExpense.status,
+        metadata: {
+          amount: updatedExpense.amount,
+          currency: updatedExpense.currency,
+          changes: (["type", "title", "description", "amount", "expenseDate"] as const)
+            .filter((field) => existingExpense[field] !== updatedExpense[field])
+            .map((field) => ({
+              field,
+              previousValue: existingExpense[field],
+              newValue: updatedExpense[field],
+            })),
+        },
+        description: `Updated expense ${updatedExpense.title}.`,
+      },
+      (transaction) => {
+        transaction.objectStore("expenses").put(updatedExpense);
+      },
+    );
 
     return HttpResponse.json(updatedExpense);
   }),
 
-  http.post("/api/expenses/:id/reject", async ({ params, request }) => {
-    const expenseId = String(params.id);
-
-    const expenseIndex = expenses.findIndex(
-      (item) => item.id === expenseId,
+  http.post("/api/expenses/:id/submit", async ({ params, request }) => {
+    const expense = await getRecord<MockExpense>(
+      "expenses",
+      String(params.id),
     );
 
-    if (expenseIndex === -1) {
-      return HttpResponse.json(
-        {
-          message: "Expense not found.",
-        },
-        {
-          status: 404,
-        },
-      );
+    if (!expense) {
+      return expenseNotFound();
     }
 
-    const expense = expenses[expenseIndex];
+    const authorization = await authorizeOwnerOperation(
+      request,
+      expense,
+      "expenses.submit",
+      ["draft"],
+    );
 
-    if (expense.status !== "under_review") {
-      return HttpResponse.json(
-        {
-          message:
-            "Only expenses under review can be rejected.",
-        },
-        {
-          status: 409,
-        },
-      );
+    if ("error" in authorization) {
+      return authorization.error;
     }
 
-    const body = (await request.json()) as {
-      reason: string;
-    };
+    const evaluation = await evaluateExpensePolicy(expense);
+    const submissionAllowed = isSubmissionAllowed(evaluation);
 
-    const reason = body.reason.trim();
+    await persistExpenseSubmissionEvaluation(
+      expense,
+      evaluation,
+      submissionAllowed,
+      {
+        organizationId: expense.organizationId,
+        actorId: authorization.principal.userId,
+        action: submissionAllowed ? "EXPENSE_SUBMITTED" : "EXPENSE_SUBMISSION_REJECTED",
+        entityType: "EXPENSE",
+        entityId: expense.id,
+        previousState: expense.status,
+        newState: submissionAllowed ? "submitted" : expense.status,
+        metadata: { policyId: evaluation.policyId, evaluationResult: evaluation.result },
+        description: submissionAllowed
+          ? `Submitted expense ${expense.title} for review.`
+          : `Submission of expense ${expense.title} was blocked by policy.`,
+      },
+    );
 
-    if (!reason) {
-      return HttpResponse.json(
-        {
-          message:
-            "A rejection reason is required.",
-        },
-        {
-          status: 400,
-        },
-      );
-    }
-
-    const updatedExpense: Expense = {
+    const evaluatedExpense = {
       ...expense,
-      status: "rejected",
-      rejectionReason: reason,
-      updatedAt: new Date().toISOString(),
+      status: submissionAllowed ? "submitted" : expense.status,
+      policyId: evaluation.policyId,
+      policyEvaluation: evaluation,
+      ...(submissionAllowed ? { submittedAt: evaluation.evaluatedAt } : {}),
+      updatedAt: evaluation.evaluatedAt,
     };
 
-    expenses[expenseIndex] = updatedExpense;
+    if (!submissionAllowed) {
+      return apiError(
+        422,
+        evaluation.result === "MISSING_INFORMATION"
+          ? (evaluation.details.missingInformation ?? []).join(" ") ||
+            "Expense is missing information required by the applicable policy."
+          : (evaluation.details.violatedRules ?? []).join(" ") ||
+            "Expense violates the applicable policy.",
+        "POLICY_VIOLATION",
+        { evaluation, expense: evaluatedExpense },
+      );
+    }
 
-    return HttpResponse.json(updatedExpense);
-  },
-),
+    // Non-blocking: tell the submitter if this expense would exceed a budget.
+    const budgetWarnings = await getBudgetWarnings(evaluatedExpense as unknown as Parameters<typeof getBudgetWarnings>[0]);
+    return HttpResponse.json({ ...evaluatedExpense, ...(budgetWarnings.length ? { budgetWarnings } : {}) });
+  }),
+
+  http.post("/api/expenses/:id/restore", async ({ params, request }) => {
+    const expense = await getRecord<MockExpense>(
+      "expenses",
+      String(params.id),
+    );
+
+    if (!expense) {
+      return expenseNotFound();
+    }
+
+    const authorization = await authorizeOwnerOperation(
+      request,
+      expense,
+      "expenses.update",
+      ["rejected"],
+    );
+
+    if ("error" in authorization) {
+      return authorization.error;
+    }
+
+    const now = new Date().toISOString();
+    const restoredExpense: MockExpense = {
+      ...expense,
+      status: transitionExpenseState("RESTORE", expense.status as ExpenseStatus),
+      updatedAt: now,
+    };
+
+    await runAuditedTransaction(
+      ["expenses"],
+      {
+        organizationId: restoredExpense.organizationId,
+        actorId: authorization.principal.userId,
+        action: "EXPENSE_RESTORED",
+        entityType: "EXPENSE",
+        entityId: restoredExpense.id,
+        previousState: expense.status,
+        newState: restoredExpense.status,
+        metadata: { rejectionReason: expense.rejectionReason },
+        description: `Returned rejected expense ${restoredExpense.title} to draft.`,
+      },
+      (transaction) => {
+        transaction.objectStore("expenses").put(restoredExpense);
+      },
+    );
+
+    return HttpResponse.json(restoredExpense);
+  }),
 ];

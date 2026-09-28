@@ -1,31 +1,20 @@
-import {
-  createContext,
-  useContext,
-  type PropsWithChildren,
-} from "react";
+import { createContext, useContext, type PropsWithChildren } from "react";
 
 import { useGetCurrentUserQuery } from "../api/authApi";
-import type { User } from "../../../types/auth";
+import type { AuthUser } from "../types/auth";
 
 interface AuthContextValue {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  refetchUser: ReturnType<typeof useGetCurrentUserQuery>["refetch"],
+  refetchUser: ReturnType<typeof useGetCurrentUserQuery>["refetch"];
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(
-  undefined,
-);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const {
-    data,
-    isLoading,
-    isFetching,
-    isError,
-    refetch,
-  } = useGetCurrentUserQuery();
+  const { data, isLoading, isFetching, isError, refetch } =
+    useGetCurrentUserQuery();
 
   const user = data?.data ?? null;
 
@@ -47,9 +36,7 @@ export function useAuth() {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error(
-      "useAuth must be used within AuthProvider",
-    );
+    throw new Error("useAuth must be used within AuthProvider");
   }
 
   return context;
