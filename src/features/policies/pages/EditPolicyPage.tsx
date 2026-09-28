@@ -64,7 +64,7 @@ export function EditPolicyPage() {
   const handleSubmit = async (
     values: CreateExpensePolicyRequest,
   ) => {
-    if (!(await confirm({ title: "Save policy", message: `Save changes to "${values.name}"? New evaluations use the updated rules.`, confirmLabel: "Save" }))) return;
+    if (!(await confirm({ title: "Save Policy", message: `Save changes to "${values.name}"? New evaluations use the updated rules.`, confirmLabel: "Save" }))) return;
     try {
       const updatedPolicy = await updatePolicy({
         id: policy.id,

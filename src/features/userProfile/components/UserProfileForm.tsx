@@ -59,7 +59,7 @@ export function UserProfileForm({
       return;
     }
 
-    if (!(await confirm({ title: "Save profile", message: "Save changes to your profile?", confirmLabel: "Save" }))) {
+    if (!(await confirm({ title: "Save Profile", message: "Save changes to your profile?", confirmLabel: "Save" }))) {
       return;
     }
 
@@ -96,7 +96,7 @@ export function UserProfileForm({
           Cancel
         </Button>
         <Button type="submit" variant="contained" loading={isSubmitting}>
-          Save changes
+          Save Changes
         </Button>
       </Stack>
     </Stack>

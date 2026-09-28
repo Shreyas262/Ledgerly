@@ -102,7 +102,7 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
     if (!user || !selectedRole) {
       return;
     }
-    if (!(await confirm({ title: "Save user", message: `Save changes to ${name}?`, confirmLabel: "Save" }))) return;
+    if (!(await confirm({ title: "Save User", message: `Save changes to ${name}?`, confirmLabel: "Save" }))) return;
 
     try {
       await updateUser({
@@ -183,7 +183,7 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
                   </MenuItem>
                 ))}
               </Select>
-              {isSelf && <FormHelperText>You can't change your own role.</FormHelperText>}
+              {isSelf && <FormHelperText>You cannot change your own role.</FormHelperText>}
             </FormControl>
 
             <FormControl fullWidth>
@@ -311,7 +311,7 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
             </Stack>
 
             {rolesError && (
-              <Typography color="error">Failed to load roles.</Typography>
+              <Typography color="error">Roles could not be loaded. Refresh the page to try again.</Typography>
             )}
 
             {updateError && <ApiFeedback error={updateError} />}
@@ -335,7 +335,7 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
               !email.trim()
             }
           >
-            {isUpdating ? "Saving..." : "Save Changes"}
+            {isUpdating ? "Saving…" : "Save Changes"}
           </Button>
         </DialogActions>
       </Box>

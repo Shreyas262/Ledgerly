@@ -42,7 +42,7 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
 
   async function handleSubmit(event: SyntheticEvent) {
     event.preventDefault();
-    if (!(await confirm({ title: "Create role", message: `Create the role "${name}" with ${permissions.length} permission(s)?`, confirmLabel: "Create" }))) return;
+    if (!(await confirm({ title: "Create Role", message: `Create the role "${name}" with ${permissions.length} permission(s)?`, confirmLabel: "Create" }))) return;
 
     try {
       await createRole({
@@ -100,7 +100,7 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
         disabled={isLoading}
         sx={{ alignSelf: "flex-end" }}
       >
-        {isLoading ? "Creating..." : "Create Role"}
+        {isLoading ? "Creating…" : "Create Role"}
       </Button>
     </Stack>
   );

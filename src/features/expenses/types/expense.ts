@@ -45,6 +45,18 @@ export type ExpenseStatus =
   | "reimbursed"
   | "cancelled";
 
+/** Display labels for expense statuses, shared by every screen. */
+export const EXPENSE_STATUS_LABELS: Record<ExpenseStatus, string> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  under_review: "Under review",
+  rejected: "Rejected",
+  approved: "Approved",
+  reimbursement_pending: "Reimbursement pending",
+  reimbursed: "Reimbursed",
+  cancelled: "Cancelled",
+};
+
 export type ReimbursementStatus =
   | "NOT_APPLICABLE"
   | "PENDING"

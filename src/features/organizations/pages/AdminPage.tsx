@@ -38,14 +38,14 @@ const sections: Array<SectionHubItem & { permission: Permission }> = [
   },
   {
     label: "Policies",
-    description: "Expense policies, limits and receipt requirements.",
+    description: "Spending rules, approval thresholds and coverage by expense type.",
     path: "/policies",
     icon: <PolicyOutlined />,
     permission: "policies.read",
   },
   {
     label: "Audit Log",
-    description: "Append-only history of business and authentication events.",
+    description: "A permanent, read-only record of sign-ins and changes across the organization.",
     path: "/audit",
     icon: <AssignmentTurnedInOutlined />,
     permission: "audit.read",

@@ -41,7 +41,7 @@ function AuditPage() {
       <BackLink to="/admin" label="Administration" />
       <PageHeader
         title="Audit Log"
-        description="Append-only history of authorized business and authentication operations."
+        description="A permanent, read-only record of sign-ins and changes across the organization."
       />
 
       <AuditFilters

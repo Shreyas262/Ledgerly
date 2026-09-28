@@ -70,7 +70,7 @@ export function UserProfilePage() {
 
       {showSuccess && (
         <Alert severity="success" onClose={() => setShowSuccess(false)}>
-          Your profile has been updated successfully.
+          Your profile has been updated.
         </Alert>
       )}
 
@@ -126,7 +126,7 @@ export function UserProfilePage() {
             <Stack spacing={0.5}>
               <Typography variant="h6">Organization</Typography>
               <Typography variant="body2" color="text.secondary">
-                Where you sit in your organization. This decides which expenses, budgets and reports you can see.
+                Where you sit in your organization. This determines which expenses, budgets and analytics you can see.
               </Typography>
             </Stack>
 

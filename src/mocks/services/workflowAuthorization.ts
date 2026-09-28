@@ -144,7 +144,7 @@ export async function authorizeExpenseManager(
 
   const owner = await resolveExpenseOwner(String(expense.employeeId));
   if (!owner) {
-    return forbidden("The expense owner could not be resolved.");
+    return forbidden("The person who submitted this expense could not be found.");
   }
 
   const denial = getReviewDenialReason(principal, expense, owner);

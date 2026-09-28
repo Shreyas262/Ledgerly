@@ -67,7 +67,7 @@ export function EditRoleForm({
     event: SyntheticEvent,
   ) {
     event.preventDefault();
-    if (!(await confirm({ title: "Save role", message: `Save changes to the role "${name}"? Users with this role get the updated permissions immediately.`, confirmLabel: "Save" }))) return;
+    if (!(await confirm({ title: "Save Role", message: `Save changes to the role "${name}"? Users with this role get the updated permissions immediately.`, confirmLabel: "Save" }))) return;
 
     try {
       await updateRole({
@@ -86,9 +86,7 @@ export function EditRoleForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      <DialogTitle>
-        Edit Role
-      </DialogTitle>
+      <DialogTitle>Edit Role</DialogTitle>
 
       <DialogContent>
         <Stack spacing={3} sx={{ pt: 1 }}>
@@ -142,7 +140,7 @@ export function EditRoleForm({
           variant="contained"
           disabled={isLoading}
         >
-          {isLoading ? "Saving..." : "Save Changes"}
+          {isLoading ? "Saving…" : "Save Changes"}
         </Button>
       </DialogActions>
     </form>

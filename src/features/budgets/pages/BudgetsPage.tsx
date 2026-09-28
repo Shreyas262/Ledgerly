@@ -1,6 +1,7 @@
 import { AddOutlined } from "@mui/icons-material";
 import { Alert, Button, Grid, Stack } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { formatDate } from "../../../utils/format";
 import { useGetBudgetsQuery } from "../api/budgetsApi";
 import { BudgetCard } from "../components/BudgetCard";
 import { BudgetSummaryCard } from "../components/BudgetSummaryCard";
@@ -42,7 +43,7 @@ export function BudgetsPage() {
         description={copy.subtitle}
         actions={canCreate && (
           <Button variant="contained" startIcon={<AddOutlined />} onClick={() => navigate("/budgets/new")}>
-            Create organization budget
+            Create Organization Budget
           </Button>
         )}
       />
@@ -53,7 +54,7 @@ export function BudgetsPage() {
           severity="warning"
           action={<Button color="inherit" size="small" onClick={() => navigate(`/budgets/${budget.id}`)}>Review</Button>}
         >
-          "{budget.name}" ended on {budget.endDate}. Close it or start the next period — new expenses can't be created until a budget covering today is active.
+          "{budget.name}" ended on {formatDate(budget.endDate)}. Close it or start the next period. New expenses cannot be created until a budget covering today is active.
         </Alert>
       ))}
 
@@ -72,8 +73,8 @@ export function BudgetsPage() {
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label={copy.budget} value={formatCurrency(summary.totalBudget)} description="Active budgets" /></Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label={copy.allocated} value={formatCurrency(summary.totalAllocated)} description={`${formatCurrency(Math.max(summary.totalBudget - summary.totalAllocated, 0))} unallocated`} /></Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Reimbursed spend" value={formatCurrency(summary.totalSpent)} description={`${formatCurrency(summary.totalRemaining)} remaining`} /></Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Utilization" value={`${summary.utilization.toFixed(1)}%`} description="Only reimbursed expenses consume budget" /></Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Spend" value={formatCurrency(summary.totalSpent)} description={`${formatCurrency(summary.totalRemaining)} remaining`} /></Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Utilization" value={`${summary.utilization.toFixed(1)}%`} description="Spend includes reimbursed expenses only" /></Grid>
             </Grid>
           )}
           <Grid container spacing={2}>

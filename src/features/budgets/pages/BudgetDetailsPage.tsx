@@ -40,6 +40,8 @@ import {
 } from "../../expenses/types/expense";
 import { BudgetProgress } from "../components/BudgetProgress";
 import { formatCurrency } from "../../../utils/currency";
+import { formatDate, humanize } from "../../../utils/format";
+import { budgetViewTitle } from "../utils/budgetViewTitle";
 import type { DepartmentBudgetView, OrganizationBudgetView } from "../types/budget";
 import { useConfirm, type ConfirmOptions } from "../../../components/common/ConfirmProvider";
 import { PageHeader } from "../../../components/common/PageHeader";
@@ -66,8 +68,6 @@ function nextPeriod(budget: OrganizationBudgetView) {
   return { startDate: toDateInput(nextStart), endDate: toDateInput(nextEnd) };
 }
 
-const formatDate = (value: string) =>
-  new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 export function BudgetDetailsPage() {
   const navigate = useNavigate();
@@ -115,9 +115,9 @@ export function BudgetDetailsPage() {
       "Budget closed.",
       "Unable to close the budget.",
       {
-        title: "Close budget",
-        message: "Close this budget because its period has ended or it is being replaced? It stops tracking spend and new expenses can't be created until another budget is active. You can reopen it if this was a mistake.",
-        confirmLabel: "Close budget",
+        title: "Close Budget",
+        message: "Close this budget because its period has ended or it is being replaced? It stops tracking spend, and new expenses cannot be created until another budget is active. You can reopen it if this was a mistake.",
+        confirmLabel: "Close Budget",
         destructive: true,
       },
     );
@@ -129,14 +129,16 @@ export function BudgetDetailsPage() {
       (user?.role === "finance" &&
         (user.authorizedDepartmentIds ?? [user.departmentId]).includes(department.departmentId)));
 
+  const viewTitle = budgetViewTitle(budget);
+
   return (
     <Stack spacing={3}>
       <BackLink to="/budgets" label="Budgets" />
 
       <PageHeader
-        title={budget.name}
-        chips={<Chip size="small" label={budget.status.toUpperCase()} color={budget.status === "active" ? "success" : "default"} />}
-        description={`${formatDate(budget.startDate)} – ${formatDate(budget.endDate)}`}
+        title={viewTitle.title}
+        chips={<Chip size="small" label={humanize(budget.status)} color={budget.status === "active" ? "success" : "default"} />}
+        description={`${viewTitle.parentName ? `Part of ${viewTitle.parentName} · ` : ""}${formatDate(budget.startDate)} – ${formatDate(budget.endDate)}`}
         actions={isAdmin && (editable || budget.status === "closed") ? (
           <>
             {isAdmin && editable && (
@@ -146,7 +148,7 @@ export function BudgetDetailsPage() {
                     variant="contained"
                     disabled={activating}
                     onClick={() => run(() => activateBudget(budget.id).unwrap(), "Budget activated.", "Unable to activate the budget.", {
-                      title: "Activate budget",
+                      title: "Activate Budget",
                       message: `Activate "${budget.name}"? Spend will be tracked against it and employees can create expenses dated ${formatDate(budget.startDate)} – ${formatDate(budget.endDate)}.`,
                       confirmLabel: "Activate",
                     })}
@@ -158,7 +160,7 @@ export function BudgetDetailsPage() {
                   <Button variant="outlined" disabled={closing} onClick={handleClose}>Close</Button>
                 )}
                 <Button onClick={() => navigate(`/budgets/${budget.id}/edit`)}>Edit</Button>
-                <Button onClick={openRollover}>Start next period</Button>
+                <Button onClick={openRollover}>Start Next Period</Button>
               </Stack>
             )}
             {isAdmin && budget.status === "closed" && (
@@ -167,14 +169,14 @@ export function BudgetDetailsPage() {
                   variant="outlined"
                   disabled={reopening}
                   onClick={() => run(() => reopenBudget(budget.id).unwrap(), "Budget reopened.", "Unable to reopen the budget.", {
-                    title: "Reopen budget",
+                    title: "Reopen Budget",
                     message: `Reopen "${budget.name}"? It becomes active again, as long as no other active budget covers the same period.`,
                     confirmLabel: "Reopen",
                   })}
                 >
                   Reopen
                 </Button>
-                <Button variant="contained" onClick={openRollover}>Start next period</Button>
+                <Button variant="contained" onClick={openRollover}>Start Next Period</Button>
               </Stack>
             )}
           </>
@@ -189,11 +191,11 @@ export function BudgetDetailsPage() {
           action={
             <Stack direction="row" spacing={1}>
               <Button color="inherit" size="small" onClick={handleClose}>Close</Button>
-              <Button color="inherit" size="small" onClick={openRollover}>Start next period</Button>
+              <Button color="inherit" size="small" onClick={openRollover}>Start Next Period</Button>
             </Stack>
           }
         >
-          This budget's period ended on {formatDate(budget.endDate)}. New expenses can't be created until a budget covering today is active.
+          This budget's period ended on {formatDate(budget.endDate)}. New expenses cannot be created until a budget covering today is active.
         </Alert>
       )}
       {budget.status === "draft" && isAdmin && (
@@ -242,7 +244,7 @@ export function BudgetDetailsPage() {
                           "Department allocation saved.",
                           "Unable to save the department allocation.",
                           {
-                            title: "Allocate to department",
+                            title: "Allocate to Department",
                             message: `Allocate ${formatCurrency(Number(departmentAmount))} to ${departments.find((item) => item.id === departmentId)?.name ?? "this department"}?`,
                             confirmLabel: "Allocate",
                           },
@@ -280,7 +282,7 @@ export function BudgetDetailsPage() {
       )}
 
       <Dialog open={Boolean(rollover)} onClose={() => !rollingOver && setRollover(null)} fullWidth maxWidth="sm">
-        <DialogTitle>Start next period</DialogTitle>
+        <DialogTitle>Start Next Period</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Typography variant="body2" color="text.secondary">
@@ -426,7 +428,7 @@ function DepartmentSection({ budget, department, canManage, showDepartmentTotals
                       "Team budget saved.",
                       "Unable to save the team budget.",
                       {
-                        title: "Allocate to team",
+                        title: "Allocate to Team",
                         message: `Allocate ${formatCurrency(Number(teamAmount))} to ${department.departmentTeams.find((team) => team.id === teamId)?.name ?? "this team"}?`,
                         confirmLabel: "Allocate",
                       },
@@ -477,7 +479,7 @@ function DepartmentSection({ budget, department, canManage, showDepartmentTotals
                           `${EXPENSE_TYPE_LABELS[expenseType]} budget saved.`,
                           "Unable to save the expense-type budget.",
                           {
-                            title: "Set expense-type budget",
+                            title: "Set Expense-Type Budget",
                             message: `Set the ${EXPENSE_TYPE_LABELS[expenseType]} budget for ${department.teamAllocations.find((team) => team.id === typeTeamAllocationId)?.teamName ?? "this team"} to ${formatCurrency(Number(typeAmount))}?`,
                             confirmLabel: "Save",
                           },

@@ -13,8 +13,8 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  title = "Nothing here yet",
-  message = "There is no data to display.",
+  title = "No records found",
+  message = "There is nothing to display yet.",
   action,
 }: EmptyStateProps) {
   return (

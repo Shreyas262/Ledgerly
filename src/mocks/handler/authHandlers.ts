@@ -10,6 +10,7 @@ import { buildSession, resolveSession, revokeSession, revokeSessionInTransaction
 import { buildAuthenticatedPrincipal, resolveAuthenticatedPrincipal } from "../services/authorizationService";
 import { runAuditedTransaction } from "../services/auditService";
 import { hashPassword, isPasswordHash, verifyPassword } from "../services/passwordService";
+import type { Session } from "../../features/auth/types/auth";
 
 interface NamedRecord {
   id: string;
@@ -56,7 +57,104 @@ interface MockCredential {
 
 const API_BASE_URL = "/api";
 
+/** Active, unexpired sessions of a user other than the given one. */
+async function otherActiveSessions(userId: string, currentSessionId: string): Promise<Session[]> {
+  const now = Date.now();
+  return (await listRecords<Session>("sessions")).filter((session) =>
+    session.userId === userId &&
+    session.id !== currentSessionId &&
+    session.status === "active" &&
+    new Date(session.expiresAt).getTime() > now);
+}
+
 export const authHandlers = [
+  // §16.4: the signed-in user's sessions — the current one and how many others are active.
+  http.get(`${API_BASE_URL}/auth/sessions`, async ({ request }) => {
+    const principal = await resolveAuthenticatedPrincipal(request);
+    const sessionId = getSessionCookieHeader(request);
+    if (!principal || !sessionId) return apiError(401, "Please sign in to continue.");
+    const now = Date.now();
+    const sessions = (await listRecords<Session>("sessions")).filter((session) =>
+      session.userId === principal.userId && session.status === "active" && new Date(session.expiresAt).getTime() > now);
+    const current = sessions.find((session) => session.id === sessionId);
+    return HttpResponse.json({
+      data: {
+        current: current ? { createdAt: current.createdAt, expiresAt: current.expiresAt } : null,
+        otherActiveSessions: sessions.filter((session) => session.id !== sessionId).length,
+      },
+    });
+  }),
+
+  // §16.4: sign out of every other session of the signed-in user.
+  http.post(`${API_BASE_URL}/auth/sessions/revoke-others`, async ({ request }) => {
+    const principal = await resolveAuthenticatedPrincipal(request);
+    const sessionId = getSessionCookieHeader(request);
+    if (!principal || !sessionId) return apiError(401, "Please sign in to continue.");
+    const others = await otherActiveSessions(principal.userId, sessionId);
+    await runAuditedTransaction(
+      ["sessions"],
+      {
+        organizationId: principal.organizationId,
+        actorId: principal.userId,
+        action: "SESSIONS_REVOKED",
+        entityType: "AUTHENTICATION",
+        entityId: principal.userId,
+        metadata: { revokedSessions: others.length },
+        description: `Signed out of ${others.length} other ${others.length === 1 ? "session" : "sessions"}.`,
+      },
+      (transaction) => {
+        for (const session of others) void revokeSessionInTransaction(transaction, session);
+      },
+    );
+    return HttpResponse.json({ data: { revokedSessions: others.length } });
+  }),
+
+  // §16.4: change one's own password. Other sessions are signed out; this one stays.
+  http.put(`${API_BASE_URL}/auth/me/password`, async ({ request }) => {
+    const principal = await resolveAuthenticatedPrincipal(request);
+    const sessionId = getSessionCookieHeader(request);
+    if (!principal || !sessionId) return apiError(401, "Please sign in to continue.");
+
+    const body = (await request.json().catch(() => ({}))) as { currentPassword?: unknown; newPassword?: unknown };
+    const fieldErrors: Record<string, string> = {};
+    if (typeof body.currentPassword !== "string" || !body.currentPassword) fieldErrors.currentPassword = "Enter your current password.";
+    if (typeof body.newPassword !== "string" || !body.newPassword) fieldErrors.newPassword = "Enter a new password.";
+    if (Object.keys(fieldErrors).length) {
+      return apiError(422, "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors });
+    }
+
+    const credential = await getRecord<MockCredential>("credentials", principal.userId);
+    if (!credential || !(await verifyPassword(body.currentPassword as string, credential.password))) {
+      return apiError(422, "The current password is incorrect.", "VALIDATION_ERROR", {
+        fieldErrors: { currentPassword: "The current password is incorrect." },
+      });
+    }
+    if (body.newPassword === body.currentPassword) {
+      return apiError(422, "The new password must be different from the current password.", "VALIDATION_ERROR", {
+        fieldErrors: { newPassword: "The new password must be different from the current password." },
+      });
+    }
+
+    const updatedCredential = { ...credential, password: await hashPassword(body.newPassword as string) };
+    const others = await otherActiveSessions(principal.userId, sessionId);
+    await runAuditedTransaction(
+      ["credentials", "sessions"],
+      {
+        organizationId: principal.organizationId,
+        actorId: principal.userId,
+        action: "PASSWORD_CHANGED",
+        entityType: "AUTHENTICATION",
+        entityId: principal.userId,
+        metadata: { revokedSessions: others.length },
+        description: "Changed own password.",
+      },
+      (transaction) => {
+        transaction.objectStore("credentials").put(updatedCredential);
+        for (const session of others) void revokeSessionInTransaction(transaction, session);
+      },
+    );
+    return HttpResponse.json({ data: { revokedSessions: others.length } });
+  }),
   http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as {
       email?: unknown;
@@ -102,7 +200,7 @@ export const authHandlers = [
           entityType: "AUTHENTICATION",
           entityId: credential.userId,
           newState: "hashed",
-          description: "Migrated a legacy development credential to a password hash.",
+          description: "Password security was updated.",
         },
         (transaction) => {
           transaction.objectStore("credentials").put(credential);
@@ -118,7 +216,7 @@ export const authHandlers = [
     const principal = await buildAuthenticatedPrincipal(user);
 
     if (!principal) {
-      return apiError(401, "Unable to resolve authenticated principal.", "INVALID_SESSION");
+      return apiError(401, "Your session could not be verified. Please sign in again.", "INVALID_SESSION");
     }
 
     const authenticatedUser = {
@@ -202,21 +300,21 @@ export const authHandlers = [
     const session = await resolveSession(sessionId);
 
     if (!session) {
-      return apiError(401, "Invalid or expired session.", "INVALID_SESSION");
+      return apiError(401, "Your session has expired. Please sign in again.", "INVALID_SESSION");
     }
 
     const user = await getRecord<MockUser>("users", session.userId);
 
     if (!user) {
       await revokeSession(sessionId);
-      return apiError(401, "Invalid session.", "INVALID_SESSION");
+      return apiError(401, "Your session is no longer valid. Please sign in again.", "INVALID_SESSION");
     }
 
     const principal = await resolveAuthenticatedPrincipal(request);
 
     if (!principal) {
       await revokeSession(sessionId);
-      return apiError(401, "Invalid session.", "INVALID_SESSION");
+      return apiError(401, "Your session is no longer valid. Please sign in again.", "INVALID_SESSION");
     }
 
     return HttpResponse.json({
@@ -236,13 +334,13 @@ export const authHandlers = [
     const principal = await resolveAuthenticatedPrincipal(request);
 
     if (!principal) {
-      return apiError(401, "Authentication required.");
+      return apiError(401, "Please sign in to continue.");
     }
 
     const user = await getRecord<MockUser>("users", principal.userId);
 
     if (!user) {
-      return apiError(401, "Invalid session.", "INVALID_SESSION");
+      return apiError(401, "Your session is no longer valid. Please sign in again.", "INVALID_SESSION");
     }
 
     const body = (await request.json().catch(() => ({}))) as {
@@ -256,7 +354,7 @@ export const authHandlers = [
     if (!name) fieldErrors.name = "Name is required.";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fieldErrors.email = "A valid email address is required.";
     if (Object.keys(fieldErrors).length) {
-      return apiError(422, "Profile validation failed.", "VALIDATION_ERROR", { fieldErrors });
+      return apiError(422, "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors });
     }
 
     const users = await listRecords<MockUser>("users");

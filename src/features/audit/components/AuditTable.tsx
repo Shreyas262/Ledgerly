@@ -27,11 +27,11 @@ export function AuditTable({ auditEvents }: AuditTableProps) {
         <TableHead>
           <TableRow>
             <TableCell>Action</TableCell>
-            <TableCell>Entity</TableCell>
+            <TableCell>Record</TableCell>
             <TableCell>Performed by</TableCell>
-            <TableCell>State</TableCell>
+            <TableCell>Status</TableCell>
             <TableCell>Description</TableCell>
-            <TableCell>Timestamp</TableCell>
+            <TableCell>Date and time</TableCell>
             <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
@@ -45,16 +45,16 @@ export function AuditTable({ auditEvents }: AuditTableProps) {
                 <Typography variant="body2">
                   {humanize(event.entityType)}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {event.entityId}
-                </Typography>
               </TableCell>
               <TableCell>{event.actorName ?? "Unknown user"}</TableCell>
               <TableCell>
-                {event.previousState || event.newState ? (
+                {/* A single status when the record was created or did not change. */}
+                {event.previousState && event.newState && event.previousState !== event.newState ? (
                   <Typography variant="body2">
-                    {event.previousState ?? "—"} → {event.newState ?? "—"}
+                    {humanize(event.previousState)} → {humanize(event.newState)}
                   </Typography>
+                ) : event.newState || event.previousState ? (
+                  <Typography variant="body2">{humanize(event.newState ?? event.previousState)}</Typography>
                 ) : (
                   "—"
                 )}

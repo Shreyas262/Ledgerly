@@ -67,7 +67,7 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
   const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
-    if (!(await confirm({ title: "Upload documents", message: `Upload ${files.map((file) => file.name).join(", ")}?`, confirmLabel: "Upload" }))) {
+    if (!(await confirm({ title: "Upload Documents", message: `Upload ${files.map((file) => file.name).join(", ")}?`, confirmLabel: "Upload" }))) {
       setFileInputKey((current) => current + 1);
       return;
     }
@@ -96,7 +96,7 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
   };
 
   const handleRemove = async (documentId: string) => {
-    if (!(await confirm({ title: "Remove document", message: "Remove this document from the expense?", confirmLabel: "Remove", destructive: true }))) return;
+    if (!(await confirm({ title: "Remove Document", message: "Remove this document from the expense?", confirmLabel: "Remove", destructive: true }))) return;
     setActionError(null);
     try {
       await removeDocument({ id: documentId, expenseId }).unwrap();

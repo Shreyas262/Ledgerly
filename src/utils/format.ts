@@ -6,16 +6,28 @@ export const humanize = (value: string | null | undefined): string => {
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
-const dateTimeFormatter = new Intl.DateTimeFormat("en-IN", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "numeric",
-  minute: "2-digit",
-});
-
-/** Formats an ISO timestamp as e.g. "26 Sep 2026, 6:01 pm". */
+/** Formats an ISO timestamp in local time as e.g. "26 Sep 2026, 6:01 pm". */
 export const formatDateTime = (value: string | null | undefined): string => {
   const date = value ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime()) ? dateTimeFormatter.format(date) : "—";
+  if (!date || Number.isNaN(date.getTime())) return "—";
+  const hours = date.getHours();
+  const time = `${hours % 12 || 12}:${String(date.getMinutes()).padStart(2, "0")} ${hours < 12 ? "am" : "pm"}`;
+  return `${formatDate(value)}, ${time}`;
+};
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * Formats a date as e.g. "27 Sep 2026". Calendar dates (YYYY-MM-DD) are shown
+ * as written; timestamps are shown in the viewer's local time zone.
+ */
+export const formatDate = (value: string | null | undefined): string => {
+  if (!value) return "—";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return `${day} ${MONTHS[month - 1]} ${year}`;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 };

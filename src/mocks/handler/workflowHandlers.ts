@@ -31,7 +31,7 @@ async function getExpense(id: string) {
 
 function workflowError(error: unknown) {
   const message =
-    error instanceof Error ? error.message : "The workflow operation failed.";
+    error instanceof Error ? error.message : "The action could not be completed.";
 
   if (message.includes("rejection reason") || message.includes("cancellation reason")) {
     return apiError(422, message, "VALIDATION_ERROR", {
@@ -257,7 +257,7 @@ export const workflowHandlers = [
     const principal = await resolveAuthenticatedPrincipal(request);
 
     if (!principal) {
-      return apiError(401, "Authentication required.");
+      return apiError(401, "Please sign in to continue.");
     }
 
     if (!isExpenseVisibleToPrincipal(principal, expense)) {

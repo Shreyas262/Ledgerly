@@ -12,7 +12,7 @@ export const authGuardHandler = http.all("/api/*", async ({ request }) => {
 
   if (!sessionId) {
     return HttpResponse.json(
-      { message: "Authentication required.", code: "UNAUTHENTICATED" },
+      { message: "Please sign in to continue.", code: "UNAUTHENTICATED" },
       { status: 401 },
     );
   }
@@ -21,7 +21,7 @@ export const authGuardHandler = http.all("/api/*", async ({ request }) => {
 
   if (!session) {
     return HttpResponse.json(
-      { message: "Invalid or expired session.", code: "INVALID_SESSION" },
+      { message: "Your session has expired. Please sign in again.", code: "INVALID_SESSION" },
       { status: 401 },
     );
   }

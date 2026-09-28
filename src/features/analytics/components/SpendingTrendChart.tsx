@@ -25,7 +25,7 @@ export function SpendingTrendChart({ data, interval }: SpendingTrendChartProps) 
   const series = mode === "total"
     ? [{
         id: "total",
-        label: "Reimbursed spend",
+        label: "Spend",
         data: data.map((point) => point.amount),
         area: true,
         showMark: data.length <= 16,
@@ -48,9 +48,9 @@ export function SpendingTrendChart({ data, interval }: SpendingTrendChartProps) 
   return (
     <ChartCard
       title="Spending trend"
-      subtitle={`Reimbursed spend per ${INTERVAL_LABEL[interval]}`}
+      subtitle={`Spend per ${INTERVAL_LABEL[interval]}`}
       isEmpty={isEmpty}
-      emptyMessage="No reimbursed spending in the selected period."
+      emptyMessage="No spend in the selected period."
       minHeight={320}
       action={
         <ToggleButtonGroup

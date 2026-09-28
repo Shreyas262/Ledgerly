@@ -6,6 +6,7 @@ import { authorizeRequest, isExpenseVisibleToPrincipal, resolveExpenseScope } fr
 import { authorizationError } from "../services/authorizationHttp";
 import { runAuditedTransaction } from "../services/auditService";
 import { getRecord, listRecords } from "../services/mockDataService";
+import { evaluateExpensePolicy } from "../services/policyService";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_FILE_TYPES = new Set(["image/jpeg", "image/png", "application/pdf"]);
@@ -14,14 +15,25 @@ interface StoredDocument extends Document {
   content: Blob;
 }
 
-interface MockExpenseResource {
+// A type alias (not an interface) so it is assignable to the policy evaluator's record shape.
+type MockExpenseResource = {
   id: string;
   organizationId: string;
   employeeId: string;
   teamId: string;
   departmentId: string;
   status: string;
+  amount: number;
   documentIds?: string[];
+};
+
+/**
+ * Documents satisfy the receipt rule, so a draft's preliminary policy check is
+ * refreshed whenever one is linked or removed (§21.7).
+ */
+async function withRefreshedPolicyCheck<T extends MockExpenseResource>(expense: T): Promise<T> {
+  const evaluation = await evaluateExpensePolicy(expense);
+  return { ...expense, policyId: evaluation.policyId, policyEvaluation: evaluation };
 }
 
 async function getAuthorizedExpense(request: Request, expenseId: string, permission: "documents.read" | "documents.create" | "documents.delete") {
@@ -124,11 +136,11 @@ export const documentHandlers = [
       content: file,
     };
 
-    const linkedExpense = {
+    const linkedExpense = await withRefreshedPolicyCheck({
       ...authorized.expense,
       documentIds: [...(authorized.expense.documentIds ?? []), document.id],
       updatedAt: now,
-    };
+    });
 
     await runAuditedTransaction(
       ["documents", "expenses"],
@@ -188,11 +200,11 @@ export const documentHandlers = [
       status: "REMOVED",
       updatedAt: now,
     };
-    const unlinkedExpense = {
+    const unlinkedExpense = await withRefreshedPolicyCheck({
       ...authorized.expense,
       documentIds: (authorized.expense.documentIds ?? []).filter((id) => id !== document.id),
       updatedAt: now,
-    };
+    });
 
     await runAuditedTransaction(
       ["documents", "expenses"],

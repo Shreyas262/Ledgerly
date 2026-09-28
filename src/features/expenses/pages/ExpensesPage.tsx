@@ -130,7 +130,7 @@ export function ExpensesPage() {
   }
 
   const handleSubmitExpense = async (expenseId: string) => {
-    if (!(await confirm({ title: "Submit expense", message: "Submit this expense for approval? You won't be able to edit it while it is being reviewed.", confirmLabel: "Submit" }))) return;
+    if (!(await confirm({ title: "Submit Expense", message: "Submit this expense for approval? You will not be able to edit it while it is being reviewed.", confirmLabel: "Submit" }))) return;
     try {
       setSubmittingExpenseId(expenseId);
 

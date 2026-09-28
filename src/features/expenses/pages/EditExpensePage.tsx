@@ -154,7 +154,7 @@ export function EditExpensePage() {
     event: FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
-    if (!(await confirm({ title: "Save changes", message: "Save your changes to this expense?", confirmLabel: "Save" }))) return;
+    if (!(await confirm({ title: "Save Changes", message: "Save your changes to this expense?", confirmLabel: "Save" }))) return;
 
     try {
       const updatedExpense =

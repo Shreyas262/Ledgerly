@@ -74,7 +74,9 @@ export function ActivityPage() {
                 Last sign-in
               </Typography>
               <Typography variant="subtitle1">
-                {lastLogin ? formatDateTime(lastLogin.timestamp) : "No sign-in recorded"}
+                {lastLogin
+                  ? formatDateTime(lastLogin.timestamp)
+                  : "No sign-in recorded"}
               </Typography>
             </Stack>
           </Stack>
@@ -85,7 +87,7 @@ export function ActivityPage() {
         <Typography variant="h6">Recent activity</Typography>
 
         {events.length === 0 ? (
-          <Alert severity="info">No account activity is available yet.</Alert>
+          <Alert severity="info">No account activity yet.</Alert>
         ) : (
           <TableContainer component={Paper}>
             <Table sx={{ minWidth: 720 }}>

@@ -18,9 +18,9 @@ export function ExpenseTypeDonut({ data }: ExpenseTypeDonutProps) {
   return (
     <ChartCard
       title="Spending by expense type"
-      subtitle="Share of reimbursed spend"
+      subtitle="Share of spend by expense type"
       isEmpty={data.length === 0}
-      emptyMessage="No reimbursed spending in the selected period."
+      emptyMessage="No spend in the selected period."
     >
       <Stack spacing={2} sx={{ alignItems: "center" }}>
         <Box sx={{ position: "relative", width: 220, height: 220, flexShrink: 0 }}>

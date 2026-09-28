@@ -11,6 +11,7 @@ import type { SelectChangeEvent } from "@mui/material";
 import { FilterBar } from "../../../components/common/FilterBar";
 import type { ExpenseFilter as ExpenseFiltersState } from "../types/expense";
 import {
+  EXPENSE_STATUS_LABELS,
   EXPENSE_TYPES,
   EXPENSE_TYPE_LABELS,
   type ExpenseStatus,
@@ -28,14 +29,7 @@ const statusOptions: {
   label: string;
 }[] = [
   { value: "all", label: "All statuses" },
-  { value: "draft", label: "Draft" },
-  { value: "submitted", label: "Submitted" },
-  { value: "under_review", label: "Under Review" },
-  { value: "rejected", label: "Rejected" },
-  { value: "approved", label: "Approved" },
-  { value: "reimbursement_pending", label: "Reimbursement Pending" },
-  { value: "reimbursed", label: "Reimbursed" },
-  { value: "cancelled", label: "Cancelled" },
+  ...(Object.entries(EXPENSE_STATUS_LABELS) as Array<[ExpenseStatus, string]>).map(([value, label]) => ({ value, label })),
 ];
 
 export function ExpenseFilters({

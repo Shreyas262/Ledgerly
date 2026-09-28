@@ -204,7 +204,7 @@ export async function getExpenseCreationEligibility(
     return {
       allowed: false,
       code: "NO_ACTIVE_BUDGET",
-      reason: "Expenses can't be created right now: there is no active budget for the current period. Ask an administrator to activate the new budget.",
+      reason: "Expenses cannot be created at present because there is no active budget for the current period. Ask an administrator to activate a budget.",
     };
   }
   const departmentAllocation = (await listRecordsByIndex<DepartmentBudgetAllocation>(
@@ -215,7 +215,7 @@ export async function getExpenseCreationEligibility(
       budget,
       allowed: false,
       code: "NO_DEPARTMENT_ALLOCATION",
-      reason: "Expenses can't be created yet: your department has no budget allocated in the active budget. Ask an administrator to allocate it.",
+      reason: "Expenses cannot be created yet because your department has no allocation in the active budget. Ask an administrator to allocate it.",
     };
   }
   const teamAllocation = (await listRecordsByIndex<TeamBudgetAllocation>(
@@ -226,7 +226,7 @@ export async function getExpenseCreationEligibility(
       budget,
       allowed: false,
       code: "NO_TEAM_ALLOCATION",
-      reason: "Expenses can't be created yet: your team has no budget allocated in the active budget. Ask Finance to allocate it.",
+      reason: "Expenses cannot be created yet because your team has no allocation in the active budget. Ask Finance to allocate it.",
     };
   }
   return { budget, allowed: true };

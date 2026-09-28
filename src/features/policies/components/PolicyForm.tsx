@@ -330,7 +330,7 @@ export default function PolicyForm({
 
       <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
         <Button type="submit" variant="contained" disabled={isSubmitting} sx={{ minWidth: 160 }}>
-          {isSubmitting ? "Saving..." : "Save Policy"}
+          {isSubmitting ? "Saving…" : "Save Policy"}
         </Button>
       </Stack>
     </Stack>

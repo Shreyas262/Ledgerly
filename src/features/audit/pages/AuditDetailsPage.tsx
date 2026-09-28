@@ -61,7 +61,7 @@ function AuditDetailsPage() {
   if (!event) return <Alert severity="warning">Audit event not found.</Alert>;
 
   const metadataEntries = Object.entries(event.metadata ?? {}).filter(([key]) => !isIdentifierKey(key));
-  const hasStateChange = Boolean(event.previousState || event.newState);
+  const hasStateChange = Boolean(event.previousState && event.newState && event.previousState !== event.newState);
 
   return (
     <Stack spacing={3}>

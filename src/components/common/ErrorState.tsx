@@ -33,11 +33,11 @@ export function ErrorState({
   const resolvedTitle =
     title ??
     (apiError ? titlesByStatus[apiError.status] : undefined) ??
-    "Something went wrong";
+    "An unexpected error occurred";
   const resolvedMessage =
     message ??
     apiError?.message ??
-    "We couldn't load this information. Please try again.";
+    "This information could not be loaded. Please try again.";
   // Retrying cannot fix authorization or missing-resource failures.
   const canRetry =
     Boolean(onRetry) &&

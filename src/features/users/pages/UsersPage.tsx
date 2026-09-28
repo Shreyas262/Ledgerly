@@ -83,7 +83,6 @@ export function UsersPage() {
   const {
     data: users,
     isLoading,
-    isFetching,
     isError,
     error: usersError,
     refetch,
@@ -149,7 +148,7 @@ export function UsersPage() {
         <BackLink to="/admin" label="Administration" />
         <PageHeader
           title="Users"
-          description="Manage who can sign in, their role, and where they sit in the organization."
+          description="Manage user accounts, roles and their place in the organization."
           actions={can("users.create") && (
             <Button
               variant="contained"
@@ -207,7 +206,7 @@ export function UsersPage() {
 
         {users && (
           <Typography variant="body2" color="text.secondary">
-            {users.total} {users.total === 1 ? "user" : "users"}{isFetching ? " · updating…" : ""}
+            {users.total} {users.total === 1 ? "user" : "users"}
           </Typography>
         )}
 
@@ -341,7 +340,7 @@ export function UsersPage() {
       {/* Delete User */}
       <ConfirmDialog
         open={Boolean(deletingUser)}
-        title="Delete User?"
+        title="Delete User"
         message={
           deletingUser
             ? `Delete ${deletingUser.name}? They lose access and are removed from their team and department. Their expense history is kept; drafts are cancelled and submitted expenses continue through approval and reimbursement.`

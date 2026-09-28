@@ -1,4 +1,5 @@
 import { ExpensePolicyPreview } from "../../policies/components/ExpensePolicyPreview";
+import { formatDate } from "../../../utils/format";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { useState, type FormEvent } from "react";
 import {
@@ -68,7 +69,7 @@ export function CreateExpensePage() {
       return;
     }
 
-    if (!(await confirm({ title: "Create expense", message: `Create "${formData.title.trim()}" for ₹${Number(formData.amount).toLocaleString("en-IN")} as a draft?`, confirmLabel: "Create" }))) return;
+    if (!(await confirm({ title: "Create Expense", message: `Create "${formData.title.trim()}" for ₹${Number(formData.amount).toLocaleString("en-IN")} as a draft?`, confirmLabel: "Create" }))) return;
 
     try {
       const createdExpense = await createExpense({
@@ -99,7 +100,7 @@ export function CreateExpensePage() {
       )}
       {activePeriod && (
         <Alert severity="info">
-          The expense date must fall within the active budget period ({activePeriod.startDate} to {activePeriod.endDate}).
+          The expense date must fall within the active budget period ({formatDate(activePeriod.startDate)} to {formatDate(activePeriod.endDate)}).
         </Alert>
       )}
 

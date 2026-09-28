@@ -13,7 +13,7 @@ export function CreateBudgetPage() {
   const confirm = useConfirm();
   const [createBudget, { isLoading, error }] = useCreateBudgetMutation();
   const handleSubmit = async (data: CreateOrganizationBudgetRequest) => {
-    if (!(await confirm({ title: "Create budget", message: `Create "${data.name}" (₹${data.amount.toLocaleString("en-IN")}) as a draft?`, confirmLabel: "Create" }))) return;
+    if (!(await confirm({ title: "Create Budget", message: `Create "${data.name}" (₹${data.amount.toLocaleString("en-IN")}) as a draft?`, confirmLabel: "Create" }))) return;
     try {
       const created = await createBudget(data).unwrap();
       navigate(`/budgets/${created.id}`);

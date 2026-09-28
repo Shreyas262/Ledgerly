@@ -31,7 +31,7 @@ export function ConfirmDialog({
   message,
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
-  loadingLabel = "Deleting...",
+  loadingLabel = "Deleting…",
   loading = false,
   reasonLabel,
   destructive = true,

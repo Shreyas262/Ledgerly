@@ -73,7 +73,7 @@ export function CreateUserForm({
     if (!departmentId || !teamId) {
       return;
     }
-    if (!(await confirm({ title: "Create user", message: `Create an account for ${name} (${email})?`, confirmLabel: "Create" }))) return;
+    if (!(await confirm({ title: "Create User", message: `Create an account for ${name} (${email})?`, confirmLabel: "Create" }))) return;
 
     try {
       await createUser({
@@ -236,7 +236,7 @@ export function CreateUserForm({
       {/* Errors */}
       {rolesError && (
         <Typography color="error">
-          Failed to load roles.
+          Roles could not be loaded. Refresh the page to try again.
         </Typography>
       )}
 
@@ -260,7 +260,7 @@ export function CreateUserForm({
           }
           sx={{ minWidth: 140 }}
         >
-          {isCreating ? "Creating..." : "Create User"}
+          {isCreating ? "Creating…" : "Create User"}
         </Button>
       </Stack>
     </Stack>

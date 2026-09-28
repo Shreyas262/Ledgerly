@@ -9,7 +9,7 @@ export function ProtectedRoute() {
   const location = useLocation();
 
   if (isLoading) {
-    return <LoadingState message="Checking your session..." />;
+    return <LoadingState message="Checking your session…" />;
   }
 
   if (!isAuthenticated) {

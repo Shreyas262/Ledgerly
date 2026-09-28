@@ -1,5 +1,7 @@
 import { Card, CardActionArea, CardContent, Chip, Stack, Typography } from "@mui/material";
 import type { ChipProps } from "@mui/material";
+import { formatDate } from "../../../utils/format";
+import { budgetViewTitle } from "../utils/budgetViewTitle";
 
 import type { BudgetStatus, OrganizationBudgetView } from "../types/budget";
 import { BudgetProgress } from "./BudgetProgress";
@@ -15,13 +17,11 @@ const statusChip: Record<BudgetStatus, { label: string; color: ChipProps["color"
   closed: { label: "Closed", color: "default" },
 };
 
-const formatDate = (value: string) =>
-  new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 /** The viewer's level of the budget: organization, their departments or team. */
 function scopedTotals(budget: OrganizationBudgetView) {
   if (budget.viewScope === "ORGANIZATION") {
-    return { label: "Organization", allocated: budget.amount, utilization: budget.utilization };
+    return { allocated: budget.amount, utilization: budget.utilization };
   }
   const items = budget.viewScope === "DEPARTMENT"
     ? budget.departmentAllocations
@@ -29,7 +29,6 @@ function scopedTotals(budget: OrganizationBudgetView) {
   const allocated = items.reduce((sum, item) => sum + item.amount, 0);
   const spentAmount = items.reduce((sum, item) => sum + item.utilization.spentAmount, 0);
   return {
-    label: budget.viewScope === "DEPARTMENT" ? "Your departments" : "Your team",
     allocated,
     utilization: {
       spentAmount,
@@ -41,6 +40,7 @@ function scopedTotals(budget: OrganizationBudgetView) {
 
 export function BudgetCard({ budget, onView }: BudgetCardProps) {
   const totals = scopedTotals(budget);
+  const viewTitle = budgetViewTitle(budget);
   const status = statusChip[budget.status];
 
   return (
@@ -50,7 +50,10 @@ export function BudgetCard({ budget, onView }: BudgetCardProps) {
           <Stack spacing={2}>
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", gap: 2 }}>
               <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-                <Typography variant="subtitle1" noWrap>{budget.name}</Typography>
+                <Typography variant="subtitle1" noWrap>{viewTitle.title}</Typography>
+                {viewTitle.parentName && (
+                  <Typography variant="caption" color="text.secondary" noWrap>Part of {viewTitle.parentName}</Typography>
+                )}
                 <Typography variant="body2" color="text.secondary">
                   {formatDate(budget.startDate)} – {formatDate(budget.endDate)}
                 </Typography>
@@ -63,7 +66,7 @@ export function BudgetCard({ budget, onView }: BudgetCardProps) {
             )}
 
             <Stack spacing={0.5}>
-              <Typography variant="caption" color="text.secondary">{totals.label}</Typography>
+              <Typography variant="caption" color="text.secondary">{viewTitle.scopeLabel}</Typography>
               <BudgetProgress allocated={totals.allocated} utilization={totals.utilization} />
             </Stack>
 

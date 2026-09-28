@@ -74,7 +74,7 @@ export const roleHandlers = [
     const now = new Date().toISOString();
 
     if (!body.name.trim() || body.permissions.some((permission) => !allPermissions.includes(permission as (typeof allPermissions)[number]))) {
-      return apiError(400, "Invalid role or permission assignment.");
+      return apiError(400, "The role name or one of the selected permissions is not valid.");
     }
 
     const existingRoles = await listRecords<MockRole>("roles");
@@ -123,7 +123,7 @@ export const roleHandlers = [
       );
 
       if (!existingRole) {
-        return apiError(404, "Resource not found.");
+        return apiError(404, "Role not found.");
       }
 
       const authorization = await authorizeRequest(request, {
@@ -141,7 +141,7 @@ export const roleHandlers = [
       const name = body.name?.trim() ?? existingRole.name;
 
       if (!name || permissions.some((permission) => !allPermissions.includes(permission as (typeof allPermissions)[number]))) {
-        return apiError(400, "Invalid role or permission assignment.");
+        return apiError(400, "The role name or one of the selected permissions is not valid.");
       }
 
       const roles = await listRecords<MockRole>("roles");
@@ -206,7 +206,7 @@ export const roleHandlers = [
     );
 
     if (!existingRole) {
-      return apiError(404, "Resource not found.");
+      return apiError(404, "Role not found.");
     }
 
     const authorization = await authorizeRequest(request, {
@@ -222,7 +222,7 @@ export const roleHandlers = [
     // Removed users keep their role name on record, so only current users block deletion.
     const assignedUsers = await listRecords<{ roleId: string; organizationId: string; status?: string }>("users");
     if (assignedUsers.some((user) => user.organizationId === existingRole.organizationId && user.roleId === existingRole.id && user.status !== "deleted")) {
-      return apiError(409, "Role cannot be deleted while it is assigned to users.");
+      return apiError(409, "This role cannot be deleted while it is assigned to users.");
     }
 
     await runAuditedTransaction(

@@ -1,4 +1,5 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { formatCurrency } from "../../../utils/currency";
 import { useState } from "react";
 import {
   Alert,
@@ -205,7 +206,7 @@ export function ReimbursementQueue() {
                         loading={isProcessing}
                         disabled={Boolean(processingId) && !isProcessing}
                         onClick={() =>
-                          confirm({ title: "Start reimbursement", message: `Start reimbursing "${expense.title}"?`, confirmLabel: "Start" })
+                          confirm({ title: "Start Reimbursement", message: `Start reimbursing "${expense.title}"?`, confirmLabel: "Start" })
                             .then((ok) => { if (ok) void runAction(expense.id, () => startReimbursement(expense.id).unwrap()); })
                         }
                       >
@@ -219,7 +220,7 @@ export function ReimbursementQueue() {
                         loading={isProcessing}
                         disabled={Boolean(processingId) && !isProcessing}
                         onClick={() =>
-                          confirm({ title: "Mark as reimbursed", message: `Confirm that ${expense.currency} ${expense.amount.toLocaleString("en-IN")} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark reimbursed" })
+                          confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatCurrency(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark Reimbursed" })
                             .then((ok) => { if (ok) void runAction(expense.id, () => reimburseExpense(expense.id).unwrap()); })
                         }
                       >
@@ -248,11 +249,11 @@ export function ReimbursementQueue() {
 
       <ConfirmDialog
         open={Boolean(cancellingExpense)}
-        title="Cancel expense"
+        title="Cancel Expense"
         message={`Cancel "${cancellingExpense?.title ?? ""}"? It stays as a historical record but will not be reimbursed.`}
-        confirmLabel="Cancel expense"
-        cancelLabel="Keep expense"
-        loadingLabel="Cancelling..."
+        confirmLabel="Cancel Expense"
+        cancelLabel="Keep Expense"
+        loadingLabel="Cancelling…"
         loading={isCancelling}
         reasonLabel="Cancellation reason"
         onConfirm={handleCancel}

@@ -3,7 +3,7 @@ import { Gauge, gaugeClasses } from "@mui/x-charts/Gauge";
 import { BarChart } from "@mui/x-charts/BarChart";
 import type { AnalyticsApprovalMetrics, AnalyticsSummary } from "../types/analytics";
 import { ChartCard } from "../../../components/common/ChartCard";
-import { EXPENSE_STATUS_LABELS } from "../utils/statusLabels";
+import { EXPENSE_STATUS_LABELS } from "../../expenses/types/expense";
 import { useChartColors } from "../utils/chartColors";
 
 interface WorkflowOverviewProps {

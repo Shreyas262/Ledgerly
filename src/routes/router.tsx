@@ -1,3 +1,4 @@
+import { StartPageRedirect } from "./StartPageRedirect";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { lazy } from "react";
@@ -116,6 +117,11 @@ const AuditDetailsPage = lazy(() =>
     default: module.default,
   })),
 );
+const MyTeamPage = lazy(() =>
+  import("../features/userProfile/pages/MyTeamPage").then((module) => ({
+    default: module.MyTeamPage,
+  })),
+);
 const AccountPage = lazy(() =>
   import("../features/userProfile/pages/AccountPage").then((module) => ({
     default: module.AccountPage,
@@ -150,7 +156,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/dashboard" replace />,
+            element: <StartPageRedirect />,
           },
           {
             path: "/dashboard",
@@ -163,7 +169,7 @@ export const router = createBrowserRouter([
             path: "/profile",
             element: <UserProfilePage />,
             handle: {
-              title: "Profile",
+              title: "My Profile",
             },
           },
           {
@@ -293,7 +299,7 @@ export const router = createBrowserRouter([
                 path: "/analytics",
                 element: <AnalyticsPage />,
                 handle: {
-                  title: "Analytics",
+                  title: "Spending Analytics",
                 },
               },
             ],
@@ -312,7 +318,7 @@ export const router = createBrowserRouter([
                   {
                     path: "/admin/organization",
                     element: <OrganizationAdminPage />,
-                    handle: { title: "Organization Administration" },
+                    handle: { title: "Organization Structure" },
                   },
                 ],
               },
@@ -392,7 +398,7 @@ export const router = createBrowserRouter([
                 path: "/audit",
                 element: <AuditPage />,
                 handle: {
-                  title: "Audit",
+                  title: "Audit Log",
                 },
               },
               {
@@ -409,6 +415,13 @@ export const router = createBrowserRouter([
             element: <AccountPage />,
             handle: {
               title: "Account",
+            },
+          },
+          {
+            path: "/account/team",
+            element: <MyTeamPage />,
+            handle: {
+              title: "My Team",
             },
           },
           {

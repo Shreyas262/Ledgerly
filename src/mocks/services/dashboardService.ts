@@ -1,3 +1,4 @@
+import { formatDate } from "../../utils/format";
 import type { DashboardSummary } from "../../features/dashboard/types/dashboard";
 import type { ExpenseStatus, ExpenseType } from "../../features/expenses/types/expense";
 
@@ -138,12 +139,9 @@ export function buildDashboardSummary(
     spendingTrend: Array.from(monthlyTotals.entries())
       .sort(([first], [second]) => first.localeCompare(second))
       .map(([monthKey, amount]) => {
-        const [year, month] = monthKey.split("-").map(Number);
+        // Same month names as every other date in the app ("Sep 2026").
         return {
-          month: new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(
-            "en-IN",
-            { month: "short", year: "numeric", timeZone: "UTC" },
-          ),
+          month: formatDate(`${monthKey}-01`).replace(/^\d+ /, ""),
           amount,
         };
       }),

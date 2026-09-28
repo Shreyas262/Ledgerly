@@ -2,7 +2,7 @@ import { apiError } from "../services/apiError";
 import { applyCollectionQuery, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
 
-import type { ExpenseType } from "../../features/expenses/types/expense";
+import { EXPENSE_TYPE_LABELS, type ExpenseType } from "../../features/expenses/types/expense";
 import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import type {
   BudgetStatus,
@@ -121,7 +121,7 @@ export const budgetsHandlers = [
   // created only while an active budget covers the current date.
   http.get("/api/budgets/active-period", async ({ request }) => {
     const principal = await resolveAuthenticatedPrincipal(request);
-    if (!principal) return apiError(401, "Authentication required.");
+    if (!principal) return apiError(401, "Please sign in to continue.");
     const { budget, allowed, reason } = await getExpenseCreationEligibility(principal);
     return HttpResponse.json({
       data: budget ? { name: budget.name, startDate: budget.startDate, endDate: budget.endDate } : null,
@@ -333,7 +333,7 @@ export const budgetsHandlers = [
       entityId: budget.id,
       newState: budget.status,
       metadata: { rolledOverFrom: source.id, amount: budget.amount, departmentAllocations: copiedDepartments.length, teamAllocations: copiedTeams.length, expenseTypeBudgets: copiedTypes.length },
-      description: `Started ${budget.name} from ${source.name}.`,
+      description: `Started the next budget period, ${budget.name}, from ${source.name}.`,
     }, (transaction) => {
       transaction.objectStore("budgets").put(budget);
       for (const item of copiedDepartments) transaction.objectStore("departmentBudgetAllocations").put(item);
@@ -520,7 +520,7 @@ export const budgetsHandlers = [
       entityType: "BUDGET",
       entityId: typeBudget.id,
       metadata: { organizationBudgetId: budget.id, teamId: teamAllocation.teamId, expenseType: body.expenseType, previousAmount: existing?.amount, newAmount: body.amount },
-      description: `Set the ${body.expenseType} budget for a team to ${money(body.amount)}.`,
+      description: `Set the ${EXPENSE_TYPE_LABELS[body.expenseType as ExpenseType] ?? body.expenseType} budget for ${(await getRecord<{ name: string }>("teams", teamAllocation.teamId))?.name ?? "a team"} to ${money(body.amount)}.`,
     }, (transaction) => transaction.objectStore("expenseTypeBudgets").put(typeBudget));
 
     return HttpResponse.json(await buildBudgetView(budget, access.principal));

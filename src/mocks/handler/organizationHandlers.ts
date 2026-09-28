@@ -149,7 +149,7 @@ export const organizationHandlers = [
     if (!authorization.allowed) return authorizationError(authorization);
     const body = (await request.json()) as Partial<DepartmentRecord>;
     const name = validateName(body.name);
-    if (!name || (body.status !== "active" && body.status !== "inactive")) return apiError(400, "Invalid department.");
+    if (!name || (body.status !== "active" && body.status !== "inactive")) return apiError(400, "Enter a department name and a valid status.");
     const departments = await listRecords<DepartmentRecord>("departments");
     if (departments.some((item) => item.id !== existing.id && item.organizationId === existing.organizationId && item.name.toLowerCase() === name.toLowerCase())) {
       return apiError(409, "A department with this name already exists.");
@@ -171,7 +171,7 @@ export const organizationHandlers = [
   http.delete(`${API_BASE_URL}/departments/:id`, async ({ params, request }) => {
     const departmentId = String(params.id);
     const existing = await getRecord<DepartmentRecord>("departments", departmentId);
-    if (!existing) return apiError(404, "Resource not found.");
+    if (!existing) return apiError(404, "Department not found.");
     const authorization = await authorizeRequest(request, { permission: "departments.manage", scope: "ORGANIZATION", resource: { organizationId: existing.organizationId } });
     if (!authorization.allowed) return authorizationError(authorization);
 
@@ -184,7 +184,7 @@ export const organizationHandlers = [
       listRecords<DepartmentBudgetReference>("expenseTypeBudgets"),
     ]);
     if (teams.some((item) => item.departmentId === departmentId) || users.some((item) => item.departmentId === departmentId) || expenses.some((item) => item.departmentId === departmentId) || budgets.some((item) => item.departmentId === departmentId) || departmentBudgetAllocations.some((item) => item.departmentId === departmentId) || expenseTypeBudgets.some((item) => item.departmentId === departmentId)) {
-      return apiError(409, "Department is still referenced by organizational or business resources.");
+      return apiError(409, "This department cannot be deleted while users, teams, expenses or budgets refer to it. Deactivate it instead.");
     }
 
     await runAuditedTransaction(["departments"], {
@@ -208,7 +208,7 @@ export const organizationHandlers = [
     const name = validateName(body.name);
     if (!name || !body.departmentId) return apiError(400, "Team name and department are required.");
     const department = await getRecord<DepartmentRecord>("departments", body.departmentId);
-    if (!department || department.organizationId !== authorization.principal.organizationId || department.status !== "active") return apiError(400, "Invalid department.");
+    if (!department || department.organizationId !== authorization.principal.organizationId || department.status !== "active") return apiError(400, "Select an active department from your organization.");
     const teams = await listRecords<TeamRecord>("teams");
     if (teams.some((item) => item.departmentId === department.id && item.name.toLowerCase() === name.toLowerCase())) return apiError(409, "A team with this name already exists in the department.");
     const now = new Date().toISOString();
@@ -227,9 +227,9 @@ export const organizationHandlers = [
     if (!authorization.allowed) return authorizationError(authorization);
     const body = (await request.json()) as Partial<TeamRecord>;
     const name = validateName(body.name);
-    if (!name || !body.departmentId || (body.status !== "active" && body.status !== "inactive")) return apiError(400, "Invalid team.");
+    if (!name || !body.departmentId || (body.status !== "active" && body.status !== "inactive")) return apiError(400, "Enter a team name, a department and a valid status.");
     const department = await getRecord<DepartmentRecord>("departments", body.departmentId);
-    if (!department || department.organizationId !== existing.organizationId || department.status !== "active") return apiError(400, "Invalid department.");
+    if (!department || department.organizationId !== existing.organizationId || department.status !== "active") return apiError(400, "Select an active department from your organization.");
     const teams = await listRecords<TeamRecord>("teams");
     if (teams.some((item) => item.id !== existing.id && item.departmentId === department.id && item.name.toLowerCase() === name.toLowerCase())) return apiError(409, "A team with this name already exists in the department.");
     const members = await listRecordsByIndex<UserReference>("users", "teamId", existing.id);
@@ -257,11 +257,11 @@ export const organizationHandlers = [
   http.delete(`${API_BASE_URL}/teams/:id`, async ({ params, request }) => {
     const teamId = String(params.id);
     const existing = await getRecord<TeamRecord>("teams", teamId);
-    if (!existing) return apiError(404, "Resource not found.");
+    if (!existing) return apiError(404, "Team not found.");
     const authorization = await authorizeRequest(request, { permission: "teams.manage", scope: "ORGANIZATION", resource: { organizationId: existing.organizationId } });
     if (!authorization.allowed) return authorizationError(authorization);
     const [users, expenses] = await Promise.all([listRecords<UserReference>("users"), listRecords<ExpenseReference>("expenses")]);
-    if (users.some((item) => item.teamId === teamId) || expenses.some((item) => item.teamId === teamId)) return apiError(409, "Team is still referenced by users or expenses.");
+    if (users.some((item) => item.teamId === teamId) || expenses.some((item) => item.teamId === teamId)) return apiError(409, "This team cannot be deleted while users or expenses refer to it. Deactivate it instead.");
     await runAuditedTransaction(["teams"], {
       organizationId: existing.organizationId, actorId: authorization.principal.userId, action: "TEAM_DELETED", entityType: "TEAM", entityId: existing.id, previousState: existing.status, newState: "deleted", description: `Deleted team ${existing.name}.`,
     }, (transaction) => transaction.objectStore("teams").delete(teamId));

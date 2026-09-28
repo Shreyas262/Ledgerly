@@ -75,8 +75,8 @@ export function AnalyticsPage() {
         title="Spending Analytics"
         chips={summary && <Chip size="small" color="primary" variant="outlined" label={scopeLabel(scope, summary)} />}
         description={summary
-          ? `${presetLabel === "Custom" ? "" : `${presetLabel} · `}${formatDate(summary.filters.from!)} – ${formatDate(summary.filters.to!)}. Spending counts reimbursed expenses only.`
-          : "Analyze reimbursed spending and approval activity."}
+          ? `${presetLabel === "Custom" ? "" : `${presetLabel} · `}${formatDate(summary.filters.from!)} – ${formatDate(summary.filters.to!)}. Spend includes reimbursed expenses only.`
+          : "Analyze spending and approval activity."}
         actions={
           <Button
             variant="outlined"
@@ -104,7 +104,7 @@ export function AnalyticsPage() {
         <>
           {summary.kpis.expenseCount === 0 && (
             <Alert severity="info">
-              No reimbursed expenses match these filters. Workflow figures below still include expenses that are in progress.
+              No spend matches these filters. The approval workflow figures below still include expenses that are in progress.
             </Alert>
           )}
 
@@ -137,7 +137,7 @@ export function AnalyticsPage() {
             </Grid>
             <Grid size={{ xs: 12, sm: 6, lg: 2.4 }}>
               <KpiTrendCard
-                label="Reimbursed expenses"
+                label="Expenses"
                 value={String(summary.kpis.expenseCount)}
                 current={summary.kpis.expenseCount}
                 previous={summary.previousKpis.expenseCount}
@@ -146,7 +146,7 @@ export function AnalyticsPage() {
             </Grid>
             <Grid size={{ xs: 12, sm: 12, lg: 2.4 }}>
               <KpiTrendCard
-                label="Avg. time to reimburse"
+                label="Average time to reimbursement"
                 value={summary.kpis.averageDaysToReimburse === null ? "—" : `${summary.kpis.averageDaysToReimburse.toFixed(1)} days`}
                 current={summary.kpis.averageDaysToReimburse}
                 previous={summary.previousKpis.averageDaysToReimburse}
@@ -174,7 +174,7 @@ export function AnalyticsPage() {
                 <Grid size={{ xs: 12, md: 6 }}>
                   <DimensionBarChart
                     title="Spending by department"
-                    subtitle="Reimbursed spend per department"
+                    subtitle="Spend per department"
                     data={summary.departmentSpending}
                     emptyMessage="No department spending in the selected period."
                   />
@@ -182,7 +182,7 @@ export function AnalyticsPage() {
                 <Grid size={{ xs: 12, md: 6 }}>
                   <DimensionBarChart
                     title="Spending by team"
-                    subtitle="Reimbursed spend per team"
+                    subtitle="Spend per team"
                     data={summary.teamSpending}
                     emptyMessage="No team spending in the selected period."
                   />

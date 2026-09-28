@@ -11,6 +11,8 @@ import { workflowHandlers } from "./handler/workflowHandlers";
 import { documentHandlers } from "./handler/documentHandlers";
 import { dashboardHandlers } from "./handler/dashboardHandlers";
 import { analyticsHandlers } from "./handler/analyticsHandlers";
+import { teamHandlers } from "./handler/teamHandlers";
+import { notificationHandlers } from "./handler/notificationHandlers";
 
 export const handlers = [
   authGuardHandler,
@@ -26,4 +28,6 @@ export const handlers = [
   ...budgetsHandlers,
   ...policiesHandlers,
   ...auditHandlers,
+  ...teamHandlers,
+  ...notificationHandlers,
 ];

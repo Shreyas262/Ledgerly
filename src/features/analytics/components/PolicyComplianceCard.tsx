@@ -29,7 +29,7 @@ export function PolicyComplianceCard({ compliance }: PolicyComplianceCardProps) 
   return (
     <ChartCard
       title="Policy compliance"
-      subtitle="Policy checks on expenses in the period: submitted expenses and blocked submission attempts"
+      subtitle="Policy check outcomes for expenses dated in the selected period"
       isEmpty={isEmpty}
       emptyMessage="No policy checks in the selected period."
       minHeight={160}

@@ -1,3 +1,5 @@
+import { formatDate } from "../../../utils/format";
+import { EXPENSE_STATUS_LABELS } from "../types/expense";
 import {
   Box,
   Button,
@@ -36,42 +38,42 @@ const statusConfig: Record<
   StatusConfig
 > = {
   draft: {
-    label: "Draft",
+    label: EXPENSE_STATUS_LABELS.draft,
     color: "default",
   },
 
   submitted: {
-    label: "Submitted",
+    label: EXPENSE_STATUS_LABELS.submitted,
     color: "info",
   },
 
   under_review: {
-    label: "Under Review",
+    label: EXPENSE_STATUS_LABELS.under_review,
     color: "warning",
   },
 
   rejected: {
-    label: "Rejected",
+    label: EXPENSE_STATUS_LABELS.rejected,
     color: "error",
   },
 
   approved: {
-    label: "Approved",
+    label: EXPENSE_STATUS_LABELS.approved,
     color: "success",
   },
 
   reimbursement_pending: {
-    label: "Reimbursement Pending",
+    label: EXPENSE_STATUS_LABELS.reimbursement_pending,
     color: "warning",
   },
 
   reimbursed: {
-    label: "Reimbursed",
+    label: EXPENSE_STATUS_LABELS.reimbursed,
     color: "success",
   },
 
   cancelled: {
-    label: "Cancelled",
+    label: EXPENSE_STATUS_LABELS.cancelled,
     color: "default",
   },
 };
@@ -154,7 +156,7 @@ export function ExpenseCard({
               variant="body2"
               color="text.secondary"
             >
-              {expense.expenseDate}
+              {formatDate(expense.expenseDate)}
             </Typography>
           </Stack>
 

@@ -1,12 +1,17 @@
 import {
+  GroupsOutlined,
   HistoryOutlined,
   PersonOutlined,
   SettingsOutlined,
 } from "@mui/icons-material";
 
 import { SectionHub } from "../../../components/navigation/SectionHub";
+import { useAuth } from "../../auth/context/AuthContext";
 
 export function AccountPage() {
+  const { user } = useAuth();
+  const isFinance = user?.role === "finance";
+
   return (
     <SectionHub
       title="Account"
@@ -17,6 +22,14 @@ export function AccountPage() {
           description: "View and update your name and email.",
           path: "/profile",
           icon: <PersonOutlined />,
+        },
+        {
+          label: isFinance ? "My Department" : "My Team",
+          description: isFinance
+            ? "Members of your authorized departments and who reviews your expenses."
+            : "Your team members and who reviews your expenses.",
+          path: "/account/team",
+          icon: <GroupsOutlined />,
         },
         {
           label: "Activity",

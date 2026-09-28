@@ -21,7 +21,7 @@ export function DimensionBarChart({ title, subtitle, data, emptyMessage }: Dimen
   return (
     <ChartCard
       title={title}
-      subtitle={data.length > MAX_BARS ? `${subtitle} · top ${MAX_BARS} of ${data.length}` : subtitle}
+      subtitle={data.length > MAX_BARS ? `${subtitle} (top ${MAX_BARS} of ${data.length})` : subtitle}
       isEmpty={rows.length === 0}
       emptyMessage={emptyMessage}
       minHeight={104}
@@ -31,7 +31,7 @@ export function DimensionBarChart({ title, subtitle, data, emptyMessage }: Dimen
         layout="horizontal"
         yAxis={[{ scaleType: "band", data: rows.map((row) => row.dimensionName), width: 120 }]}
         xAxis={[{ valueFormatter: formatCompactCurrency }]}
-        series={[{ data: rows.map((row) => row.amount), color: series, label: "Reimbursed spend", valueFormatter: formatChartCurrency }]}
+        series={[{ data: rows.map((row) => row.amount), color: series, label: "Spend", valueFormatter: formatChartCurrency }]}
         grid={{ vertical: true }}
         hideLegend
         borderRadius={6}

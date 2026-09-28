@@ -18,10 +18,10 @@ export function SpendingTrend({
 
   return (
     <ChartCard
-      title="Spending Trend"
-      subtitle="Monthly expense spending"
+      title="Spending trend"
+      subtitle="Spend per month"
       isEmpty={data.length === 0}
-      emptyMessage="There are no expenses in the selected date range."
+      emptyMessage="No spend in the selected date range."
       minHeight={220}
     >
       <Stack

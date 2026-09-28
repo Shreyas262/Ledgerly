@@ -25,7 +25,7 @@ export function CreatePolicyPage() {
   const handleSubmit = async (
     values: CreateExpensePolicyRequest,
   ) => {
-    if (!(await confirm({ title: "Create policy", message: `Create the policy "${values.name}"?`, confirmLabel: "Create" }))) return;
+    if (!(await confirm({ title: "Create Policy", message: `Create the policy "${values.name}"?`, confirmLabel: "Create" }))) return;
     try {
       const policy = await createPolicy(values).unwrap();
 

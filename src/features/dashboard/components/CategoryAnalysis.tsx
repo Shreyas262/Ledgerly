@@ -19,10 +19,10 @@ export function CategoryAnalysis({
 
   return (
     <ChartCard
-      title="Spending by Expense Type"
-      subtitle="Breakdown of expenses by expense type"
+      title="Spending by expense type"
+      subtitle="Share of spend by expense type"
       isEmpty={data.length === 0}
-      emptyMessage="There are no expenses in the selected date range."
+      emptyMessage="No spend in the selected date range."
       minHeight={220}
     >
       <Stack spacing={2}>

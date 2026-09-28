@@ -35,11 +35,11 @@ export function KpiTrendCard({ label, value, current, previous, lowerIsBetter, s
               <>
                 <Icon fontSize="small" color={favourable === null ? "disabled" : favourable ? "success" : "error"} />
                 <Typography variant="caption" color="text.secondary">
-                  {direction === "flat" ? "No change" : `${Math.abs(change).toFixed(0)}% ${direction === "up" ? "higher" : "lower"}`} than previous period
+                  {direction === "flat" ? "No change" : `${Math.abs(change).toFixed(0)}% ${direction === "up" ? "higher" : "lower"}`} than the previous period
                 </Typography>
               </>
             ) : (
-              <Typography variant="caption" color="text.secondary">No previous-period data</Typography>
+              <Typography variant="caption" color="text.secondary">No data for the previous period</Typography>
             )}
           </Stack>
           {sparkline && sparkline.length > 1 && (

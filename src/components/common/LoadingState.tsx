@@ -5,7 +5,7 @@ interface LoadingStateProps {
 }
 
 export function LoadingState({
-  message = "Loading...",
+  message = "Loading…",
 }: LoadingStateProps) {
   return (
     <Box

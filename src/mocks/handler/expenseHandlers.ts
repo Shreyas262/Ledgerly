@@ -1,4 +1,5 @@
 import { apiError } from "../services/apiError";
+import { formatDate } from "../../utils/format";
 import { applyCollectionQueryResult, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
 import type { ExpenseType } from "../../features/expenses/types/expense";
@@ -46,7 +47,7 @@ async function checkBudgetPeriod(
     if (!budget) return null;
   }
   if (expenseDate < budget.startDate || expenseDate > budget.endDate) {
-    const message = `The expense date must fall within the active budget period (${budget.startDate} to ${budget.endDate}).`;
+    const message = `The expense date must fall within the active budget period (${formatDate(budget.startDate)} to ${formatDate(budget.endDate)}).`;
     return apiError(422, message, "OUTSIDE_BUDGET_PERIOD", { fieldErrors: { expenseDate: message } });
   }
   return null;
@@ -208,7 +209,7 @@ export const expensesHandlers = [
     const scope = (requestedScope ?? resolveExpenseScope(principal)) as AuthorizationScope;
 
     if (!EXPENSE_SCOPES.has(scope)) {
-      return apiError(422, "Invalid expense scope.", "INVALID_FILTER");
+      return apiError(422, "The requested expense view is not valid.", "INVALID_FILTER");
     }
 
     // Filters may narrow the authorized scope but never expand it (§20.5).
@@ -271,7 +272,7 @@ export const expensesHandlers = [
 
     const body = validateExpenseBody(await request.json());
     if ("fieldErrors" in body) {
-      return apiError(422, "Expense validation failed.", "VALIDATION_ERROR", { fieldErrors: body.fieldErrors });
+      return apiError(422, "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors: body.fieldErrors });
     }
 
     const periodError = await checkBudgetPeriod(authorization.principal, body.expenseDate, true);
@@ -347,7 +348,7 @@ export const expensesHandlers = [
 
     const body = validateExpenseBody(await request.json());
     if ("fieldErrors" in body) {
-      return apiError(422, "Expense validation failed.", "VALIDATION_ERROR", { fieldErrors: body.fieldErrors });
+      return apiError(422, "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors: body.fieldErrors });
     }
 
     const periodError = await checkBudgetPeriod(existingExpense, body.expenseDate, false);

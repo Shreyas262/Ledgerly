@@ -11,19 +11,19 @@ export function ApprovalMetrics({
   metrics,
 }: ApprovalMetricsProps) {
   const rates = [
-    { label: "Approval Rate", value: metrics.approvalRate, color: "success" as const },
-    { label: "Rejection Rate", value: metrics.rejectionRate, color: "error" as const },
+    { label: "Approval rate", value: metrics.approvalRate, color: "success" as const },
+    { label: "Rejection rate", value: metrics.rejectionRate, color: "error" as const },
   ];
 
   const counts = [
-    { label: "Pending Review", value: metrics.pendingReview },
-    { label: "Total Reviewed", value: metrics.totalReviewed },
+    { label: "Pending review", value: metrics.pendingReview },
+    { label: "Total reviewed", value: metrics.totalReviewed },
   ];
 
   return (
     <ChartCard
-      title="Approval Metrics"
-      subtitle="Overview of expense approval activity"
+      title="Approval metrics"
+      subtitle="Review outcomes for your submitted expenses"
       minHeight={0}
     >
       <Stack spacing={2.5}>

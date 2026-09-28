@@ -67,7 +67,7 @@ export function RolesPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   async function handleDelete(roleId: ID) {
-    if (!(await confirm({ title: "Delete role", message: "Delete this role? This cannot be undone.", confirmLabel: "Delete", destructive: true }))) {
+    if (!(await confirm({ title: "Delete Role", message: "Delete this role? This cannot be undone.", confirmLabel: "Delete", destructive: true }))) {
       return;
     }
     try {
@@ -151,7 +151,7 @@ export function RolesPage() {
                               onClick={() => handleDelete(role.id)}
                               sx={{ minWidth: 120 }}
                             >
-                              {isDeleting && deletingRoleId === role.id ? "Deleting..." : "Delete"}
+                              {isDeleting && deletingRoleId === role.id ? "Deleting…" : "Delete"}
                             </Button>
                           </span>
                         </Tooltip>

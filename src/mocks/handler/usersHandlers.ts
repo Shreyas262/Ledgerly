@@ -62,7 +62,7 @@ async function resolveFinanceDepartmentIds(
   if (roleName !== "finance") return { ids: undefined };
   if (value === undefined) return { ids: current };
   if (!Array.isArray(value) || value.some((id) => typeof id !== "string")) {
-    return { error: "Authorized departments must be a list of departments." };
+    return { error: "Select authorized departments from the list." };
   }
 
   const ids = Array.from(new Set(value as string[]));
@@ -137,7 +137,7 @@ export const usersHandlers = [
     if (typeof body.departmentId !== "string" || !body.departmentId) fieldErrors.departmentId = "Department is required.";
     if (typeof body.teamId !== "string" || !body.teamId) fieldErrors.teamId = "Team is required.";
     if (Object.keys(fieldErrors).length) {
-      return apiError(422, "User validation failed.", "VALIDATION_ERROR", { fieldErrors });
+      return apiError(422, "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors });
     }
 
     const email = body.email.trim();
@@ -154,7 +154,7 @@ export const usersHandlers = [
     const department = await getRecord<{ id: string; organizationId: string; status?: string }>("departments", body.departmentId!);
     const team = await getRecord<{ id: string; organizationId: string; departmentId: string; status?: string }>("teams", body.teamId!);
     if (!role || role.organizationId !== authorization.principal.organizationId || !department || department.organizationId !== authorization.principal.organizationId || !team || team.organizationId !== authorization.principal.organizationId || team.departmentId !== department.id || department.status === "inactive" || team.status === "inactive") {
-      return apiError(422, "Invalid role, department, or team assignment.");
+      return apiError(422, "Select a valid role, and a team that belongs to the selected active department.");
     }
 
     const financeAuthority = await resolveFinanceDepartmentIds(
@@ -253,9 +253,9 @@ export const usersHandlers = [
       const fieldErrors: Record<string, string> = {};
       if (typeof body.name !== "string" || !body.name.trim()) fieldErrors.name = "Name is required.";
       if (typeof body.email !== "string" || !EMAIL_PATTERN.test(body.email.trim())) fieldErrors.email = "A valid email address is required.";
-      if (body.password !== undefined && typeof body.password !== "string") fieldErrors.password = "Password must be a string.";
+      if (body.password !== undefined && typeof body.password !== "string") fieldErrors.password = "Enter a valid password.";
       if (Object.keys(fieldErrors).length) {
-        return apiError(422, "User validation failed.", "VALIDATION_ERROR", { fieldErrors });
+        return apiError(422, "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors });
       }
 
       const email = body.email.trim();
@@ -278,7 +278,7 @@ export const usersHandlers = [
       const department = await getRecord<{ id: string; organizationId: string; status?: string }>("departments", body.departmentId ?? currentUser.departmentId);
       const team = await getRecord<{ id: string; organizationId: string; departmentId: string; status?: string }>("teams", body.teamId ?? currentUser.teamId);
       if (!role || role.organizationId !== currentUser.organizationId || !department || department.organizationId !== currentUser.organizationId || !team || team.organizationId !== currentUser.organizationId || team.departmentId !== department.id || department.status === "inactive" || team.status === "inactive") {
-        return apiError(422, "Invalid role, department, or team assignment.");
+        return apiError(422, "Select a valid role, and a team that belongs to the selected active department.");
       }
 
       const financeAuthority = await resolveFinanceDepartmentIds(
@@ -294,8 +294,8 @@ export const usersHandlers = [
       }
 
       if (currentUser.id === authorization.principal.userId) {
-        if (role.id !== currentUser.roleId) return apiError(409, "You can't change your own role.", "SELF_MODIFICATION");
-        if (body.status === "inactive") return apiError(409, "You can't deactivate your own account.", "SELF_MODIFICATION");
+        if (role.id !== currentUser.roleId) return apiError(409, "You cannot change your own role.", "SELF_MODIFICATION");
+        if (body.status === "inactive") return apiError(409, "You cannot deactivate your own account.", "SELF_MODIFICATION");
       }
 
       if (role.name.toLowerCase() === "manager" && (body.status ?? currentUser.status) !== "inactive") {
@@ -371,9 +371,9 @@ export const usersHandlers = [
     const authorization = await authorizeRequest(request, { permission: "users.update", scope: "ORGANIZATION", resource: { organizationId: user.organizationId } });
     if (!authorization.allowed) return authorizationError(authorization);
     const body = (await request.json()) as { status?: "active" | "inactive" };
-    if (body.status !== "active" && body.status !== "inactive") return apiError(422, "Invalid status.");
+    if (body.status !== "active" && body.status !== "inactive") return apiError(422, "Status must be Active or Inactive.");
     if (user.id === authorization.principal.userId && body.status === "inactive") {
-      return apiError(409, "You can't deactivate your own account.", "SELF_MODIFICATION");
+      return apiError(409, "You cannot deactivate your own account.", "SELF_MODIFICATION");
     }
     if (user.role === "admin" && user.status !== "inactive" && body.status === "inactive") {
       const activeAdmins = (await listRecords<MockUser>("users")).filter((item) => item.organizationId === user.organizationId && item.role === "admin" && item.status === "active");
@@ -393,7 +393,7 @@ export const usersHandlers = [
     const user = await getRecord<MockUser>("users", userId);
 
     if (!user) {
-      return apiError(404, "Resource not found.");
+      return apiError(404, "User not found.");
     }
 
     const authorization = await authorizeRequest(request, {
@@ -407,11 +407,11 @@ export const usersHandlers = [
     }
 
     if (user.status === "deleted") {
-      return apiError(404, "Resource not found.");
+      return apiError(404, "User not found.");
     }
 
     if (user.id === authorization.principal.userId) {
-      return apiError(409, "You can't delete your own account.", "SELF_MODIFICATION");
+      return apiError(409, "You cannot delete your own account.", "SELF_MODIFICATION");
     }
 
     if (user.role === "admin" && user.status === "active") {

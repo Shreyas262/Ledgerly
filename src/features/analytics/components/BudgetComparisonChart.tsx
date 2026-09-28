@@ -29,10 +29,10 @@ export function BudgetComparisonChart({ comparison }: BudgetComparisonChartProps
 
   return (
     <ChartCard
-      title="Budget vs actual"
+      title="Budget vs. actual spend"
       subtitle={comparison
-        ? `${comparison.budgetName} · ${formatDate(comparison.startDate)} – ${formatDate(comparison.endDate)} · by ${LEVEL_LABEL[comparison.level]} · whole budget period`
-        : "Allocation against reimbursed spend"}
+        ? `${comparison.budgetName} · ${formatDate(comparison.startDate)} – ${formatDate(comparison.endDate)} · by ${LEVEL_LABEL[comparison.level]} · entire budget period`
+        : "Allocated budget compared with spend"}
       isEmpty={rows.length === 0}
       emptyMessage={comparison
         ? `No ${LEVEL_LABEL[comparison.level]} allocations in the active budget.`
@@ -52,7 +52,7 @@ export function BudgetComparisonChart({ comparison }: BudgetComparisonChartProps
           xAxis={[{ valueFormatter: formatCompactCurrency }]}
           series={[
             { label: "Allocated", data: rows.map((row) => row.allocated), color: colors.reference, valueFormatter: formatChartCurrency },
-            { label: "Reimbursed", data: rows.map((row) => row.spent), color: colors.series, valueFormatter: formatChartCurrency },
+            { label: "Spent", data: rows.map((row) => row.spent), color: colors.series, valueFormatter: formatChartCurrency },
           ]}
           grid={{ vertical: true }}
           borderRadius={4}

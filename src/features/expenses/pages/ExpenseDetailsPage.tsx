@@ -1,4 +1,7 @@
 import { PolicyEvaluationPanel } from "../../policies/components/PolicyEvaluationPanel";
+import { formatCurrency } from "../../../utils/currency";
+import { formatDate } from "../../../utils/format";
+import { EXPENSE_STATUS_LABELS } from "../types/expense";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import {
   Alert,
@@ -41,7 +44,7 @@ import { ErrorState } from "../../../components/common/ErrorState";
 import { ForbiddenPage } from "../../auth/pages/ForbiddenPage";
 import { isForbiddenError } from "../../auth/utils/authErrors";
 
-import { EXPENSE_TYPE_LABELS, type ExpenseStatus } from "../types/expense";
+import { EXPENSE_TYPE_LABELS } from "../types/expense";
 import { isStatus } from "../../../services/api/apiErrors";
 import { DocumentPanel } from "../../documents/components/DocumentPanel";
 import { Amount } from "../../../components/common/Amount";
@@ -62,16 +65,6 @@ interface ExpenseDetailsPageProps {
   mode?: ExpenseDetailsMode;
 }
 
-const statusLabels: Record<ExpenseStatus, string> = {
-  draft: "Draft",
-  submitted: "Submitted",
-  under_review: "Under Review",
-  rejected: "Rejected",
-  approved: "Approved",
-  reimbursement_pending: "Reimbursement Pending",
-  reimbursed: "Reimbursed",
-  cancelled: "Cancelled",
-};
 
 export function ExpenseDetailsPage({
   mode = "default",
@@ -168,7 +161,7 @@ export function ExpenseDetailsPage({
   const policyResult = expense.policyEvaluation;
 
   const handleSubmitExpense = async () => {
-    if (!(await confirm({ title: "Submit expense", message: `Submit "${expense.title}" for approval? You won't be able to edit it while it is being reviewed.`, confirmLabel: "Submit" }))) return;
+    if (!(await confirm({ title: "Submit Expense", message: `Submit "${expense.title}" for approval? You will not be able to edit it while it is being reviewed.`, confirmLabel: "Submit" }))) return;
     try {
       const submitted = await submitExpense(expense.id).unwrap();
       setBudgetWarnings(submitted.budgetWarnings ?? []);
@@ -178,7 +171,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleStartReview = async () => {
-    if (!(await confirm({ title: "Start review", message: `Start reviewing "${expense.title}"?`, confirmLabel: "Start review" }))) return;
+    if (!(await confirm({ title: "Start Review", message: `Start reviewing "${expense.title}"?`, confirmLabel: "Start Review" }))) return;
     try {
       await startExpenseReview(expense.id).unwrap();
     } catch {
@@ -187,7 +180,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleApproveExpense = async () => {
-    if (!(await confirm({ title: "Approve expense", message: `Approve "${expense.title}" for ${expense.currency} ${expense.amount.toLocaleString("en-IN")}? It moves to Finance for reimbursement.`, confirmLabel: "Approve" }))) return;
+    if (!(await confirm({ title: "Approve Expense", message: `Approve "${expense.title}" for ${formatCurrency(expense.amount)}? It moves to Finance for reimbursement.`, confirmLabel: "Approve" }))) return;
     try {
       await approveExpense(expense.id).unwrap();
     } catch {
@@ -216,7 +209,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleRestoreExpense = async () => {
-    if (!(await confirm({ title: "Restore to draft", message: "Move this rejected expense back to draft so you can fix and resubmit it?", confirmLabel: "Restore" }))) return;
+    if (!(await confirm({ title: "Restore to Draft", message: "Move this rejected expense back to draft so you can fix and resubmit it?", confirmLabel: "Restore" }))) return;
     try {
       await restoreExpense(expense.id).unwrap();
     } catch {
@@ -225,7 +218,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleStartReimbursement = async () => {
-    if (!(await confirm({ title: "Start reimbursement", message: `Start reimbursing "${expense.title}"?`, confirmLabel: "Start" }))) return;
+    if (!(await confirm({ title: "Start Reimbursement", message: `Start reimbursing "${expense.title}"?`, confirmLabel: "Start" }))) return;
     try {
       await startReimbursement(expense.id).unwrap();
     } catch {
@@ -234,7 +227,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleReimburseExpense = async () => {
-    if (!(await confirm({ title: "Mark as reimbursed", message: `Confirm that ${expense.currency} ${expense.amount.toLocaleString("en-IN")} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark reimbursed" }))) return;
+    if (!(await confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatCurrency(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark Reimbursed" }))) return;
     try {
       await reimburseExpense(expense.id).unwrap();
     } catch {
@@ -340,7 +333,7 @@ export function ExpenseDetailsPage({
 
       {budgetWarnings.length > 0 && (
         <Alert severity="warning" onClose={() => setBudgetWarnings([])}>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>Submitted — budget notice</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>Budget notice</Typography>
           {budgetWarnings.map((warning) => (
             <Typography key={warning} variant="body2">{warning}</Typography>
           ))}
@@ -372,7 +365,7 @@ export function ExpenseDetailsPage({
               Cancelled
               {expense.cancelledByName ? ` by ${expense.cancelledByName}` : ""}
               {expense.cancelledAt
-                ? ` on ${new Date(expense.cancelledAt).toLocaleDateString("en-IN")}`
+                ? ` on ${formatDate(expense.cancelledAt)}`
                 : ""}
             </Typography>
             {expense.cancellationReason && (
@@ -404,7 +397,7 @@ export function ExpenseDetailsPage({
               </Typography>
             </Stack>
 
-            <Chip label={statusLabels[expense.status]} size="small" />
+            <Chip label={EXPENSE_STATUS_LABELS[expense.status]} size="small" />
           </Stack>
 
           {/* Policy check (§21.10) */}
@@ -551,7 +544,7 @@ export function ExpenseDetailsPage({
                 Expense Date
               </Typography>
 
-              <Typography variant="body1">{expense.expenseDate}</Typography>
+              <Typography variant="body1">{formatDate(expense.expenseDate)}</Typography>
             </Stack>
 
             <Stack spacing={0.5}>
@@ -642,9 +635,7 @@ export function ExpenseDetailsPage({
                         Reimbursed on
                       </Typography>
                       <Typography variant="body1">
-                        {new Date(
-                          expense.reimbursement.processedAt,
-                        ).toLocaleDateString("en-IN")}
+                        {formatDate(expense.reimbursement.processedAt)}
                       </Typography>
                     </Stack>
                   )}
@@ -696,7 +687,7 @@ export function ExpenseDetailsPage({
 
             <TextField
               label="Rejection reason"
-              placeholder="Enter the reason..."
+              placeholder="Enter the reason"
               value={rejectionReason}
               onChange={(event) => setRejectionReason(event.target.value)}
               multiline
@@ -737,14 +728,14 @@ export function ExpenseDetailsPage({
       </Dialog>
       <ConfirmDialog
         open={isCancelDialogOpen}
-        title="Cancel expense"
+        title="Cancel Expense"
         message="Cancelling keeps the expense as a historical record, but it can no longer be submitted or processed. Continue?"
         reasonLabel={
           expense.status === "draft" ? undefined : "Cancellation reason"
         }
-        confirmLabel="Cancel expense"
-        cancelLabel="Keep expense"
-        loadingLabel="Cancelling..."
+        confirmLabel="Cancel Expense"
+        cancelLabel="Keep Expense"
+        loadingLabel="Cancelling…"
         loading={isCancelling}
         onConfirm={handleCancelExpense}
         onCancel={() => setIsCancelDialogOpen(false)}

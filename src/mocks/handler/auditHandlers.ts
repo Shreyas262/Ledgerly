@@ -30,7 +30,7 @@ export const auditHandlers = [
     const principal = await resolveAuthenticatedPrincipal(request);
 
     if (!principal) {
-      return apiError(401, "Authentication required.");
+      return apiError(401, "Please sign in to continue.");
     }
 
     const events = await listRecordsByIndex<AuditEvent>(

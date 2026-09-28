@@ -131,7 +131,7 @@ async function validatePolicyBody(body: unknown, organizationId: string): Promis
   let departmentIds: string[] = [];
   if (value.departmentIds !== undefined && value.departmentIds !== null) {
     if (!Array.isArray(value.departmentIds) || value.departmentIds.some((id) => typeof id !== "string")) {
-      fieldErrors.departmentIds = "Departments must be a list.";
+      fieldErrors.departmentIds = "Select departments from the list.";
     } else {
       departmentIds = Array.from(new Set(value.departmentIds as string[]));
       const departments = await listRecords<{ id: string; organizationId: string }>("departments");
@@ -190,14 +190,14 @@ function policyConflict(conflicting: MockPolicy) {
 }
 
 const validationFailed = (fieldErrors: Record<string, string>) =>
-  apiError(422, Object.values(fieldErrors)[0] ?? "Policy validation failed.", "VALIDATION_ERROR", { fieldErrors });
+  apiError(422, Object.values(fieldErrors)[0] ?? "Please correct the highlighted fields.", "VALIDATION_ERROR", { fieldErrors });
 
 export const policiesHandlers = [
   // §21.12: any signed-in user may read the summary of the policy that applies
   // to them for an expense type, plus their counted spend this month.
   http.get("/api/policies/applicable", async ({ request }) => {
     const principal = await resolveAuthenticatedPrincipal(request);
-    if (!principal) return apiError(401, "Authentication required.");
+    if (!principal) return apiError(401, "Please sign in to continue.");
     const url = new URL(request.url);
     const type = url.searchParams.get("type") ?? "";
     if (!EXPENSE_TYPES.has(type)) return apiError(400, "A valid expense type is required.", "INVALID_FILTER");

@@ -14,13 +14,13 @@ export function exportAnalyticsCsv(summary: AnalyticsSummary, filterDescription:
     rows.push([title], header, ...body, []);
   };
 
-  rows.push(["Ledgerly analytics"], ["Filters", filterDescription], ["Spending counts reimbursed expenses only"], []);
+  rows.push(["Ledgerly analytics"], ["Filters", filterDescription], ["Spend includes reimbursed expenses only"], []);
   section("Summary", ["Metric", "Current period", "Previous period"], [
     ["Total spend (INR)", summary.kpis.totalSpend, summary.previousKpis.totalSpend],
     ["Average expense (INR)", Math.round(summary.kpis.averageExpense), Math.round(summary.previousKpis.averageExpense)],
     ["Largest expense (INR)", summary.kpis.largestExpense, summary.previousKpis.largestExpense],
-    ["Reimbursed expenses", summary.kpis.expenseCount, summary.previousKpis.expenseCount],
-    ["Average days to reimburse", summary.kpis.averageDaysToReimburse?.toFixed(1) ?? "", summary.previousKpis.averageDaysToReimburse?.toFixed(1) ?? ""],
+    ["Expenses", summary.kpis.expenseCount, summary.previousKpis.expenseCount],
+    ["Average days to reimbursement", summary.kpis.averageDaysToReimburse?.toFixed(1) ?? "", summary.previousKpis.averageDaysToReimburse?.toFixed(1) ?? ""],
   ]);
   section("Spending trend", ["Period", "Amount (INR)", "Expenses"],
     summary.spendingTrend.map((point) => [point.period, point.amount, point.count]));
@@ -36,7 +36,7 @@ export function exportAnalyticsCsv(summary: AnalyticsSummary, filterDescription:
   }
   if (summary.budgetComparison) {
     const budget = summary.budgetComparison;
-    section(`Budget vs actual: ${budget.budgetName} (${budget.startDate} to ${budget.endDate})`, ["Name", "Allocated (INR)", "Reimbursed (INR)"],
+    section(`Budget vs. actual spend: ${budget.budgetName} (${budget.startDate} to ${budget.endDate})`, ["Name", "Allocated (INR)", "Spent (INR)"],
       budget.rows.map((row) => [row.name, row.allocated, row.spent]));
   }
   const compliance = summary.policyCompliance;

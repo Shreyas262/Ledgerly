@@ -1,4 +1,5 @@
-import { MenuOutlined, NotificationsNoneOutlined } from "@mui/icons-material";
+import { MenuOutlined } from "@mui/icons-material";
+import { NotificationBell } from "../../../features/notifications/components/NotificationBell";
 import {
   AppBar,
   Avatar,
@@ -57,7 +58,7 @@ export function Topbar({
 
   const handleLogout = async () => {
     handleMenuClose();
-    if (!(await confirm({ title: "Sign out", message: "Sign out of Ledgerly?", confirmLabel: "Sign out" }))) return;
+    if (!(await confirm({ title: "Sign Out", message: "Sign out of Ledgerly?", confirmLabel: "Sign Out" }))) return;
 
     try {
       await logout().unwrap();
@@ -84,9 +85,7 @@ export function Topbar({
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <IconButton aria-label="Notifications">
-            <NotificationsNoneOutlined />
-          </IconButton>
+          <NotificationBell />
 
           <IconButton
             onClick={handleAccountClick}
@@ -106,7 +105,7 @@ export function Topbar({
             <MenuItem onClick={handleProfileClick}>Profile</MenuItem>
 
             <MenuItem onClick={handleLogout} disabled={isLoading}>
-              {isLoading ? "Signing out..." : "Sign out"}
+              {isLoading ? "Signing Out…" : "Sign Out"}
             </MenuItem>
           </Menu>
         </Box>

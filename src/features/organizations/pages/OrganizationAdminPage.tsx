@@ -87,7 +87,7 @@ export function OrganizationAdminPage() {
     teams.isLoading ||
     users.isLoading
   ) {
-    return <LoadingState message="Loading organization administration…" />;
+    return <LoadingState message="Loading organization structure…" />;
   }
 
   if (
@@ -120,8 +120,8 @@ export function OrganizationAdminPage() {
     <Stack spacing={3}>
       <BackLink to="/admin" label="Administration" />
       <PageHeader
-        title="Organization Administration"
-        description="Manage departments, teams and who belongs to them. Changes are validated and audited by the API."
+        title="Organization Structure"
+        description="Manage departments, teams, team members and Finance authorization."
       />
 
       {error && (
@@ -152,10 +152,10 @@ export function OrganizationAdminPage() {
                 await run(
                   () =>
                     createDepartment({ name: newDepartment.trim() }).unwrap(),
-                  "Failed to create department.",
+                  "The department could not be created.",
                   "Department created.",
                   {
-                    title: "Create department",
+                    title: "Create Department",
                     message: `Create the department "${newDepartment.trim()}"?`,
                     confirmLabel: "Create",
                   },
@@ -216,10 +216,10 @@ export function OrganizationAdminPage() {
                       name: newTeam.trim(),
                       departmentId: newTeamDepartment,
                     }).unwrap(),
-                  "Failed to create team.",
+                  "The team could not be created.",
                   "Team created.",
                   {
-                    title: "Create team",
+                    title: "Create Team",
                     message: `Create the team "${newTeam.trim()}"?`,
                     confirmLabel: "Create",
                   },
@@ -366,10 +366,10 @@ function DepartmentCard({
                               id: department.id,
                               body: { name: name.trim(), status },
                             }).unwrap(),
-                          "Failed to update department.",
+                          "The department could not be updated.",
                           "Department updated.",
                           {
-                            title: "Save department",
+                            title: "Save Department",
                             message: `Save changes to ${department.name}?`,
                             confirmLabel: "Save",
                           },
@@ -406,7 +406,7 @@ function DepartmentCard({
                     "Department cannot be deleted while it is still referenced.",
                     "Department deleted.",
                     {
-                      title: "Delete department",
+                      title: "Delete Department",
                       message: `Delete ${department.name}? This cannot be undone.`,
                       confirmLabel: "Delete",
                       destructive: true,
@@ -473,10 +473,10 @@ function DepartmentCard({
                             status: team.status,
                           },
                         }).unwrap(),
-                      "Failed to move team.",
+                      "The team could not be moved.",
                       `${team.name} moved to ${department.name}; its members moved with it.`,
                       {
-                        title: "Move team",
+                        title: "Move Team",
                         message: `Move ${team.name} to ${department.name}? Its members move to the department too.`,
                         confirmLabel: "Move",
                       },
@@ -547,10 +547,10 @@ function DepartmentCard({
                           departmentId: department.id,
                           userIds: financeSelection,
                         }).unwrap(),
-                      "Failed to update Finance authorization.",
+                      "Finance authorization could not be updated.",
                       `Finance authorization updated for ${department.name}.`,
                       {
-                        title: "Update Finance authorization",
+                        title: "Update Finance Authorization",
                         message: `Save which Finance users can process ${department.name}'s expenses?`,
                         confirmLabel: "Save",
                       },
@@ -604,10 +604,10 @@ function TeamCard({
   const moveUser = (user: User, target: Team) =>
     run(
       () => addTeamMember({ teamId: target.id, userId: user.id }).unwrap(),
-      "Failed to move user.",
+      "The user could not be moved.",
       `${user.name} moved to ${target.name}.`,
       {
-        title: "Move user",
+        title: "Move User",
         message: `Move ${user.name} to ${target.name}? Their department follows the team.`,
         confirmLabel: "Move",
       },
@@ -688,10 +688,10 @@ function TeamCard({
                               id: team.id,
                               body: { name: name.trim(), departmentId, status },
                             }).unwrap(),
-                          "Failed to update team.",
+                          "The team could not be updated.",
                           "Team updated.",
                           {
-                            title: "Save team",
+                            title: "Save Team",
                             message: `Save changes to ${team.name}?`,
                             confirmLabel: "Save",
                           },
@@ -728,7 +728,7 @@ function TeamCard({
                     "Team cannot be deleted while it is still referenced.",
                     "Team deleted.",
                     {
-                      title: "Delete team",
+                      title: "Delete Team",
                       message: `Delete ${team.name}? This cannot be undone.`,
                       confirmLabel: "Delete",
                       destructive: true,

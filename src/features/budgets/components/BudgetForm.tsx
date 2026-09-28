@@ -38,7 +38,7 @@ export function BudgetForm({ budget, onSubmit, isSubmitting = false, onCancel }:
       </Stack>
       {error && <TextField value={error} error helperText={error} slotProps={{ input: { readOnly: true } }} />}
       <Stack direction="row" spacing={2}>
-        <Button type="submit" variant="contained" disabled={isSubmitting}>{isSubmitting ? "Saving…" : "Save budget"}</Button>
+        <Button type="submit" variant="contained" disabled={isSubmitting}>{isSubmitting ? "Saving…" : "Save Budget"}</Button>
         <Button type="button" onClick={onCancel}>Cancel</Button>
       </Stack>
     </Stack>

@@ -19,7 +19,7 @@ export function EditBudgetPage() {
   if (isLoading) return <LoadingState />;
   if (isError || !data) return <ErrorState error={loadError} onRetry={refetch} />;
   const handleSubmit = async (payload: CreateOrganizationBudgetRequest) => {
-    if (!(await confirm({ title: "Save budget", message: `Save changes to "${payload.name}"?`, confirmLabel: "Save" }))) return;
+    if (!(await confirm({ title: "Save Budget", message: `Save changes to "${payload.name}"?`, confirmLabel: "Save" }))) return;
     try {
       await updateBudget({ id: data.id, ...payload }).unwrap();
       navigate(`/budgets/${data.id}`);

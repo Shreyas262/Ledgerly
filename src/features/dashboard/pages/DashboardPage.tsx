@@ -65,7 +65,7 @@ export function DashboardPage() {
       {isFetching && <RefreshingState />}
       <PageHeader
         title="My Expenses Overview"
-        description="Summary of the expenses you have created."
+        description="A summary of the expenses you have created. Spend includes reimbursed expenses only."
       />
 
       <DashboardDateFilter
@@ -75,28 +75,28 @@ export function DashboardPage() {
 
       {isInvalidRange && (
         <Alert severity="warning">
-          Start date must be before or equal to end date.
+          The start date cannot be later than the end date.
         </Alert>
       )}
 
       {!isInvalidRange && !hasData && (
         <Alert severity="info">
-          No expenses were found for the selected date range.
+          No expenses were found in the selected date range.
         </Alert>
       )}
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
-            label="Reimbursed Spending"
+            label="Spend"
             value={formatCurrency(summary.kpis.totalSpending)}
-            description="Reimbursed expenses only"
+            description="Total amount paid out"
           />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
-            label="Pending Approval"
+            label="Pending approval"
             value={summary.kpis.pendingApproval}
             description="Submitted or under review"
           />
@@ -104,17 +104,17 @@ export function DashboardPage() {
 
         <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
-            label="Approved Expenses"
+            label="Approved expenses"
             value={summary.kpis.approvedExpenses}
-            description="Approved expenses"
+            description="Including those in or past reimbursement"
           />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
-            label="Rejected Expenses"
+            label="Rejected expenses"
             value={summary.kpis.rejectedExpenses}
-            description="Rejected expenses"
+            description="Returned by a reviewer"
           />
         </Grid>
 

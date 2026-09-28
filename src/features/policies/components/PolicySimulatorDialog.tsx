@@ -59,7 +59,7 @@ export function PolicySimulatorDialog({ open, onClose }: PolicySimulatorDialogPr
 
   return (
     <Dialog open={open} onClose={close} fullWidth maxWidth="md">
-      <DialogTitle>Try a policy</DialogTitle>
+      <DialogTitle>Try a Policy</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2.5}>
           <Typography variant="body2" color="text.secondary">
@@ -103,7 +103,7 @@ export function PolicySimulatorDialog({ open, onClose }: PolicySimulatorDialogPr
       <DialogActions>
         <Button onClick={close} sx={{ minWidth: 100 }}>Close</Button>
         <Button variant="contained" onClick={run} disabled={isLoading || !selectedDepartment} sx={{ minWidth: 120 }}>
-          {isLoading ? "Checking..." : "Check"}
+          {isLoading ? "Checking…" : "Check"}
         </Button>
       </DialogActions>
     </Dialog>

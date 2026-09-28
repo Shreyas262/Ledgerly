@@ -137,7 +137,7 @@ export const analyticsHandlers = [
       teamId: url.searchParams.get("teamId") || undefined,
     };
     if (query.type && !(query.type in EXPENSE_TYPE_LABELS)) {
-      return apiError(400, "Unknown expense type.", "INVALID_FILTER");
+      return apiError(400, "The selected expense type is not valid.", "INVALID_FILTER");
     }
 
     const validationError = validateAnalyticsQuery(query);
@@ -153,13 +153,13 @@ export const analyticsHandlers = [
 
     // Filters may narrow the authorized scope but never expand it.
     if (scope === "TEAM" && (query.departmentId || (query.teamId && query.teamId !== principal.teamId))) {
-      return apiError(400, "Managers analyze their own team only.", "INVALID_FILTER");
+      return apiError(400, "Managers can view analytics for their own team only.", "INVALID_FILTER");
     }
     if (query.departmentId && (
       !departments.some((department) => department.id === query.departmentId) ||
       (scope === "DEPARTMENT" && !principal.authorizedDepartmentIds.includes(query.departmentId))
     )) {
-      return apiError(400, "The department filter cannot expand the authorized analytics scope.", "INVALID_FILTER");
+      return apiError(400, "You can only view analytics for departments you are authorized for.", "INVALID_FILTER");
     }
     if (query.teamId && scope !== "TEAM") {
       const team = teams.find((item) => item.id === query.teamId);
@@ -168,7 +168,7 @@ export const analyticsHandlers = [
         (scope === "DEPARTMENT" && !principal.authorizedDepartmentIds.includes(team.departmentId ?? "")) ||
         (query.departmentId && team.departmentId !== query.departmentId)
       ) {
-        return apiError(400, "The team filter cannot expand the authorized analytics scope.", "INVALID_FILTER");
+        return apiError(400, "You can only view analytics for teams within your authorized scope.", "INVALID_FILTER");
       }
     }
 

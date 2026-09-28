@@ -20,6 +20,8 @@ interface AuditFiltersProps {
 const actions: AuditAction[] = [
   "LOGIN",
   "LOGOUT",
+  "PASSWORD_CHANGED",
+  "SESSIONS_REVOKED",
   "USER_CREATED",
   "USER_UPDATED",
   "USER_DELETED",
@@ -87,16 +89,16 @@ export function AuditFilters({
       </FormControl>
 
       <FormControl size="small">
-        <InputLabel id="audit-entity-type-label">Entity</InputLabel>
+        <InputLabel id="audit-entity-type-label">Record type</InputLabel>
         <Select
           labelId="audit-entity-type-label"
           value={entityType}
-          label="Entity"
+          label="Record type"
           onChange={(event) =>
             onEntityTypeChange(event.target.value as AuditEntityType | "")
           }
         >
-          <MenuItem value="">All entities</MenuItem>
+          <MenuItem value="">All record types</MenuItem>
           {entityTypes.map((item) => (
             <MenuItem key={item} value={item}>{humanize(item)}</MenuItem>
           ))}

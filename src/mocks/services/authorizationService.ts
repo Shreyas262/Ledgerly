@@ -122,7 +122,7 @@ export async function authorizeRequest(
       allowed: false,
       status: 401,
       code: "UNAUTHENTICATED",
-      message: "Authentication required.",
+      message: "Please sign in to continue.",
     };
   }
 
@@ -131,7 +131,7 @@ export async function authorizeRequest(
       allowed: false,
       status: 403,
       code: "FORBIDDEN",
-      message: "You are not authorized to perform this operation.",
+      message: "You do not have permission to perform this action.",
     };
   }
 
@@ -144,7 +144,7 @@ export async function authorizeRequest(
       allowed: false,
       status: 403,
       code: "FORBIDDEN",
-      message: "You are not authorized to access this organization resource.",
+      message: "This record belongs to another organization.",
     };
   }
 
@@ -153,7 +153,7 @@ export async function authorizeRequest(
       allowed: false,
       status: 403,
       code: "FORBIDDEN",
-      message: "You are not authorized to access this resource scope.",
+      message: "You do not have access to records outside your assigned scope.",
     };
   }
 
@@ -166,7 +166,7 @@ export async function authorizeRequest(
       allowed: false,
       status: 403,
       code: "FORBIDDEN",
-      message: "You are not authorized to operate on this resource state.",
+      message: "This action is not available for the record in its current status.",
     };
   }
 
@@ -178,7 +178,7 @@ export async function authorizeRequest(
       allowed: false,
       status: 403,
       code: "FORBIDDEN",
-      message: "You are not authorized to perform this domain operation.",
+      message: "You do not have permission to perform this action.",
     };
   }
 

@@ -82,7 +82,7 @@ function ReviewQueue() {
     useStartExpenseReviewMutation();
 
   const handleStartReview = async (expense: Expense) => {
-    if (!(await confirm({ title: "Start review", message: `Start reviewing "${expense.title}"?`, confirmLabel: "Start review" }))) return;
+    if (!(await confirm({ title: "Start Review", message: `Start reviewing "${expense.title}"?`, confirmLabel: "Start Review" }))) return;
     try {
       await startExpenseReview(String(expense.id)).unwrap();
       navigate(`/approvals/${expense.id}`);

@@ -15,10 +15,10 @@ export function NotFound() {
         <Typography
             variant="h3"
         >
-            Page Not Found.
+            Page not found
         </Typography>
         <Typography component={"p"}>
-            The page you are looking for does not exists...
+            The page you requested does not exist or has been moved.
         </Typography>
         <Button variant="contained" component={NavLink} to={"/dashboard"}>
             Return to Dashboard

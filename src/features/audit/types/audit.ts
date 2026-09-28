@@ -33,6 +33,8 @@ export type AuditAction =
   | "LOGIN"
   | "LOGOUT"
   | "CREDENTIAL_MIGRATED"
+  | "PASSWORD_CHANGED"
+  | "SESSIONS_REVOKED"
   | "USER_CREATED"
   | "USER_UPDATED"
   | "USER_DELETED"

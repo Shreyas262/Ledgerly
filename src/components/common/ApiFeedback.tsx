@@ -9,14 +9,30 @@ interface ApiFeedbackProps {
   onReconcile?: () => void;
 }
 
-export function ApiFeedback({ error, context = "mutation", onRetry, onReconcile }: ApiFeedbackProps) {
+export function ApiFeedback({
+  error,
+  context = "mutation",
+  onRetry,
+  onReconcile,
+}: ApiFeedbackProps) {
   const navigate = useNavigate();
   const apiError = getApiError(error);
   if (!apiError) return null;
 
   if (apiError.status === 401) {
     return (
-      <Alert severity="warning" action={<Button color="inherit" size="small" onClick={() => navigate("/auth/login")}>Sign in</Button>}>
+      <Alert
+        severity="warning"
+        action={
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => navigate("/auth/login")}
+          >
+            Sign In
+          </Button>
+        }
+      >
         <AlertTitle>Session required</AlertTitle>
         Your session is no longer authenticated. Sign in again to continue.
       </Alert>
@@ -27,7 +43,8 @@ export function ApiFeedback({ error, context = "mutation", onRetry, onReconcile 
     return (
       <Alert severity="error">
         <AlertTitle>Access denied</AlertTitle>
-        {apiError.message || "You are not authorized to perform this operation."}
+        {apiError.message ||
+          "You are not authorized to perform this operation."}
       </Alert>
     );
   }
@@ -38,12 +55,15 @@ export function ApiFeedback({ error, context = "mutation", onRetry, onReconcile 
         severity="warning"
         action={
           onReconcile ? (
-            <Button color="inherit" size="small" onClick={onReconcile}>Refresh current data</Button>
+            <Button color="inherit" size="small" onClick={onReconcile}>
+              Refresh
+            </Button>
           ) : undefined
         }
       >
         <AlertTitle>Conflict</AlertTitle>
-        {apiError.message || "This resource changed before the operation completed."}
+        {apiError.message ||
+          "This resource changed before the operation completed."}
       </Alert>
     );
   }
@@ -52,7 +72,9 @@ export function ApiFeedback({ error, context = "mutation", onRetry, onReconcile 
     const details = getApiErrorDetails(error);
     return (
       <Alert severity="warning">
-        <AlertTitle>{details.businessRule ? "Business rule" : "Validation failed"}</AlertTitle>
+        <AlertTitle>
+          {details.businessRule ? "Business rule" : "Validation failed"}
+        </AlertTitle>
         {details.businessRule ?? apiError.message}
       </Alert>
     );
@@ -61,9 +83,17 @@ export function ApiFeedback({ error, context = "mutation", onRetry, onReconcile 
   return (
     <Alert
       severity="error"
-      action={context === "load" && onRetry ? <Button color="inherit" size="small" onClick={onRetry}>Retry</Button> : undefined}
+      action={
+        context === "load" && onRetry ? (
+          <Button color="inherit" size="small" onClick={onRetry}>
+            Retry
+          </Button>
+        ) : undefined
+      }
     >
-      <AlertTitle>{context === "load" ? "Unable to load" : "Unable to complete operation"}</AlertTitle>
+      <AlertTitle>
+        {context === "load" ? "The data could not be loaded" : "The action could not be completed"}
+      </AlertTitle>
       {apiError.message || "The request could not be completed."}
     </Alert>
   );

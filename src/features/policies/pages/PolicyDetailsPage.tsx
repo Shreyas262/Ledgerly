@@ -24,7 +24,7 @@ import { PageHeader } from "../../../components/common/PageHeader";
 import { BackLink } from "../../../components/navigation/BackLink";
 import { PolicyRuleList } from "../components/PolicyRuleList";
 import { EXPENSE_TYPE_LABELS } from "../../expenses/types/expense";
-import { humanize } from "../../../utils/format";
+import { formatDateTime, humanize } from "../../../utils/format";
 
 const STATUS_COLOR = { active: "success", draft: "warning", inactive: "default" } as const;
 const FIELD_LABELS: Record<string, string> = {
@@ -110,8 +110,8 @@ export function PolicyDetailsPage() {
                   {policy.departmentIds?.length ? policy.departmentIds.map(departmentName).join(", ") : "Whole organization"}
                 </Field>
                 <Divider />
-                <Field label="Created">{new Date(policy.createdAt).toLocaleString("en-IN")}</Field>
-                <Field label="Last updated">{new Date(policy.updatedAt).toLocaleString("en-IN")}</Field>
+                <Field label="Created">{formatDateTime(policy.createdAt)}</Field>
+                <Field label="Last updated">{formatDateTime(policy.updatedAt)}</Field>
               </Stack>
             </CardContent>
           </Card>
@@ -152,7 +152,7 @@ export function PolicyDetailsPage() {
                           <Typography variant="caption" color="text.secondary">{event.actorName ?? event.actorId}</Typography>
                         </Stack>
                         <Typography variant="caption" color="text.secondary">
-                          {new Date(event.timestamp).toLocaleString("en-IN")}
+                          {formatDateTime(event.timestamp)}
                         </Typography>
                       </Stack>
                     );
