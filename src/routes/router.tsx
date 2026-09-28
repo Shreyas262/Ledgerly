@@ -1,11 +1,12 @@
 import { StartPageRedirect } from "./StartPageRedirect";
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate, type RouteObject } from "react-router-dom";
 
 import { lazy } from "react";
 
 import { AppLayout } from "../layouts/AppLayout/AppLayout";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { PermissionRoute } from "./PermissionRoute";
+import { AccountTypeRoute } from "./AccountTypeRoute";
 import { administrationPermissions } from "../features/roles/constants/permissions";
 
 const DashboardPage = lazy(() =>
@@ -142,10 +143,390 @@ const OrganizationAdminPage = lazy(() =>
     (module) => ({ default: module.OrganizationAdminPage }),
   ),
 );
+const LandingPage = lazy(() =>
+  import("../pages/LandingPage").then((module) => ({
+    default: module.LandingPage,
+  })),
+);
+const RegisterPage = lazy(() =>
+  import("../features/auth/pages/RegisterPage").then((module) => ({
+    default: module.RegisterPage,
+  })),
+);
+const PersonalDashboardPage = lazy(() =>
+  import("../features/personal/pages/PersonalDashboardPage").then((module) => ({
+    default: module.PersonalDashboardPage,
+  })),
+);
+const PersonalExpensesPage = lazy(() =>
+  import("../features/personal/pages/PersonalExpensesPage").then((module) => ({
+    default: module.PersonalExpensesPage,
+  })),
+);
+const PersonalExpenseFormPage = lazy(() =>
+  import("../features/personal/pages/PersonalExpenseFormPage").then((module) => ({
+    default: module.PersonalExpenseFormPage,
+  })),
+);
+const PersonalExpenseDetailsPage = lazy(() =>
+  import("../features/personal/pages/PersonalExpenseDetailsPage").then((module) => ({
+    default: module.PersonalExpenseDetailsPage,
+  })),
+);
+const PersonalBudgetsPage = lazy(() =>
+  import("../features/personal/pages/PersonalBudgetsPage").then((module) => ({
+    default: module.PersonalBudgetsPage,
+  })),
+);
+const PersonalAnalyticsPage = lazy(() =>
+  import("../features/personal/pages/PersonalAnalyticsPage").then((module) => ({
+    default: module.PersonalAnalyticsPage,
+  })),
+);
+
+/** Organization pages; personal accounts are sent to their own home (§5.15). */
+const organizationRoutes: RouteObject[] = [
+  {
+    path: "/dashboard",
+    element: <DashboardPage />,
+    handle: {
+      title: "Dashboard",
+    },
+  },
+  {
+    element: <PermissionRoute permission="expenses.read" />,
+    children: [
+      {
+        path: "/expenses",
+        element: <ExpensesPage />,
+        handle: {
+          title: "Expenses",
+        },
+      },
+      {
+        path: "/expenses/:id",
+        element: <ExpenseDetailsPage mode="default" />,
+        handle: {
+          title: "Expense Details",
+        },
+      },
+      {
+        element: <PermissionRoute permission="expenses.create" />,
+        children: [
+          {
+            path: "/expenses/new",
+            element: <CreateExpensePage />,
+            handle: {
+              title: "Create Expense",
+            },
+          },
+        ],
+      },
+      {
+        element: <PermissionRoute permission="expenses.update" />,
+        children: [
+          {
+            path: "/expenses/:id/edit",
+            element: <EditExpensePage />,
+            handle: {
+              title: "Edit Expense",
+            },
+          },
+        ],
+      },
+    ],
+  },
+  {
+    // Approvals hosts both managerial review and finance
+    // reimbursement; each tab is gated by its own permission.
+    element: (
+      <PermissionRoute
+        permission={["expenses.approve", "reimbursements.manage"]}
+      />
+    ),
+    children: [
+      {
+        path: "/approvals",
+        element: <ApprovalsPage />,
+        handle: {
+          title: "Approvals",
+        },
+      },
+      {
+        path: "/reimbursements",
+        element: <Navigate to="/approvals?tab=reimbursement" replace />,
+      },
+    ],
+  },
+  {
+    element: <PermissionRoute permission="expenses.approve" />,
+    children: [
+      {
+        path: "/approvals/:id",
+        element: <ExpenseDetailsPage mode="review" />,
+        handle: {
+          title: "Expense Review",
+        },
+      },
+    ],
+  },
+  {
+    element: <PermissionRoute permission="budgets.read" />,
+    children: [
+      {
+        path: "/budgets",
+        element: <BudgetsPage />,
+        handle: {
+          title: "Budgets",
+        },
+      },
+      {
+        path: "/budgets/:id",
+        element: <BudgetDetailsPage />,
+        handle: {
+          title: "Budget Details",
+        },
+      },
+      {
+        element: <PermissionRoute permission="budgets.update" />,
+        children: [
+          {
+            path: "/budgets/:id/edit",
+            element: <EditBudgetPage />,
+            handle: {
+              title: "Edit Budget",
+            },
+          },
+        ],
+      },
+      {
+        element: <PermissionRoute permission="budgets.create" />,
+        children: [
+          {
+            path: "/budgets/new",
+            element: <CreateBudgetPage />,
+            handle: {
+              title: "Create Budget",
+            },
+          },
+        ],
+      },
+    ],
+  },
+  {
+    element: <PermissionRoute permission="analytics.read" />,
+    children: [
+      {
+        path: "/analytics",
+        element: <AnalyticsPage />,
+        handle: {
+          title: "Spending Analytics",
+        },
+      },
+    ],
+  },
+  {
+    element: <PermissionRoute permission={administrationPermissions} />,
+    children: [
+      {
+        path: "/admin",
+        element: <AdminPage />,
+        handle: { title: "Administration" },
+      },
+      {
+        element: <PermissionRoute permission="organization.manage" />,
+        children: [
+          {
+            path: "/admin/organization",
+            element: <OrganizationAdminPage />,
+            handle: { title: "Organization Structure" },
+          },
+        ],
+      },
+    ],
+  },
+  {
+    element: <PermissionRoute permission="users.read" />,
+    children: [
+      {
+        path: "/users",
+        element: <UsersPage />,
+        handle: {
+          title: "Users",
+        },
+      },
+    ],
+  },
+  {
+    element: <PermissionRoute permission="roles.read" />,
+    children: [
+      {
+        path: "/roles",
+        element: <RolesPage />,
+        handle: {
+          title: "Roles & Permissions",
+        },
+      },
+    ],
+  },
+  {
+    element: <PermissionRoute permission="policies.read" />,
+    children: [
+      {
+        path: "/policies",
+        element: <PoliciesPage />,
+        handle: {
+          title: "Policies",
+        },
+      },
+      {
+        path: "/policies/:id",
+        element: <PolicyDetailsPage />,
+        handle: {
+          title: "Policy Details",
+        },
+      },
+      {
+        element: <PermissionRoute permission="policies.create" />,
+        children: [
+          {
+            path: "/policies/new",
+            element: <CreatePolicyPage />,
+            handle: {
+              title: "Create Policy",
+            },
+          },
+        ],
+      },
+      {
+        element: <PermissionRoute permission="policies.update" />,
+        children: [
+          {
+            path: "/policies/:id/edit",
+            element: <EditPolicyPage />,
+            handle: {
+              title: "Edit Policy",
+            },
+          },
+        ],
+      },
+    ],
+  },
+  {
+    element: <PermissionRoute permission="audit.read" />,
+    children: [
+      {
+        path: "/audit",
+        element: <AuditPage />,
+        handle: {
+          title: "Audit Log",
+        },
+      },
+      {
+        path: "/audit/:id",
+        element: <AuditDetailsPage />,
+        handle: {
+          title: "Audit Details",
+        },
+      },
+    ],
+  },
+  {
+    path: "/account/team",
+    element: <MyTeamPage />,
+    handle: {
+      title: "My Team",
+    },
+  },
+];
+
+/** Personal expense management; organization accounts never reach it. */
+const personalRoutes: RouteObject[] = [
+  {
+    path: "/personal/dashboard",
+    element: <PersonalDashboardPage />,
+    handle: { title: "Dashboard" },
+  },
+  {
+    path: "/personal/expenses",
+    element: <PersonalExpensesPage />,
+    handle: { title: "Expenses" },
+  },
+  {
+    path: "/personal/expenses/new",
+    element: <PersonalExpenseFormPage mode="create" />,
+    handle: { title: "Add Expense" },
+  },
+  {
+    path: "/personal/expenses/:id",
+    element: <PersonalExpenseDetailsPage />,
+    handle: { title: "Expense Details" },
+  },
+  {
+    path: "/personal/expenses/:id/edit",
+    element: <PersonalExpenseFormPage mode="edit" />,
+    handle: { title: "Edit Expense" },
+  },
+  {
+    path: "/personal/budgets",
+    element: <PersonalBudgetsPage />,
+    handle: { title: "Budgets" },
+  },
+  {
+    path: "/personal/analytics",
+    element: <PersonalAnalyticsPage />,
+    handle: { title: "Spending Analytics" },
+  },
+];
+
+/** Account pages shared by both kinds of account. */
+const accountRoutes: RouteObject[] = [
+  {
+    path: "/profile",
+    element: <UserProfilePage />,
+    handle: {
+      title: "My Profile",
+    },
+  },
+  {
+    path: "/account",
+    element: <AccountPage />,
+    handle: {
+      title: "Account",
+    },
+  },
+  {
+    path: "/security",
+    element: <Navigate to="/activity" replace />,
+  },
+  {
+    path: "/settings",
+    element: <SettingsPage />,
+    handle: {
+      title: "Settings",
+    },
+  },
+  {
+    path: "/activity",
+    element: <ActivityPage />,
+    handle: {
+      title: "Activity",
+    },
+  },
+];
+
 export const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <LandingPage />,
+  },
   {
     path: "/auth/login",
     element: <LoginPage />,
+  },
+  {
+    path: "/auth/register",
+    element: <RegisterPage />,
   },
 
   {
@@ -155,293 +536,19 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           {
-            index: true,
+            // Opens the signed-in user's chosen start page.
+            path: "/start",
             element: <StartPageRedirect />,
           },
           {
-            path: "/dashboard",
-            element: <DashboardPage />,
-            handle: {
-              title: "Dashboard",
-            },
+            element: <AccountTypeRoute accountType="organization" />,
+            children: organizationRoutes,
           },
           {
-            path: "/profile",
-            element: <UserProfilePage />,
-            handle: {
-              title: "My Profile",
-            },
+            element: <AccountTypeRoute accountType="personal" />,
+            children: personalRoutes,
           },
-          {
-            element: <PermissionRoute permission="expenses.read" />,
-            children: [
-              {
-                path: "/expenses",
-                element: <ExpensesPage />,
-                handle: {
-                  title: "Expenses",
-                },
-              },
-              {
-                path: "/expenses/:id",
-                element: <ExpenseDetailsPage mode="default" />,
-                handle: {
-                  title: "Expense Details",
-                },
-              },
-              {
-                element: <PermissionRoute permission="expenses.create" />,
-                children: [
-                  {
-                    path: "/expenses/new",
-                    element: <CreateExpensePage />,
-                    handle: {
-                      title: "Create Expense",
-                    },
-                  },
-                ],
-              },
-              {
-                element: <PermissionRoute permission="expenses.update" />,
-                children: [
-                  {
-                    path: "/expenses/:id/edit",
-                    element: <EditExpensePage />,
-                    handle: {
-                      title: "Edit Expense",
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            // Approvals hosts both managerial review and finance
-            // reimbursement; each tab is gated by its own permission.
-            element: (
-              <PermissionRoute
-                permission={["expenses.approve", "reimbursements.manage"]}
-              />
-            ),
-            children: [
-              {
-                path: "/approvals",
-                element: <ApprovalsPage />,
-                handle: {
-                  title: "Approvals",
-                },
-              },
-              {
-                path: "/reimbursements",
-                element: <Navigate to="/approvals?tab=reimbursement" replace />,
-              },
-            ],
-          },
-          {
-            element: <PermissionRoute permission="expenses.approve" />,
-            children: [
-              {
-                path: "/approvals/:id",
-                element: <ExpenseDetailsPage mode="review" />,
-                handle: {
-                  title: "Expense Review",
-                },
-              },
-            ],
-          },
-          {
-            element: <PermissionRoute permission="budgets.read" />,
-            children: [
-              {
-                path: "/budgets",
-                element: <BudgetsPage />,
-                handle: {
-                  title: "Budgets",
-                },
-              },
-              {
-                path: "/budgets/:id",
-                element: <BudgetDetailsPage />,
-                handle: {
-                  title: "Budget Details",
-                },
-              },
-              {
-                element: <PermissionRoute permission="budgets.update" />,
-                children: [
-                  {
-                    path: "/budgets/:id/edit",
-                    element: <EditBudgetPage />,
-                    handle: {
-                      title: "Edit Budget",
-                    },
-                  },
-                ],
-              },
-              {
-                element: <PermissionRoute permission="budgets.create" />,
-                children: [
-                  {
-                    path: "/budgets/new",
-                    element: <CreateBudgetPage />,
-                    handle: {
-                      title: "Create Budget",
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            element: <PermissionRoute permission="analytics.read" />,
-            children: [
-              {
-                path: "/analytics",
-                element: <AnalyticsPage />,
-                handle: {
-                  title: "Spending Analytics",
-                },
-              },
-            ],
-          },
-          {
-            element: <PermissionRoute permission={administrationPermissions} />,
-            children: [
-              {
-                path: "/admin",
-                element: <AdminPage />,
-                handle: { title: "Administration" },
-              },
-              {
-                element: <PermissionRoute permission="organization.manage" />,
-                children: [
-                  {
-                    path: "/admin/organization",
-                    element: <OrganizationAdminPage />,
-                    handle: { title: "Organization Structure" },
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            element: <PermissionRoute permission="users.read" />,
-            children: [
-              {
-                path: "/users",
-                element: <UsersPage />,
-                handle: {
-                  title: "Users",
-                },
-              },
-            ],
-          },
-          {
-            element: <PermissionRoute permission="roles.read" />,
-            children: [
-              {
-                path: "/roles",
-                element: <RolesPage />,
-                handle: {
-                  title: "Roles & Permissions",
-                },
-              },
-            ],
-          },
-          {
-            element: <PermissionRoute permission="policies.read" />,
-            children: [
-              {
-                path: "/policies",
-                element: <PoliciesPage />,
-                handle: {
-                  title: "Policies",
-                },
-              },
-              {
-                path: "/policies/:id",
-                element: <PolicyDetailsPage />,
-                handle: {
-                  title: "Policy Details",
-                },
-              },
-              {
-                element: <PermissionRoute permission="policies.create" />,
-                children: [
-                  {
-                    path: "/policies/new",
-                    element: <CreatePolicyPage />,
-                    handle: {
-                      title: "Create Policy",
-                    },
-                  },
-                ],
-              },
-              {
-                element: <PermissionRoute permission="policies.update" />,
-                children: [
-                  {
-                    path: "/policies/:id/edit",
-                    element: <EditPolicyPage />,
-                    handle: {
-                      title: "Edit Policy",
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            element: <PermissionRoute permission="audit.read" />,
-            children: [
-              {
-                path: "/audit",
-                element: <AuditPage />,
-                handle: {
-                  title: "Audit Log",
-                },
-              },
-              {
-                path: "/audit/:id",
-                element: <AuditDetailsPage />,
-                handle: {
-                  title: "Audit Details",
-                },
-              },
-            ],
-          },
-          {
-            path: "/account",
-            element: <AccountPage />,
-            handle: {
-              title: "Account",
-            },
-          },
-          {
-            path: "/account/team",
-            element: <MyTeamPage />,
-            handle: {
-              title: "My Team",
-            },
-          },
-          {
-            path: "/security",
-            element: <Navigate to="/activity" replace />,
-          },
-          {
-            path: "/settings",
-            element: <SettingsPage />,
-            handle: {
-              title: "Settings",
-            },
-          },
-          {
-            path: "/activity",
-            element: <ActivityPage />,
-            handle: {
-              title: "Activity",
-            },
-          },
+          ...accountRoutes,
         ],
       },
     ],

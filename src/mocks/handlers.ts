@@ -13,6 +13,7 @@ import { dashboardHandlers } from "./handler/dashboardHandlers";
 import { analyticsHandlers } from "./handler/analyticsHandlers";
 import { teamHandlers } from "./handler/teamHandlers";
 import { notificationHandlers } from "./handler/notificationHandlers";
+import { personalHandlers } from "./handler/personalHandlers";
 
 export const handlers = [
   authGuardHandler,
@@ -30,4 +31,5 @@ export const handlers = [
   ...auditHandlers,
   ...teamHandlers,
   ...notificationHandlers,
+  ...personalHandlers,
 ];

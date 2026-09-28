@@ -4,13 +4,19 @@ import {
   AccountBalanceOutlined,
   FactCheckOutlined,
   HistoryEduOutlined,
+  InsightsOutlined,
+  ReceiptLongOutlined,
+  SavingsOutlined,
 } from "@mui/icons-material";
 import type { ReactNode } from "react";
+import { Link as RouterLink } from "react-router-dom";
 
 import logoUrl from "../../assets/ledgerly_svg.svg";
 
 interface AuthLayoutProps {
   children: ReactNode;
+  /** Which kind of account the brand panel describes. */
+  variant?: "organization" | "personal";
 }
 
 const riseIn = keyframes`
@@ -24,15 +30,37 @@ const entrance = (delayMs: number) => ({
   "@media (prefers-reduced-motion: reduce)": { animation: "none" },
 });
 
-const features = [
-  { icon: <FactCheckOutlined />, title: "Policy-checked expenses", text: "Every claim is checked against your rules before it is approved." },
-  { icon: <AccountBalanceOutlined />, title: "Budgets tracked as you spend", text: "Allocations and utilisation stay current across departments and teams." },
-  { icon: <HistoryEduOutlined />, title: "A complete audit trail", text: "Every action is recorded, read-only and attributable." },
-];
+const content = {
+  organization: {
+    headline: "Precision finance for every expense.",
+    summary: "Submit, approve, reimburse and report on organisational spend — with policies and budgets enforced at every step.",
+    features: [
+      { icon: <FactCheckOutlined />, title: "Policy-checked expenses", text: "Every claim is checked against your rules before it is approved." },
+      { icon: <AccountBalanceOutlined />, title: "Budgets tracked as you spend", text: "Allocations and utilisation stay current across departments and teams." },
+      { icon: <HistoryEduOutlined />, title: "A complete audit trail", text: "Every action is recorded, read-only and attributable." },
+    ],
+  },
+  personal: {
+    headline: "Know where your money goes.",
+    summary: "Record your spending, keep receipts in one place and stay within the monthly budget you set.",
+    features: [
+      { icon: <ReceiptLongOutlined />, title: "Every expense in one place", text: "Amounts, payment methods and receipts, searchable in seconds." },
+      { icon: <SavingsOutlined />, title: "Monthly budgets", text: "Set a limit for the month, and for the types of spending that matter to you." },
+      { icon: <InsightsOutlined />, title: "Clear insights", text: "See trends and where your spending goes, month by month." },
+    ],
+  },
+};
 
 function BrandMark({ inverse = false }: { inverse?: boolean }) {
   return (
-    <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+    <Stack
+      component={RouterLink}
+      to="/"
+      aria-label="Ledgerly home"
+      direction="row"
+      spacing={1.5}
+      sx={{ alignItems: "center", textDecoration: "none", width: "fit-content" }}
+    >
       <Box component="img" src={logoUrl} alt="" sx={{ width: 40, height: 40 }} />
       <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: inverse ? "sidebar.activeText" : "text.primary" }}>
         Ledgerly
@@ -78,7 +106,9 @@ function LedgerGraphic() {
   );
 }
 
-export default function AuthLayout({ children }: AuthLayoutProps) {
+export default function AuthLayout({ children, variant = "organization" }: AuthLayoutProps) {
+  const { headline, summary, features } = content[variant];
+
   return (
     <Box
       component="main"
@@ -112,10 +142,10 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         <Stack spacing={4} sx={{ position: "relative", maxWidth: 440, ...entrance(120) }}>
           <Stack spacing={1.5}>
             <Typography variant="h3" component="p" sx={{ color: "sidebar.activeText" }}>
-              Precision finance for every expense.
+              {headline}
             </Typography>
             <Typography sx={{ color: "sidebar.textMuted" }}>
-              Submit, approve, reimburse and report on organisational spend — with policies and budgets enforced at every step.
+              {summary}
             </Typography>
           </Stack>
 

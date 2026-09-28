@@ -31,6 +31,7 @@ export interface AuthorizationOptions {
 
 interface AuthorizationUser {
   id: string;
+  accountType?: "organization" | "personal";
   organizationId: string;
   departmentId: string;
   teamId: string;
@@ -63,6 +64,23 @@ export async function buildAuthenticatedPrincipal(
   user: AuthorizationUser,
 ): Promise<AuthenticatedPrincipal | null>
 {
+  // Personal accounts have no organization, role or permissions, so every
+  // organization endpoint refuses them by permission (§5.15).
+  if (user.accountType === "personal") {
+    if (user.status !== "active") return null;
+    return {
+      userId: user.id,
+      accountType: "personal",
+      organizationId: user.organizationId,
+      departmentId: "",
+      teamId: "",
+      roleId: "",
+      role: "personal",
+      effectivePermissions: [],
+      authorizedDepartmentIds: [],
+    };
+  }
+
   const role = await getRecord<AuthorizationRole>("roles", user.roleId);
 
   if (user.status !== "active" || !role || role.organizationId !== user.organizationId) {
@@ -71,6 +89,7 @@ export async function buildAuthenticatedPrincipal(
 
   return {
     userId: user.id,
+    accountType: "organization",
     organizationId: user.organizationId,
     departmentId: user.departmentId,
     teamId: user.teamId,

@@ -3,7 +3,10 @@ import {
   Button,
   IconButton,
   InputAdornment,
+  Link,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from "@mui/material";
@@ -14,26 +17,52 @@ import {
   VisibilityOutlined,
 } from "@mui/icons-material";
 import { useState, type SyntheticEvent } from "react";
-import { useLocation, useNavigate, type Location } from "react-router-dom";
+import {
+  Link as RouterLink,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+  type Location,
+} from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLoginMutation } from "../api/authApi";
+import type { AccountType } from "../types/auth";
 import AuthLayout from "../../../layouts/AuthLayout/AuthLayout";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
+
+const COPY: Record<AccountType, { title: string; subtitle: string }> = {
+  organization: {
+    title: "Organization login",
+    subtitle: "Sign in to your organization's Ledgerly workspace.",
+  },
+  personal: {
+    title: "Personal login",
+    subtitle: "Sign in to manage your personal expenses and budgets.",
+  },
+};
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const accountType: AccountType = searchParams.get("type") === "personal" ? "personal" : "organization";
   const redirectTo =
-    // Without a page to return to, "/" opens the user's chosen start page.
+    // Without a page to return to, the user's chosen start page opens.
     (location.state as { from?: Location } | null)?.from?.pathname ??
-    "/";
+    "/start";
 
-  const [login, { isLoading, isError, error }] = useLoginMutation();
+  const [login, { isLoading, isError, error, reset }] = useLoginMutation();
   const { refetchUser } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleAccountTypeChange = (_event: SyntheticEvent, value: AccountType) => {
+    reset();
+    // Replace, so switching tabs does not fill the browser history.
+    setSearchParams(value === "personal" ? { type: "personal" } : {}, { replace: true, state: location.state });
+  };
 
   const handleSubmit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,6 +71,7 @@ export function LoginPage() {
       await login({
         email,
         password,
+        accountType,
       }).unwrap();
 
       await refetchUser().unwrap();
@@ -53,15 +83,25 @@ export function LoginPage() {
   };
 
   return (
-    <AuthLayout>
+    <AuthLayout variant={accountType}>
       <Stack component="form" onSubmit={handleSubmit} spacing={3} noValidate>
+        <Tabs
+          value={accountType}
+          onChange={handleAccountTypeChange}
+          variant="fullWidth"
+          aria-label="Account type"
+        >
+          <Tab value="organization" label="Organization" />
+          <Tab value="personal" label="Personal" />
+        </Tabs>
+
         <Stack spacing={0.75}>
           <Typography variant="h4" component="h1">
-            Welcome back
+            {COPY[accountType].title}
           </Typography>
 
           <Typography color="text.secondary">
-            Sign in to your Ledgerly account.
+            {COPY[accountType].subtitle}
           </Typography>
         </Stack>
 
@@ -131,6 +171,19 @@ export function LoginPage() {
         >
           Sign in
         </Button>
+
+        {accountType === "personal" ? (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+            New to Ledgerly?{" "}
+            <Link component={RouterLink} to="/auth/register">
+              Create a personal account
+            </Link>
+          </Typography>
+        ) : (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+            Organization accounts are created by your administrator.
+          </Typography>
+        )}
       </Stack>
     </AuthLayout>
   );

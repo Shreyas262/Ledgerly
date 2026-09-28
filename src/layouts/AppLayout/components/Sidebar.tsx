@@ -6,6 +6,7 @@ import {
   DashboardOutlined,
   ReceiptLongOutlined,
   RequestQuoteOutlined,
+  SavingsOutlined,
 } from "@mui/icons-material";
 import {
   Box,
@@ -23,6 +24,8 @@ import { NavLink, useLocation } from "react-router-dom";
 import type { Permission } from "../../../features/roles/types/role";
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { administrationPermissions } from "../../../features/roles/constants/permissions";
+import { useAuth } from "../../../features/auth/context/AuthContext";
+import { isPersonalAccount } from "../../../features/auth/utils/accountType";
 
 const SIDEBAR_WIDTH = 260;
 
@@ -57,6 +60,14 @@ const primaryItems: NavigationItem[] = [
   { label: "Analytics", path: "/analytics", icon: <AssessmentOutlined />, permission: "analytics.read" },
 ];
 
+// Personal accounts see only their own expense management (§5.15).
+const personalItems: NavigationItem[] = [
+  { label: "Dashboard", path: "/personal/dashboard", icon: <DashboardOutlined /> },
+  { label: "Expenses", path: "/personal/expenses", icon: <ReceiptLongOutlined /> },
+  { label: "Budgets", path: "/personal/budgets", icon: <SavingsOutlined /> },
+  { label: "Analytics", path: "/personal/analytics", icon: <AssessmentOutlined /> },
+];
+
 // Section hubs that group related pages.
 const sectionItems: NavigationItem[] = [
   {
@@ -82,7 +93,9 @@ function isItemActive(item: NavigationItem, pathname: string): boolean {
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { can } = usePermissions();
+  const { user } = useAuth();
   const { pathname } = useLocation();
+  const personal = isPersonalAccount(user);
 
   const isVisible = (item: NavigationItem) =>
     !item.permission ||
@@ -134,7 +147,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           Ledgerly
         </Typography>
         <Typography variant="body2" sx={{ color: "sidebar.textMuted" }}>
-          Expense Management
+          {personal ? "Personal Finance" : "Expense Management"}
         </Typography>
       </Box>
 
@@ -142,7 +155,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <Box component="nav" aria-label="Main navigation">
         <List sx={{ px: 1.5, pt: 2, pb: 1 }}>
-          {primaryItems.filter(isVisible).map(renderItem)}
+          {(personal ? personalItems : primaryItems).filter(isVisible).map(renderItem)}
         </List>
         <Divider sx={{ mx: 2, borderColor: "sidebar.border" }} />
         <List sx={{ px: 1.5, pt: 1, pb: 2 }}>

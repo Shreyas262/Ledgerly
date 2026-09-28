@@ -269,3 +269,34 @@ export const bootstrapCredentials: BootstrapCredential[] = [
     password: "admin123",
   },
 ];
+
+/**
+ * Demo personal account (§5.15). Personal users have no organization, role
+ * or permissions; their organizationId is a private namespace so that no
+ * organization query can ever match them.
+ */
+export const bootstrapPersonalUsers = [
+  {
+    id: "user-personal-1",
+    accountType: "personal",
+    organizationId: "personal:user-personal-1",
+    departmentId: "",
+    teamId: "",
+    roleId: "",
+    name: "Priya Personal",
+    email: "personal@ledgerly.com",
+    role: "personal",
+    permissions: [],
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+] as const;
+
+export const bootstrapPersonalCredentials: BootstrapCredential[] = [
+  {
+    userId: "user-personal-1",
+    email: "personal@ledgerly.com",
+    password: "personal123",
+  },
+];
