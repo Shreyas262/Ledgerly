@@ -135,5 +135,3 @@ export interface ActiveBudgetPeriod {
   canCreateExpense: boolean;
   reason: string | null;
 }
-
-export type Budget = OrganizationBudget;

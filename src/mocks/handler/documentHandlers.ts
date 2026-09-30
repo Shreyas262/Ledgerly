@@ -2,7 +2,7 @@ import { apiError } from "../services/apiError";
 import { applyCollectionQuery, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
 import type { Document } from "../../features/documents/types/document";
-import { authorizeRequest, isExpenseVisibleToPrincipal, resolveExpenseScope } from "../services/authorizationService";
+import { authorizeRequest, isExpenseVisibleToPrincipal, resolveExpenseReadScope } from "../services/authorizationService";
 import { authorizationError } from "../services/authorizationHttp";
 import { runAuditedTransaction } from "../services/auditService";
 import { getRecord, listRecords } from "../services/mockDataService";
@@ -59,7 +59,7 @@ async function getAuthorizedExpense(request: Request, expenseId: string, permiss
   const authorization = await authorizeRequest(request, {
     permission,
     scope: permission === "documents.read"
-      ? resolveExpenseScope(principalAuthorization.principal)
+      ? resolveExpenseReadScope(principalAuthorization.principal, expense)
       : "OWN",
     resource: {
       organizationId: expense.organizationId,

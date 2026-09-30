@@ -16,7 +16,7 @@ export const DATE_PRESETS: Array<{ value: DatePreset; label: string }> = [
   { value: "custom", label: "Custom" },
 ];
 
-export const DEFAULT_PRESET: DatePreset = "last_12_months";
+export const DEFAULT_PRESET: DatePreset = "this_month";
 
 /** Maximum range accepted by the API (§26.3). */
 export const MAX_RANGE_DAYS = 366;

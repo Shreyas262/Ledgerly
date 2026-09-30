@@ -4,11 +4,6 @@ import { baseApi } from "../../../services/api/baseApi";
 import type { ID } from "../../../types/common";
 import type { Department, Organization, Team } from "../types/organization";
 
-export interface OrganizationUpdatePayload {
-  name: string;
-  status: Organization["status"];
-}
-
 export interface DepartmentPayload {
   name: string;
   status?: Department["status"];
@@ -25,10 +20,6 @@ export const organizationApi = baseApi.injectEndpoints({
     getOrganization: builder.query<Organization, void>({
       query: () => "/organization",
       providesTags: ["Organization"],
-    }),
-    updateOrganization: builder.mutation<Organization, OrganizationUpdatePayload>({
-      query: (body) => ({ url: "/organization", method: "PUT", body }),
-      invalidatesTags: ["Organization"],
     }),
     getDepartments: builder.query<Department[], CollectionQuery | void>({
       query: (query) => `/departments${buildCollectionQuery(query ?? undefined)}`,
@@ -76,7 +67,6 @@ export const organizationApi = baseApi.injectEndpoints({
 
 export const {
   useGetOrganizationQuery,
-  useUpdateOrganizationMutation,
   useGetDepartmentsQuery,
   useCreateDepartmentMutation,
   useUpdateDepartmentMutation,

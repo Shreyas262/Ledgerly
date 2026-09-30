@@ -5,7 +5,7 @@ import {
   getRecord,
   listRecords,
 } from "../services/mockDataService";
-import { getSessionCookieHeader } from "../sessionCookie";
+import { getSessionCookieHeader } from "../../services/auth/sessionCookie";
 import { buildSession, resolveSession, revokeSession, revokeSessionInTransaction } from "../services/sessionService";
 import { buildAuthenticatedPrincipal, resolveAuthenticatedPrincipal } from "../services/authorizationService";
 import { runAuditedTransaction } from "../services/auditService";

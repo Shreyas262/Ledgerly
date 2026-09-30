@@ -2,7 +2,7 @@ import type { Permission } from "../../features/roles/types/role";
 import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import { getRecord } from "./mockDataService";
 import { resolveSession } from "./sessionService";
-import { getSessionCookieHeader } from "../sessionCookie";
+import { getSessionCookieHeader } from "../../services/auth/sessionCookie";
 
 export type AuthorizationScope =
   | "OWN"
@@ -218,6 +218,19 @@ export function resolveExpenseScope(
     default:
       return "OWN";
   }
+}
+
+/**
+ * Owners can always read their own expenses, independent of the departments
+ * or team they oversee; everyone else is limited to their role scope.
+ */
+export function resolveExpenseReadScope(
+  principal: AuthenticatedPrincipal,
+  expense: { employeeId: string },
+): AuthorizationScope {
+  return expense.employeeId === principal.userId
+    ? "OWN"
+    : resolveExpenseScope(principal);
 }
 
 /**

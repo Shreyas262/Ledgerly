@@ -81,36 +81,6 @@ export const organizationHandlers = [
     return HttpResponse.json(organization);
   }),
 
-  http.put(`${API_BASE_URL}/organization`, async ({ request }) => {
-    const authorization = await authorizeRequest(request, {
-      permission: "organization.manage",
-      scope: "ORGANIZATION",
-    });
-    if (!authorization.allowed) return authorizationError(authorization);
-
-    const existing = await getRecord<OrganizationRecord>("organizations", authorization.principal.organizationId);
-    if (!existing) return apiError(404, "Organization not found.");
-
-    const body = (await request.json()) as Partial<OrganizationRecord>;
-    const name = validateName(body.name);
-    if (!name || (body.status !== "active" && body.status !== "inactive")) {
-      return apiError(400, "Invalid organization configuration.");
-    }
-
-    const updated = { ...existing, name, status: body.status, updatedAt: new Date().toISOString() };
-    await runAuditedTransaction(["organizations"], {
-      organizationId: existing.id,
-      actorId: authorization.principal.userId,
-      action: "ORGANIZATION_SETTINGS_UPDATED",
-      entityType: "ORGANIZATION",
-      entityId: existing.id,
-      metadata: { previousName: existing.name, newName: updated.name, previousStatus: existing.status, newStatus: updated.status },
-      description: `Updated organization configuration for ${updated.name}.`,
-    }, (transaction) => transaction.objectStore("organizations").put(updated));
-
-    return HttpResponse.json(updated);
-  }),
-
   http.get(`${API_BASE_URL}/departments`, async ({ request }) => {
     const result = await authorizeCollection(request, await listRecords<DepartmentRecord>("departments"), {
       permission: "departments.read",

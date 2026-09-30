@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Card,
-  CardActionArea,
   CardContent,
   Divider,
   Grid,
@@ -16,6 +15,7 @@ import {
 import {
   AddOutlined,
   AssessmentOutlined,
+  ChevronRightOutlined,
   ReceiptLongOutlined,
   SavingsOutlined,
 } from "@mui/icons-material";
@@ -43,21 +43,21 @@ function changeDescription(current: number, previous: number): string {
   return `${Math.abs(change).toFixed(0)}% ${change > 0 ? "more" : "less"} than last month`;
 }
 
-function QuickAction({ to, icon, label, description }: { to: string; icon: ReactNode; label: string; description: string }) {
+function QuickAction({ to, icon, label, primary = false }: { to: string; icon: ReactNode; label: string; primary?: boolean }) {
   return (
-    <Card variant="outlined" sx={{ height: "100%" }}>
-      <CardActionArea component={RouterLink} to={to} sx={{ height: "100%" }}>
-        <CardContent>
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-            <Box sx={{ display: "flex", p: 1, borderRadius: 1.5, bgcolor: "action.hover", color: "primary.main" }}>{icon}</Box>
-            <Stack sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle2">{label}</Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>{description}</Typography>
-            </Stack>
-          </Stack>
-        </CardContent>
-      </CardActionArea>
-    </Card>
+    <Button
+      component={RouterLink}
+      to={to}
+      variant={primary ? "contained" : "outlined"}
+      size="large"
+      startIcon={icon}
+      endIcon={<ChevronRightOutlined />}
+      fullWidth
+      // Equal heights when one label wraps onto two lines.
+      sx={{ height: "100%", justifyContent: "flex-start", textAlign: "left", "& .MuiButton-endIcon": { ml: "auto" } }}
+    >
+      {label}
+    </Button>
   );
 }
 
@@ -73,11 +73,6 @@ export function PersonalDashboardPage() {
       <PageHeader
         title={firstName ? `Hello, ${firstName}` : "Dashboard"}
         description={summary ? `Your spending for ${formatMonth(summary.month)}.` : "Your spending at a glance."}
-        actions={
-          <Button component={RouterLink} to="/personal/expenses/new" variant="contained" startIcon={<AddOutlined />}>
-            Add Expense
-          </Button>
-        }
       />
 
       {isLoading ? (
@@ -87,6 +82,35 @@ export function PersonalDashboardPage() {
       ) : (
         <>
           {isFetching && <RefreshingState />}
+
+          <Card component="section" aria-labelledby="quick-actions-title">
+            <CardContent>
+              <Stack spacing={2}>
+                <Box>
+                  <Typography id="quick-actions-title" variant="h6">Quick actions</Typography>
+                  <Typography variant="body2" color="text.secondary">Jump to common tasks.</Typography>
+                </Box>
+                <Grid container spacing={1.5}>
+                  <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                    <QuickAction to="/personal/expenses/new" icon={<AddOutlined />} label="Add expense" primary />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                    <QuickAction to="/personal/expenses" icon={<ReceiptLongOutlined />} label="View expenses" />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                    <QuickAction
+                      to="/personal/budgets"
+                      icon={<SavingsOutlined />}
+                      label={summary.budget ? "Review budget" : "Set this month's budget"}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+                    <QuickAction to="/personal/analytics" icon={<AssessmentOutlined />} label="View analytics" />
+                  </Grid>
+                </Grid>
+              </Stack>
+            </CardContent>
+          </Card>
 
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
@@ -122,21 +146,6 @@ export function PersonalDashboardPage() {
                 value={summary.byType[0] ? PERSONAL_EXPENSE_TYPE_LABELS[summary.byType[0].type] : "—"}
                 description={summary.byType[0] ? `${formatCurrency(summary.byType[0].amount)} this month` : "No spending yet"}
               />
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-              <QuickAction to="/personal/expenses/new" icon={<AddOutlined />} label="Add expense" description="Record a new purchase" />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-              <QuickAction to="/personal/expenses" icon={<ReceiptLongOutlined />} label="All expenses" description="Search and filter" />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-              <QuickAction to="/personal/budgets" icon={<SavingsOutlined />} label="Budgets" description={summary.budget ? "Review your limits" : "Set this month's budget"} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-              <QuickAction to="/personal/analytics" icon={<AssessmentOutlined />} label="Analytics" description="Trends and breakdowns" />
             </Grid>
           </Grid>
 

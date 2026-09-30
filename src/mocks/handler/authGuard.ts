@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 
-import { getSessionCookieHeader } from "../sessionCookie";
+import { getSessionCookieHeader } from "../../services/auth/sessionCookie";
 import { resolveSession } from "../services/sessionService";
 
 export const authGuardHandler = http.all("/api/*", async ({ request }) => {

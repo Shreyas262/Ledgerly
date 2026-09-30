@@ -50,7 +50,3 @@ export function describeRules(rules: PolicyRules): RuleSummary[] {
   return summary;
 }
 
-/** One short line per rule, e.g. "Blocks: above ₹5,000 per expense". */
-export function ruleLine(rule: RuleSummary): string {
-  return rule.enforcement ? `${ENFORCEMENT_LABELS[rule.enforcement]}: ${rule.text.charAt(0).toLowerCase()}${rule.text.slice(1)}` : rule.text;
-}

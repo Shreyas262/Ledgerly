@@ -229,11 +229,6 @@ export async function evaluateExpensePolicy(
   );
 }
 
-/** Whether the expense was above its policy's approval threshold when submitted (§22.3). */
-export function requiresEscalation(expense: { policyEvaluation?: PolicyEvaluation }): boolean {
-  return expense.policyEvaluation?.details.escalated === true;
-}
-
 export async function persistExpenseSubmissionEvaluation(
   expense: PolicyExpense,
   evaluation: PolicyEvaluation,

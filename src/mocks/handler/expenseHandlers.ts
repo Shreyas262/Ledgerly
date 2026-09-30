@@ -10,6 +10,7 @@ import { transitionExpenseState } from "../../features/expenses/domain/expenseSt
 import {
   authorizeRequest,
   isExpenseVisibleToPrincipal,
+  resolveExpenseReadScope,
   resolveExpenseScope,
   type AuthorizationScope,
 } from "../services/authorizationService";
@@ -248,7 +249,7 @@ export const expensesHandlers = [
 
     const authorization = await authorizeRequest(request, {
       permission: "expenses.read",
-      scope: resolveExpenseScope(principalAuthorization.principal),
+      scope: resolveExpenseReadScope(principalAuthorization.principal, expense),
       resource: getExpenseResource(expense),
     });
 
