@@ -3,6 +3,7 @@ import {
   AccountCircleOutlined,
   AdminPanelSettingsOutlined,
   AssessmentOutlined,
+  BusinessOutlined,
   DashboardOutlined,
   ReceiptLongOutlined,
   RequestQuoteOutlined,
@@ -25,7 +26,8 @@ import type { Permission } from "../../../features/roles/types/role";
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { administrationPermissions } from "../../../features/roles/constants/permissions";
 import { useAuth } from "../../../features/auth/context/AuthContext";
-import { isPersonalAccount } from "../../../features/auth/utils/accountType";
+import { accountTypeOf } from "../../../features/auth/utils/accountType";
+import type { AccountType } from "../../../features/auth/types/auth";
 import logoUrl from "../../../assets/ledgerly_svg.svg";
 
 const SIDEBAR_WIDTH = 260;
@@ -101,6 +103,23 @@ const personalItems: NavigationItem[] = [
   },
 ];
 
+// Platform operators manage organizations only.
+const platformItems: NavigationItem[] = [
+  { label: "Organizations", path: "/platform/organizations", icon: <BusinessOutlined /> },
+];
+
+const mainItems: Record<AccountType, NavigationItem[]> = {
+  organization: primaryItems,
+  personal: personalItems,
+  platform: platformItems,
+};
+
+const subtitles: Record<AccountType, string> = {
+  organization: "Expense Management",
+  personal: "Personal Finance",
+  platform: "Platform Administration",
+};
+
 // Section hubs that group related pages.
 const sectionItems: NavigationItem[] = [
   {
@@ -128,7 +147,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { can } = usePermissions();
   const { user } = useAuth();
   const { pathname } = useLocation();
-  const personal = isPersonalAccount(user);
+  const accountType = accountTypeOf(user);
 
   const isVisible = (item: NavigationItem) =>
     !item.permission ||
@@ -193,7 +212,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           />
         </Typography>
         <Typography variant="body2" sx={{ color: "sidebar.textMuted" }}>
-          {personal ? "Personal Finance" : "Expense Management"}
+          {subtitles[accountType]}
         </Typography>
       </Box>
 
@@ -201,7 +220,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <Box component="nav" aria-label="Main navigation">
         <List sx={{ px: 1.5, pt: 2, pb: 1 }}>
-          {(personal ? personalItems : primaryItems)
+          {mainItems[accountType]
             .filter(isVisible)
             .map(renderItem)}
         </List>

@@ -16,8 +16,10 @@ export type SessionStatus = "active" | "expired" | "revoked";
 /**
  * Organization accounts belong to an organization; personal accounts manage
  * their own spending and have no organization, role or permissions (§5.15).
+ * Platform accounts operate Ledgerly itself: they create organizations and
+ * their first Admin, and hold no organization role or permissions.
  */
-export type AccountType = "organization" | "personal";
+export type AccountType = "organization" | "personal" | "platform";
 
 export interface AuthUser {
   id: EntityId;

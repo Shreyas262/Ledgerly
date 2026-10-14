@@ -9,6 +9,8 @@ import {
   bootstrapOrganizations,
   bootstrapPersonalCredentials,
   bootstrapPersonalUsers,
+  bootstrapPlatformCredentials,
+  bootstrapPlatformUsers,
   bootstrapRoles,
   bootstrapTeams,
   bootstrapUsers,
@@ -106,16 +108,16 @@ async function seedCredentials(): Promise<void> {
 }
 
 /**
- * The demo personal account is added by id rather than on an empty store, so
- * databases seeded before personal accounts existed receive it too.
+ * The demo personal and platform accounts are added by id rather than on an
+ * empty store, so databases seeded before those accounts existed receive them too.
  */
 async function ensurePersonalDemoAccounts(): Promise<void> {
-  for (const user of bootstrapPersonalUsers) {
+  for (const user of [...bootstrapPersonalUsers, ...bootstrapPlatformUsers]) {
     if (!(await indexedDbRepository.getById("users", user.id))) {
       await indexedDbRepository.save("users", { ...user, permissions: [] });
     }
   }
-  for (const credential of bootstrapPersonalCredentials) {
+  for (const credential of [...bootstrapPersonalCredentials, ...bootstrapPlatformCredentials]) {
     if (!(await indexedDbRepository.getById("credentials", credential.userId))) {
       await indexedDbRepository.save("credentials", {
         ...credential,

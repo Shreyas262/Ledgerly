@@ -19,8 +19,8 @@ interface NamedRecord {
 
 /** Display names for the user's organization context, so clients never show raw IDs. */
 async function resolveContextNames(user: MockUser, authorizedDepartmentIds: string[] = []) {
-  // Personal accounts have no organization context to name.
-  if (user.accountType === "personal") return {};
+  // Personal and platform accounts have no organization context to name.
+  if (user.accountType === "personal" || user.accountType === "platform") return {};
   const [organization, departments, team] = await Promise.all([
     getRecord<NamedRecord>("organizations", user.organizationId),
     listRecords<NamedRecord>("departments"),
@@ -289,12 +289,17 @@ export const authHandlers = [
 
     // Each sign-in path accepts only its own kind of account (§5.15).
     const accountType: AccountType = user.accountType ?? "organization";
-    if ((body.accountType === "personal" || body.accountType === "organization") && body.accountType !== accountType) {
+    if (
+      (body.accountType === "personal" || body.accountType === "organization" || body.accountType === "platform") &&
+      body.accountType !== accountType
+    ) {
       return apiError(
         403,
         accountType === "personal"
           ? "This is a personal account. Use Personal Login to sign in."
-          : "This is an organization account. Use Organization Login to sign in.",
+          : accountType === "platform"
+            ? "This is a platform account. Use Platform Login to sign in."
+            : "This is an organization account. Use Organization Login to sign in.",
         "ACCOUNT_TYPE_MISMATCH",
       );
     }

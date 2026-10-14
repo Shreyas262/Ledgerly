@@ -7,12 +7,18 @@ import {
 
 import { SectionHub } from "../../../components/navigation/SectionHub";
 import { useAuth } from "../../auth/context/AuthContext";
-import { isPersonalAccount } from "../../auth/utils/accountType";
+import { accountTypeOf } from "../../auth/utils/accountType";
+
+const SETTINGS_DESCRIPTION = {
+  organization: "Theme and notification preferences.",
+  personal: "Theme and start page preferences.",
+  platform: "Theme preferences.",
+} as const;
 
 export function AccountPage() {
   const { user } = useAuth();
   const isFinance = user?.role === "finance";
-  const personal = isPersonalAccount(user);
+  const accountType = accountTypeOf(user);
 
   return (
     <SectionHub
@@ -25,8 +31,8 @@ export function AccountPage() {
           path: "/profile",
           icon: <PersonOutlined />,
         },
-        // Personal accounts have no team or department.
-        ...(personal ? [] : [{
+        // Only organization accounts have a team or department.
+        ...(accountType !== "organization" ? [] : [{
           label: isFinance ? "My Department" : "My Team",
           description: isFinance
             ? "Members of your authorized departments and who reviews your expenses."
@@ -42,7 +48,7 @@ export function AccountPage() {
         },
         {
           label: "Settings",
-          description: personal ? "Theme and start page preferences." : "Theme and notification preferences.",
+          description: SETTINGS_DESCRIPTION[accountType],
           path: "/settings",
           icon: <SettingsOutlined />,
         },

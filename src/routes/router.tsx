@@ -183,6 +183,11 @@ const PersonalAnalyticsPage = lazy(() =>
     default: module.PersonalAnalyticsPage,
   })),
 );
+const PlatformOrganizationsPage = lazy(() =>
+  import("../features/platform/pages/PlatformOrganizationsPage").then((module) => ({
+    default: module.PlatformOrganizationsPage,
+  })),
+);
 
 /** Organization pages; personal accounts are sent to their own home (§5.15). */
 const organizationRoutes: RouteObject[] = [
@@ -479,7 +484,16 @@ const personalRoutes: RouteObject[] = [
   },
 ];
 
-/** Account pages shared by both kinds of account. */
+/** Platform administration; only platform operators reach it. */
+const platformRoutes: RouteObject[] = [
+  {
+    path: "/platform/organizations",
+    element: <PlatformOrganizationsPage />,
+    handle: { title: "Organizations" },
+  },
+];
+
+/** Account pages shared by every kind of account. */
 const accountRoutes: RouteObject[] = [
   {
     path: "/profile",
@@ -547,6 +561,10 @@ export const router = createBrowserRouter([
           {
             element: <AccountTypeRoute accountType="personal" />,
             children: personalRoutes,
+          },
+          {
+            element: <AccountTypeRoute accountType="platform" />,
+            children: platformRoutes,
           },
           ...accountRoutes,
         ],

@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../features/auth/context/AuthContext";
 import { usePermissions } from "../features/auth/hooks/usePermissions";
-import { HOME_PATH, isPersonalAccount } from "../features/auth/utils/accountType";
+import { HOME_PATH, isPersonalAccount, isPlatformAccount } from "../features/auth/utils/accountType";
 import { useSettings } from "../features/settings/hooks/useSettings";
 
 /** Sends the user to their chosen start page (§30.12), when they can open it. */
@@ -9,6 +9,11 @@ export function StartPageRedirect() {
   const { user } = useAuth();
   const { settings } = useSettings();
   const { can } = usePermissions();
+
+  // Platform operators have a single area and no start page choice.
+  if (isPlatformAccount(user)) {
+    return <Navigate to={HOME_PATH.platform} replace />;
+  }
 
   if (isPersonalAccount(user)) {
     const allowed = settings.startPage === "/personal/dashboard" || settings.startPage === "/personal/expenses";

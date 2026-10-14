@@ -17,7 +17,7 @@ import { useAppDispatch } from "../../../store/hooks";
 
 import { useLogoutMutation } from "../../../features/auth/api/authApi";
 import { useAuth } from "../../../features/auth/context/AuthContext";
-import { isPersonalAccount } from "../../../features/auth/utils/accountType";
+import { accountTypeOf } from "../../../features/auth/utils/accountType";
 import { baseApi } from "../../../services/api/baseApi";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 
@@ -66,7 +66,8 @@ export function Topbar({
     handleMenuClose();
     if (!(await confirm({ title: "Sign Out", message: "Sign out of Ledgerly?", confirmLabel: "Sign Out" }))) return;
     // Read before signing out: the user is cleared with the API state.
-    const loginPath = isPersonalAccount(user) ? "/auth/login?type=personal" : "/auth/login";
+    const accountType = accountTypeOf(user);
+    const loginPath = accountType === "organization" ? "/auth/login" : `/auth/login?type=${accountType}`;
 
     try {
       await logout().unwrap();
@@ -94,7 +95,7 @@ export function Topbar({
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {/* Notifications describe organization workflows only. */}
-          {!isPersonalAccount(user) && <NotificationBell />}
+          {accountTypeOf(user) === "organization" && <NotificationBell />}
 
           <IconButton
             onClick={handleAccountClick}

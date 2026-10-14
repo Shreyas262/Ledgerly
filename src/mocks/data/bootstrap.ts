@@ -300,3 +300,34 @@ export const bootstrapPersonalCredentials: BootstrapCredential[] = [
     password: "personal123",
   },
 ];
+
+/**
+ * Demo platform operator. Platform accounts sit above every organization:
+ * they create organizations and their first Admin, and hold no organization
+ * role or permissions, so no organization endpoint ever serves them.
+ */
+export const bootstrapPlatformUsers = [
+  {
+    id: "user-platform-1",
+    accountType: "platform",
+    organizationId: "platform",
+    departmentId: "",
+    teamId: "",
+    roleId: "",
+    name: "Platform Operator",
+    email: "platform@ledgerly.com",
+    role: "platform",
+    permissions: [],
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+] as const;
+
+export const bootstrapPlatformCredentials: BootstrapCredential[] = [
+  {
+    userId: "user-platform-1",
+    email: "platform@ledgerly.com",
+    password: "platform123",
+  },
+];

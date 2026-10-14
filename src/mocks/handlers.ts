@@ -14,6 +14,7 @@ import { analyticsHandlers } from "./handler/analyticsHandlers";
 import { teamHandlers } from "./handler/teamHandlers";
 import { notificationHandlers } from "./handler/notificationHandlers";
 import { personalHandlers } from "./handler/personalHandlers";
+import { platformHandlers } from "./handler/platformHandlers";
 
 export const handlers = [
   authGuardHandler,
@@ -32,4 +33,5 @@ export const handlers = [
   ...teamHandlers,
   ...notificationHandlers,
   ...personalHandlers,
+  ...platformHandlers,
 ];

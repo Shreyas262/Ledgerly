@@ -22,7 +22,15 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { humanize } from "../../../utils/format";
-import { isPersonalAccount } from "../../auth/utils/accountType";
+import { accountTypeOf } from "../../auth/utils/accountType";
+
+import type { AccountType } from "../../auth/types/auth";
+
+/** Accounts without an organization role show their kind instead. */
+const ACCOUNT_LABELS: Partial<Record<AccountType, string>> = {
+  personal: "Personal account",
+  platform: "Platform operator",
+};
 import { PageHeader } from "../../../components/common/PageHeader";
 
 export function UserProfilePage() {
@@ -100,7 +108,7 @@ export function UserProfilePage() {
                 <Stack spacing={0.5} sx={{ minWidth: 0 }}>
                   <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
                     <Typography variant="h5">{user.name}</Typography>
-                    <Chip size="small" label={isPersonalAccount(user) ? "Personal account" : humanize(user.role)} />
+                    <Chip size="small" label={ACCOUNT_LABELS[accountTypeOf(user)] ?? humanize(user.role)} />
                   </Stack>
                   <Typography color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
                     {user.email}
@@ -121,8 +129,8 @@ export function UserProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Personal accounts belong to no organization (§5.15). */}
-      {!isPersonalAccount(user) && (
+      {/* Personal and platform accounts belong to no organization (§5.15). */}
+      {accountTypeOf(user) === "organization" && (
       <Card>
         <CardContent>
           <Stack spacing={2.5}>

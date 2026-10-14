@@ -156,7 +156,7 @@ export const roleHandlers = [
           return apiError(409, "The Admin role must retain the permissions required for continued administration.");
         }
       }
-      if (existingRole.name === "admin" && name !== "admin" && !users.some((user) => user.organizationId === existingRole.organizationId && user.status !== "inactive" && user.roleId !== existingRole.id && user.roleId === "role-admin")) {
+      if (existingRole.name === "admin" && name !== "admin" && !users.some((user) => user.organizationId === existingRole.organizationId && user.status !== "inactive" && user.roleId !== existingRole.id && roles.some((role) => role.id === user.roleId && role.name === "admin"))) {
         return apiError(409, "The final Admin role cannot be renamed without another active Admin.");
       }
 

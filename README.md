@@ -1,11 +1,12 @@
 # Ledgerly
 
-Ledgerly is a React-based expense management application that supports two isolated account experiences:
+Ledgerly is a React-based expense management application that supports three isolated account experiences:
 
 - **Personal accounts** — track personal expenses, budgets, receipts, and spending analytics.
 - **Organizational accounts** — manage organizational expenses, budgets, approvals, policies, users, roles, analytics, and audit activity.
+- **Platform accounts** — Ledgerly operators who create organizations and their first Admin.
 
-The application uses account-type routing so personal users remain inside the personal expense-management area while organizational users use the organization-management area.
+The application uses account-type routing so each kind of user stays inside its own area: personal users in personal expense management, organizational users in organization management, and platform operators in platform administration.
 
 ## Features
 
@@ -33,6 +34,13 @@ The application uses account-type routing so personal users remain inside the pe
 - Organization administration
 - Audit log and audit details
 - Account, team, activity, profile, and settings pages
+
+### Platform Administration
+
+- List of every organization with its Admins, user count, and status
+- Create an organization together with its first Admin
+- Each new organization gets its own system roles and a default `General` department and team
+- Platform operators have no access to any organization's data
 
 ## Tech Stack
 
@@ -66,6 +74,7 @@ src/
 │   ├── users/           # User management
 │   ├── roles/           # Roles and permissions
 │   ├── organizations/   # Organization administration
+│   ├── platform/        # Platform administration (organizations)
 │   ├── audit/           # Audit logging
 │   ├── documents/       # Receipts and documents
 │   ├── activity/        # Account activity
@@ -81,14 +90,17 @@ src/
 
 ## Account Architecture
 
-Ledgerly supports two account types:
+Ledgerly supports three account types:
 
 | Account      | Primary Area                    | Purpose                                         |
 | ------------ | ------------------------------- | ----------------------------------------------- |
 | Personal     | `/personal/*`                   | Individual expense and budget management        |
 | Organization | `/dashboard`, `/expenses`, etc. | Organizational expense and financial management |
+| Platform     | `/platform/*`                   | Creating organizations and their first Admin    |
 
-Protected routing enforces account-type isolation. Personal accounts cannot access organizational routes, and organizational accounts cannot access personal routes.
+Protected routing enforces account-type isolation. Each account type can access only its own routes and is redirected to its own home otherwise.
+
+Personal accounts sign up themselves. Organizational users are created by their organization's Admin. Organizations, and their first Admin, are created by platform operators, who sign in at `/auth/login?type=platform`.
 
 Authentication and permission checks are applied through the application's route guards and authorization layer.
 
@@ -154,6 +166,10 @@ npm run lint
 - `/admin`
 - `/admin/organization`
 - `/audit`
+
+### Platform
+
+- `/platform/organizations`
 
 Shared account routes include `/profile`, `/account`, `/settings`, and `/activity`.
 

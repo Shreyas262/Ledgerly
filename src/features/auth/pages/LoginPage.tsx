@@ -39,13 +39,22 @@ const COPY: Record<AccountType, { title: string; subtitle: string }> = {
     title: "Personal login",
     subtitle: "Sign in to manage your personal expenses and budgets.",
   },
+  platform: {
+    title: "Platform login",
+    subtitle: "Sign in to manage the organizations on Ledgerly.",
+  },
 };
+
+/** Platform login is reached by its URL only (?type=platform); it has no tab. */
+function parseAccountType(value: string | null): AccountType {
+  return value === "personal" || value === "platform" ? value : "organization";
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const accountType: AccountType = searchParams.get("type") === "personal" ? "personal" : "organization";
+  const accountType = parseAccountType(searchParams.get("type"));
   const redirectTo =
     // Without a page to return to, the user's chosen start page opens.
     (location.state as { from?: Location } | null)?.from?.pathname ??
@@ -83,17 +92,19 @@ export function LoginPage() {
   };
 
   return (
-    <AuthLayout variant={accountType}>
+    <AuthLayout variant={accountType === "personal" ? "personal" : "organization"}>
       <Stack component="form" onSubmit={handleSubmit} spacing={3} noValidate>
-        <Tabs
-          value={accountType}
-          onChange={handleAccountTypeChange}
-          variant="fullWidth"
-          aria-label="Account type"
-        >
-          <Tab value="organization" label="Organization" />
-          <Tab value="personal" label="Personal" />
-        </Tabs>
+        {accountType !== "platform" && (
+          <Tabs
+            value={accountType}
+            onChange={handleAccountTypeChange}
+            variant="fullWidth"
+            aria-label="Account type"
+          >
+            <Tab value="organization" label="Organization" />
+            <Tab value="personal" label="Personal" />
+          </Tabs>
+        )}
 
         <Stack spacing={0.75}>
           <Typography variant="h4" component="h1">
@@ -179,11 +190,11 @@ export function LoginPage() {
               Create a personal account
             </Link>
           </Typography>
-        ) : (
+        ) : accountType === "organization" ? (
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
             Organization accounts are created by your administrator.
           </Typography>
-        )}
+        ) : null}
       </Stack>
     </AuthLayout>
   );

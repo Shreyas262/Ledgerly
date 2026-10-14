@@ -25,7 +25,7 @@ import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { usePermissions } from "../../auth/hooks/usePermissions";
 import { useAuth } from "../../auth/context/AuthContext";
-import { isPersonalAccount } from "../../auth/utils/accountType";
+import { isPersonalAccount, isPlatformAccount } from "../../auth/utils/accountType";
 import { useSettings } from "../hooks/useSettings";
 import { resetSettings } from "../utils/settingsStorage";
 import { useChangePasswordMutation, useGetSessionsQuery, useRevokeOtherSessionsMutation } from "../api/securityApi";
@@ -65,6 +65,8 @@ export function SettingsPage() {
   const [saved, setSaved] = useState<string | null>(null);
   const isReviewer = can("expenses.approve") || can("reimbursements.manage");
   const personal = isPersonalAccount(user);
+  // Platform operators have one page and no notifications: only the theme applies.
+  const platform = isPlatformAccount(user);
   // Organization defaults do not apply to personal accounts, and vice versa.
   const startPage = personal
     ? (settings.startPage.startsWith("/personal/") ? settings.startPage : "/personal/dashboard")
@@ -87,9 +89,11 @@ export function SettingsPage() {
   const handleReset = async () => {
     if (!(await confirm({
       title: "Reset Preferences",
-      message: personal
-        ? "Restore theme and start page preferences to their defaults?"
-        : "Restore theme, start page and notification preferences to their defaults?",
+      message: platform
+        ? "Restore theme preferences to their defaults?"
+        : personal
+          ? "Restore theme and start page preferences to their defaults?"
+          : "Restore theme, start page and notification preferences to their defaults?",
       confirmLabel: "Reset",
       destructive: true,
     }))) return;
@@ -161,7 +165,7 @@ export function SettingsPage() {
         </ToggleButtonGroup>
       </Section>
 
-      <Section title="Start page" description="The page that opens after you sign in.">
+      {!platform && <Section title="Start page" description="The page that opens after you sign in.">
         <TextField
           select
           label="Start page"
@@ -180,10 +184,10 @@ export function SettingsPage() {
                 isReviewer && <MenuItem key="approvals" value="/approvals">Approvals</MenuItem>,
               ]}
         </TextField>
-      </Section>
+      </Section>}
 
       {/* Notifications cover organization workflows only. */}
-      {!personal && <Section title="Notifications" description="Choose which notifications appear under the bell in the top bar.">
+      {!personal && !platform && <Section title="Notifications" description="Choose which notifications appear under the bell in the top bar.">
         <Stack spacing={1.5}>
           {NOTIFICATION_OPTIONS.filter((option) => !option.reviewersOnly || isReviewer).map((option) => (
             <FormControlLabel

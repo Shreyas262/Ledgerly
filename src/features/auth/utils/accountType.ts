@@ -8,8 +8,12 @@ export function accountTypeOf(user: AuthUser | null | undefined): AccountType {
 export const isPersonalAccount = (user: AuthUser | null | undefined): boolean =>
   accountTypeOf(user) === "personal";
 
+export const isPlatformAccount = (user: AuthUser | null | undefined): boolean =>
+  accountTypeOf(user) === "platform";
+
 /** Where each kind of account lands by default. */
 export const HOME_PATH: Record<AccountType, string> = {
   organization: "/dashboard",
   personal: "/personal/dashboard",
+  platform: "/platform/organizations",
 };

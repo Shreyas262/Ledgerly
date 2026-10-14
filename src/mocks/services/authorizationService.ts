@@ -31,7 +31,7 @@ export interface AuthorizationOptions {
 
 interface AuthorizationUser {
   id: string;
-  accountType?: "organization" | "personal";
+  accountType?: "organization" | "personal" | "platform";
   organizationId: string;
   departmentId: string;
   teamId: string;
@@ -76,6 +76,23 @@ export async function buildAuthenticatedPrincipal(
       teamId: "",
       roleId: "",
       role: "personal",
+      effectivePermissions: [],
+      authorizedDepartmentIds: [],
+    };
+  }
+
+  // Platform operators sit above every organization and hold no organization
+  // permissions; platform endpoints check the account type instead.
+  if (user.accountType === "platform") {
+    if (user.status !== "active") return null;
+    return {
+      userId: user.id,
+      accountType: "platform",
+      organizationId: user.organizationId,
+      departmentId: "",
+      teamId: "",
+      roleId: "",
+      role: "platform",
       effectivePermissions: [],
       authorizedDepartmentIds: [],
     };
