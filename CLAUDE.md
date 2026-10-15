@@ -10,8 +10,8 @@ React 19 + TypeScript + Vite app; the "backend" is Mock Service Worker + Indexed
    risks, and how it will be verified. Do not edit any project file until the user explicitly approves the plan.
 3. **Implement exactly the approved plan.** If more changes turn out to be necessary, or the plan conflicts with the
    architecture, stop and ask. No unrequested features, refactors or dependencies.
-4. **Do not break existing functionality.** Run `npx tsc -b`, `npm run lint`, `npm run build` (and tests, once they exist)
-   after every change. Report failures honestly with their output.
+4. **Do not break existing functionality.** Run `npm test`, `npx tsc -b`, `npm run lint` and `npm run build` after every
+   change, and add or update tests for the behavior changed. Report failures honestly with their output.
 5. **Explain the result.** After implementing, explain what changed and why, file by file, plus verification results and
    any remaining issues.
 6. **Branch per phase.** Each roadmap phase is developed on its own branch created from `main`
@@ -34,7 +34,19 @@ npm run dev       # Vite dev server (MSW enabled in dev)
 npm run build     # tsc -b && vite build
 npm run lint      # oxlint
 npm run preview   # serve the production build
+npm test          # Vitest, single run
+npm run test:watch
 ```
+
+## Testing
+
+- Vitest with three projects (`vitest.config.ts`): `unit` (Node, `src/**/*.test.ts`), `api` (jsdom,
+  `src/mocks/handler/**/*.test.ts`) and `dom` (jsdom, `src/**/*.test.tsx`). Tests sit next to the code they test.
+- IndexedDB is provided by fake-indexeddb; `src/test/setup.ts` resets and reseeds the mock database before every test.
+- API tests go through the real MSW handlers with `setupApiServer()`, `signIn()` and `apiFetch()` from
+  `src/test/apiServer.ts`, so authentication and authorization are exercised as in the app.
+- Tests assert behavior and authorization outcomes (including negative cases), not implementation details. Use
+  `vi.setSystemTime` for date-dependent rules; each scenario creates the data (e.g. budgets) it needs.
 
 Production on Netlify sets `VITE_ENABLE_MOCKS=true`, so the mock backend also runs in the deployed app.
 
