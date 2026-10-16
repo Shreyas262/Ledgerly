@@ -24,26 +24,19 @@ import {
 import { getRecord } from "../services/mockDataService";
 import { withEmployeeNames } from "../services/authorizedExpenseRecords";
 import { runAuditedTransaction } from "../services/auditService";
+import { WorkflowError } from "../services/workflowErrors";
 
 async function getExpense(id: string) {
   return getRecord<Expense>("expenses", id);
 }
 
 function workflowError(error: unknown) {
-  const message =
-    error instanceof Error ? error.message : "The action could not be completed.";
-
-  if (message.includes("rejection reason") || message.includes("cancellation reason")) {
-    return apiError(422, message, "VALIDATION_ERROR", {
-      fieldErrors: { reason: message },
-    });
+  if (error instanceof WorkflowError) {
+    return apiError(error.status, error.message, error.code, error.details);
   }
 
-  if (message.includes("Invalid expense transition")) {
-    return apiError(409, message, "INVALID_STATE_TRANSITION");
-  }
-
-  return apiError(403, message, "FORBIDDEN");
+  // Unexpected failures never expose internal messages.
+  return apiError(500, "The action could not be completed.");
 }
 
 function expenseNotFound() {

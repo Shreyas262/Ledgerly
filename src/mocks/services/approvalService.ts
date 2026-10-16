@@ -1,5 +1,5 @@
 import type { Expense } from "../../features/expenses/types/expense";
-import { transitionExpenseState } from "../../features/expenses/domain/expenseStateMachine";
+import { transitionOrConflict, workflowForbidden, workflowReasonRequired } from "./workflowErrors";
 import { listRecords, listRecordsByIndex } from "./mockDataService";
 import {
   authorizeExpenseManager,
@@ -76,10 +76,10 @@ export async function startExpenseReview(
   );
 
   if (authorization.allowed === false) {
-    throw new Error(authorization.error.message);
+    throw workflowForbidden(authorization.error.message);
   }
 
-  const status = transitionExpenseState("START_REVIEW", expense.status);
+  const status = transitionOrConflict("START_REVIEW", expense.status);
   const now = new Date().toISOString();
 
   const updatedExpense: Expense = {
@@ -118,10 +118,10 @@ export async function approveExpense(
   );
 
   if (authorization.allowed === false) {
-    throw new Error(authorization.error.message);
+    throw workflowForbidden(authorization.error.message);
   }
 
-  const status = transitionExpenseState("APPROVE", expense.status);
+  const status = transitionOrConflict("APPROVE", expense.status);
   const now = new Date().toISOString();
 
   const updatedExpense: Expense = {
@@ -164,16 +164,16 @@ export async function rejectExpense(
   );
 
   if (authorization.allowed === false) {
-    throw new Error(authorization.error.message);
+    throw workflowForbidden(authorization.error.message);
   }
 
   const normalizedReason = reason.trim();
 
   if (!normalizedReason) {
-    throw new Error("A rejection reason is required.");
+    throw workflowReasonRequired("A rejection reason is required.");
   }
 
-  const status = transitionExpenseState("REJECT", expense.status);
+  const status = transitionOrConflict("REJECT", expense.status);
   const now = new Date().toISOString();
 
   const updatedExpense: Expense = {

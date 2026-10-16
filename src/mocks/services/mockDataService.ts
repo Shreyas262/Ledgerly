@@ -1,4 +1,6 @@
 import {
+  closeDatabase,
+  DB_NAME,
   readAll,
   type MockStoreName,
 } from "../db/indexedDb";
@@ -143,6 +145,22 @@ export function initializeMockDatabase(): Promise<void> {
   }
 
   return initializationPromise;
+}
+
+/**
+ * Development reset (§17.6): closes and deletes the mock database so the next
+ * request seeds fresh demo data. Not used by the application itself.
+ */
+export async function resetMockDatabase(): Promise<void> {
+  await initializationPromise?.catch(() => undefined);
+  initializationPromise = null;
+  await closeDatabase();
+
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(DB_NAME);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
 }
 
 export async function listRecords<T>(

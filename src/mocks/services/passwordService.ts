@@ -77,7 +77,7 @@ export async function verifyPassword(
   }
 
   const iterations = Number(parts[1]);
-  if (!Number.isSafeInteger(iterations) || iterations <= 0) return false;
+  if (!Number.isSafeInteger(iterations) || iterations <= 0 || iterations > 10_000_000) return false;
 
   const salt = fromBase64(parts[2]);
   const expected = fromBase64(parts[3]);
