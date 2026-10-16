@@ -4,6 +4,7 @@ import { createBrowserRouter, Navigate, type RouteObject } from "react-router-do
 import { lazy } from "react";
 
 import { AppLayout } from "../layouts/AppLayout/AppLayout";
+import { RouteErrorPage } from "../components/common/RouteErrorPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { PermissionRoute } from "./PermissionRoute";
 import { AccountTypeRoute } from "./AccountTypeRoute";
@@ -533,40 +534,51 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <LandingPage />,
+    errorElement: <RouteErrorPage />,
   },
   {
     path: "/auth/login",
     element: <LoginPage />,
+    errorElement: <RouteErrorPage />,
   },
   {
     path: "/auth/register",
     element: <RegisterPage />,
+    errorElement: <RouteErrorPage />,
   },
 
   {
     element: <ProtectedRoute />,
+    // Fallback when the layout itself fails.
+    errorElement: <RouteErrorPage />,
     children: [
       {
         element: <AppLayout />,
         children: [
           {
-            // Opens the signed-in user's chosen start page.
-            path: "/start",
-            element: <StartPageRedirect />,
+            // Page errors render inside the layout, keeping the navigation.
+            errorElement: <RouteErrorPage />,
+            children: [
+              {
+                // Opens the signed-in user's chosen start page.
+                path: "/start",
+                element: <StartPageRedirect />,
+              },
+              {
+                element: <AccountTypeRoute accountType="organization" />,
+                children: organizationRoutes,
+              },
+              {
+                element: <AccountTypeRoute accountType="personal" />,
+                children: personalRoutes,
+              },
+              {
+                element: <AccountTypeRoute accountType="platform" />,
+                children: platformRoutes,
+              },
+              ...accountRoutes,
+            ],
           },
-          {
-            element: <AccountTypeRoute accountType="organization" />,
-            children: organizationRoutes,
-          },
-          {
-            element: <AccountTypeRoute accountType="personal" />,
-            children: personalRoutes,
-          },
-          {
-            element: <AccountTypeRoute accountType="platform" />,
-            children: platformRoutes,
-          },
-          ...accountRoutes,
         ],
       },
     ],
