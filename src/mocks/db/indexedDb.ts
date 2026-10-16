@@ -521,6 +521,14 @@ function openDatabase(): Promise<IDBDatabase> {
 
   databasePromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
+    let blocked = false;
+
+    // Another tab holds an older version open and did not release it. Fail
+    // instead of waiting indefinitely; the next request opens it again.
+    request.onblocked = () => {
+      blocked = true;
+      reject(new Error("The database is in use by another Ledgerly tab."));
+    };
 
     request.onupgradeneeded = (event) => {
       const database = request.result;
@@ -544,9 +552,24 @@ function openDatabase(): Promise<IDBDatabase> {
       }
     };
 
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const database = request.result;
+      if (blocked) {
+        // The open completed after it was given up; nothing uses it.
+        database.close();
+        return;
+      }
+      // A newer version opened in another tab: release this connection so its
+      // upgrade is not blocked. The next request reopens the database.
+      database.onversionchange = () => {
+        database.close();
+        if (databasePromise === openPromise) databasePromise = null;
+      };
+      resolve(database);
+    };
     request.onerror = () => reject(request.error);
   });
+  const openPromise = databasePromise;
 
   databasePromise.catch(() => {
     databasePromise = null;

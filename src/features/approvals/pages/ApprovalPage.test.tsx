@@ -1,5 +1,5 @@
-import { screen, waitFor } from "@testing-library/react";
-import { http } from "msw";
+import { screen, waitFor, within } from "@testing-library/react";
+import { delay, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { apiError } from "../../../mocks/services/apiError";
@@ -79,6 +79,27 @@ describe("ApprovalsPage review queue", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/START_REVIEW|under_review/)).not.toBeInTheDocument();
     expect(screen.queryByTestId("current-location")).not.toBeInTheDocument();
+  });
+
+  it("shows progress only on the expense whose review is starting", async () => {
+    await givenExpense({ owner: "employee", title: "Hotel in Pune" });
+    await givenExpense({ owner: "employee", title: "Taxi to airport" });
+    const { user } = await renderApprovals();
+    await screen.findByText("Hotel in Pune");
+    server.use(http.post("/api/expenses/:id/review", async () => {
+      // Falls through to the real handler after the delay.
+      await delay(300);
+    }));
+
+    await user.click(screen.getAllByRole("button", { name: "Start Review" })[0]);
+    const dialog = await screen.findByRole("dialog", { name: "Start Review" });
+    await user.click(within(dialog).getByRole("button", { name: "Start Review" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    const cardButtons = screen.getAllByRole("button", { name: "Start Review" });
+    expect(cardButtons).toHaveLength(2);
+    expect(cardButtons.filter((button) => button.hasAttribute("disabled"))).toHaveLength(1);
+    expect(await navigatedTo()).toMatch(/^\/approvals\//);
   });
 
   it("offers Retry when the queue fails to load", async () => {

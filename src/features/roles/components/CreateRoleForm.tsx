@@ -36,9 +36,6 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
       return [...currentPermissions, permission];
     });
   }
-    if (isError && error) {
-      console.log(error)
-  }
 
   async function handleSubmit(event: SyntheticEvent) {
     event.preventDefault();

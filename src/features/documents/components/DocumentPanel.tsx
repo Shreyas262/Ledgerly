@@ -11,7 +11,6 @@ import {
 } from "@mui/material";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
-import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import {
   useFetchDocumentContentMutation,
   useGetExpenseDocumentsQuery,
@@ -29,10 +28,11 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
     data: documents = [],
     isLoading,
     isError,
+    refetch,
   } = useGetExpenseDocumentsQuery(expenseId);
   const [removeDocument, { isLoading: isRemoving }] =
     useRemoveDocumentMutation();
-  const [uploadDocument, { isLoading: isUploading, error: uploadError }] =
+  const [uploadDocument, { isLoading: isUploading }] =
     useUploadDocumentMutation();
   const confirm = useConfirm();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -136,9 +136,13 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
           )}
         </Stack>
         {actionError && <Alert severity="error">{actionError}</Alert>}
-        {uploadError && <ApiFeedback error={uploadError} />}
         {isError && (
-          <Alert severity="error">Documents could not be loaded.</Alert>
+          <Alert
+            severity="error"
+            action={<Button color="inherit" size="small" onClick={() => refetch()}>Retry</Button>}
+          >
+            Documents could not be loaded.
+          </Alert>
         )}
         {isLoading && (
           <Typography color="text.secondary">Loading documents…</Typography>
@@ -161,7 +165,7 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
                 : `${name} could not be uploaded.`}
           </Alert>
         ))}
-        {!isLoading && documents.length === 0 && (
+        {!isLoading && !isError && documents.length === 0 && (
           <Typography color="text.secondary">No documents attached.</Typography>
         )}
         {documents.map((document, index) => (

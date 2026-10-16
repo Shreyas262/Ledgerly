@@ -6,6 +6,7 @@ import {
   Tabs,
   Typography,
 } from "@mui/material";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useGetApprovalQueueQuery } from "../api/approvalApi";
@@ -78,16 +79,19 @@ function ReviewQueue() {
     refetch,
   } = useGetApprovalQueueQuery();
 
-  const [startExpenseReview, { isLoading: isStartingReview, error: startReviewError }] =
-    useStartExpenseReviewMutation();
+  const [startExpenseReview, { error: startReviewError }] = useStartExpenseReviewMutation();
+  const [startingExpenseId, setStartingExpenseId] = useState<string | null>(null);
 
   const handleStartReview = async (expense: Expense) => {
     if (!(await confirm({ title: "Start Review", message: `Start reviewing "${expense.title}"?`, confirmLabel: "Start Review" }))) return;
+    setStartingExpenseId(expense.id);
     try {
-      await startExpenseReview(String(expense.id)).unwrap();
+      await startExpenseReview(expense.id).unwrap();
       navigate(`/approvals/${expense.id}`);
     } catch {
       // Error is exposed through startReviewError.
+    } finally {
+      setStartingExpenseId(null);
     }
   };
 
@@ -122,7 +126,7 @@ function ReviewQueue() {
                 navigate(`/approvals/${selectedExpense.id}`)
               }
               onStartReview={handleStartReview}
-              isStartingReview={isStartingReview}
+              isStartingReview={startingExpenseId === expense.id}
             />
           ))}
         </Stack>
