@@ -21,7 +21,7 @@ async function fillForm(user: Awaited<ReturnType<typeof renderCreatePage>>["user
   await user.type(screen.getByRole("textbox", { name: "Title" }), "Team lunch");
   await user.type(screen.getByRole("textbox", { name: "Description" }), "Lunch with the project team");
   await user.type(screen.getByRole("spinbutton", { name: "Amount" }), "1200");
-  fireEvent.change(screen.getByLabelText(/Expense Date/), { target: { value: "2026-10-10" } });
+  fireEvent.change(screen.getByLabelText(/Expense date/), { target: { value: "2026-10-10" } });
 }
 
 describe("CreateExpensePage", () => {

@@ -56,7 +56,7 @@ export function PolicyCard({
           onClick={() => onView(policy)}
           sx={{ alignSelf: "flex-start", mt: "auto" }}
         >
-          View policy
+          View Policy
         </Button>
       </CardContent>
     </Card>

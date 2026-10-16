@@ -92,7 +92,8 @@ export interface Expense extends ResourceTimestamps {
   title: string;
   amount: number;
   currency: CurrencyCode;
-  merchant: string;
+  /** Not captured yet; reserved for merchant-based duplicate checks. */
+  merchant?: string;
   description: string;
   expenseDate: ISODateString;
   projectId?: EntityId;

@@ -25,7 +25,7 @@ describe("UserProfilePage", () => {
   it("saves the profile without re-checking the session and confirms the change", async () => {
     const { user } = await renderPage(<GuardedProfile />, { path: "/profile/*", route: "/profile", as: "employee" });
 
-    await user.click(await screen.findByRole("button", { name: "Edit profile" }));
+    await user.click(await screen.findByRole("button", { name: "Edit Profile" }));
     const name = screen.getByLabelText(/Name/);
     await user.clear(name);
     await user.type(name, "Renamed Employee");

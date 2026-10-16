@@ -27,5 +27,5 @@ export function EditBudgetPage() {
       // Error is exposed through the mutation state; form input is preserved.
     }
   };
-  return <Stack spacing={3}><BackLink to={`/budgets/${data.id}`} label="Budget" /><PageHeader title="Edit Organization Budget" description="Department allocations must remain within the organization budget." />{updateError && <ApiFeedback error={updateError} onReconcile={() => navigate(`/budgets/${data.id}`)} />}<BudgetForm budget={data} onSubmit={handleSubmit} isSubmitting={isUpdating} onCancel={() => navigate(`/budgets/${data.id}`)} /></Stack>;
+  return <Stack spacing={3}><BackLink to={`/budgets/${data.id}`} label="Budget" /><PageHeader title="Edit Organization Budget" description="Department allocations must remain within the organization budget." />{updateError && <ApiFeedback error={updateError} onReconcile={() => navigate(`/budgets/${data.id}`)} />}<BudgetForm key={`${data.id}:${data.updatedAt}`} budget={data} onSubmit={handleSubmit} isSubmitting={isUpdating} onCancel={() => navigate(`/budgets/${data.id}`)} /></Stack>;
 }

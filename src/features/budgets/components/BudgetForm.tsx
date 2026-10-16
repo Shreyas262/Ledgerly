@@ -1,5 +1,5 @@
-import { Button, Stack, TextField } from "@mui/material";
-import { useEffect, useState } from "react";
+import { Alert, Button, Stack, TextField } from "@mui/material";
+import { useState } from "react";
 import type { OrganizationBudget, CreateOrganizationBudgetRequest } from "../types/budget";
 
 interface BudgetFormProps {
@@ -13,11 +13,10 @@ interface FormState { name: string; description: string; amount: string; startDa
 const INITIAL_FORM: FormState = { name: "", description: "", amount: "", startDate: "", endDate: "" };
 
 export function BudgetForm({ budget, onSubmit, isSubmitting = false, onCancel }: BudgetFormProps) {
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  // Starts from the budget being edited; the caller remounts the form for a newer version.
+  const [form, setForm] = useState<FormState>(() =>
+    budget ? { name: budget.name, description: budget.description ?? "", amount: String(budget.amount), startDate: budget.startDate, endDate: budget.endDate } : INITIAL_FORM);
   const [error, setError] = useState("");
-  useEffect(() => {
-    setForm(budget ? { name: budget.name, description: budget.description ?? "", amount: String(budget.amount), startDate: budget.startDate, endDate: budget.endDate } : INITIAL_FORM);
-  }, [budget]);
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const amount = Number(form.amount);
@@ -36,7 +35,7 @@ export function BudgetForm({ budget, onSubmit, isSubmitting = false, onCancel }:
         <TextField label="Start date" type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
         <TextField label="End date" type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
       </Stack>
-      {error && <TextField value={error} error helperText={error} slotProps={{ input: { readOnly: true } }} />}
+      {error && <Alert severity="error">{error}</Alert>}
       <Stack direction="row" spacing={2}>
         <Button type="submit" variant="contained" disabled={isSubmitting}>{isSubmitting ? "Saving…" : "Save Budget"}</Button>
         <Button type="button" onClick={onCancel}>Cancel</Button>

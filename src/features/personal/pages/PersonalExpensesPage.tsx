@@ -97,7 +97,7 @@ export function PersonalExpensesPage() {
             <EmptyState
               title="No matching expenses"
               message="Try a different search or clear the filters."
-              action={<Button onClick={() => changeFilters(initialPersonalExpenseFilters)}>Clear filters</Button>}
+              action={<Button onClick={() => changeFilters(initialPersonalExpenseFilters)}>Clear Filters</Button>}
             />
           ) : (
             <EmptyState

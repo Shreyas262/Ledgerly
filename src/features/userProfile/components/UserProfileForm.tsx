@@ -1,5 +1,5 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button, Stack, TextField } from "@mui/material";
 
 import type { AuthUser } from "../../auth/types/auth";
@@ -25,11 +25,6 @@ export function UserProfileForm({
     name: "",
     email: "",
   });
-
-  useEffect(() => {
-    setName(user.name);
-    setEmail(user.email);
-  }, [user]);
 
   const validate = () => {
     const nextErrors = {

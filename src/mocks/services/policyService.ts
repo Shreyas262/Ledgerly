@@ -25,8 +25,8 @@ interface PolicyExpense {
   expenseDate?: string;
   description?: string;
   documentIds?: string[];
+  status?: string;
   policyEvaluation?: PolicyEvaluation;
-  [key: string]: unknown;
 }
 
 /** Statuses counted towards the monthly limit: submitted and not rejected or cancelled. */

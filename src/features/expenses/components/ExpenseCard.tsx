@@ -148,7 +148,7 @@ export function ExpenseCard({
               variant="body2"
               color="text.secondary"
             >
-              {expense.teamName ?? expense.teamId} · {expense.departmentName ?? expense.departmentId}
+              {expense.teamName ?? "—"} · {expense.departmentName ?? "—"}
             </Typography>
 
             <Typography
@@ -217,7 +217,7 @@ export function ExpenseCard({
               disabled={!expense.documentIds?.length}
               title={expense.documentIds?.length ? undefined : "Attach a receipt before submitting"}
             >
-              {expense.documentIds?.length ? "Submit" : "Receipt required"}
+              {expense.documentIds?.length ? "Submit" : "Receipt Required"}
             </Button>
           )}
 

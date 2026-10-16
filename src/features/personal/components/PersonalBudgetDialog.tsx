@@ -202,7 +202,7 @@ function BudgetForm({ budget, defaultMonth, onClose, onSaved }: PersonalBudgetDi
                 disabled={limits.length >= PERSONAL_EXPENSE_TYPES.length}
                 sx={{ alignSelf: "flex-start" }}
               >
-                Add type limit
+                Add Type Limit
               </Button>
             </Stack>
           </Stack>

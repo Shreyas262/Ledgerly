@@ -135,7 +135,7 @@ export function RegisterPage() {
           loading={isRegistering || isSigningIn}
           fullWidth
         >
-          Create account
+          Create Account
         </Button>
 
         <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>

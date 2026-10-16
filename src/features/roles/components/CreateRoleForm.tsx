@@ -3,15 +3,12 @@ import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState, type SyntheticEvent } from "react";
 import {
   Button,
-  Checkbox,
-  FormControlLabel,
-  FormGroup,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 
-import { allPermissions } from "../constants/permissions";
+import { PermissionChecklist } from "./PermissionChecklist";
 
 import type { Permission, RoleName } from "../types/role";
 import { useCreateRoleMutation } from "../../roles/api/rolesApi";
@@ -24,18 +21,6 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
 
   const [createRole, { isLoading, isError, error }] = useCreateRoleMutation();
   const confirm = useConfirm();
-
-  function handlePermissionChange(permission: Permission) {
-    setPermissions((currentPermissions) => {
-      if (currentPermissions.includes(permission)) {
-        return currentPermissions.filter(
-          (currentPermission) => currentPermission !== permission
-        );
-      }
-
-      return [...currentPermissions, permission];
-    });
-  }
 
   async function handleSubmit(event: SyntheticEvent) {
     event.preventDefault();
@@ -60,10 +45,6 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
       spacing={3}
       onSubmit={handleSubmit}
     >
-      <Typography variant="h6">
-        Create Role
-      </Typography>
-
       <TextField
         label="Role name"
         value={name}
@@ -72,22 +53,12 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
         }
       />
 
-      <FormGroup>
-        {allPermissions.map((permission) => (
-          <FormControlLabel
-            key={permission}
-            control={
-              <Checkbox
-                checked={permissions.includes(permission)}
-                onChange={() =>
-                  handlePermissionChange(permission)
-                }
-              />
-            }
-            label={permission}
-          />
-        ))}
-      </FormGroup>
+      <Stack spacing={1}>
+        <Typography variant="subtitle1">
+          Permissions
+        </Typography>
+        <PermissionChecklist value={permissions} onChange={setPermissions} />
+      </Stack>
 
       {isError && <ApiFeedback error={error} />}
 

@@ -2,7 +2,7 @@ import { BackLink } from "../../../components/navigation/BackLink";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { LoadingState } from "../../../components/common/LoadingState";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Button,
@@ -297,10 +297,12 @@ function DepartmentCard({
   const [financeSelection, setFinanceSelection] =
     useState<string[]>(authorizedFinance);
   const authorizedKey = authorizedFinance.join(",");
-
-  useEffect(() => {
-    setFinanceSelection(authorizedKey ? authorizedKey.split(",") : []);
-  }, [authorizedKey]);
+  // When the saved finance users change, the selection starts again from them.
+  const [selectionFor, setSelectionFor] = useState(authorizedKey);
+  if (selectionFor !== authorizedKey) {
+    setSelectionFor(authorizedKey);
+    setFinanceSelection(authorizedFinance);
+  }
 
   return (
     <Card>

@@ -27,10 +27,10 @@ export function ExpenseFormFields({ value, onChange, fieldErrors, dateRange }: E
   return (
     <>
       <FormControl fullWidth required>
-        <InputLabel id="expense-type-label">Expense Type</InputLabel>
+        <InputLabel id="expense-type-label">Expense type</InputLabel>
         <Select
           labelId="expense-type-label"
-          label="Expense Type"
+          label="Expense type"
           value={value.type}
           onChange={(event) => onChange({ ...value, type: event.target.value as ExpenseType })}
         >
@@ -82,7 +82,7 @@ export function ExpenseFormFields({ value, onChange, fieldErrors, dateRange }: E
       />
 
       <TextField
-        label="Expense Date"
+        label="Expense date"
         name="expenseDate"
         type="date"
         value={value.expenseDate}

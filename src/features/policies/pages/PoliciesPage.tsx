@@ -85,7 +85,7 @@ export function PoliciesPage() {
         actions={
           <Stack direction="row" spacing={1.5}>
             <Button variant="outlined" startIcon={<ScienceOutlinedIcon />} onClick={() => setSimulatorOpen(true)}>
-              Try a policy
+              Try a Policy
             </Button>
             {can("policies.create") && (
               <Button variant="contained" startIcon={<AddOutlined />} onClick={() => navigate("/policies/new")}>

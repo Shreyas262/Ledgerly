@@ -71,8 +71,9 @@ export function ExpenseFilters({
       />
 
       <FormControl size="small">
-        <InputLabel>Status</InputLabel>
+        <InputLabel id="expense-filter-status-label">Status</InputLabel>
         <Select
+          labelId="expense-filter-status-label"
           label="Status"
           value={filters.status}
           onChange={handleStatusChange}
@@ -86,9 +87,10 @@ export function ExpenseFilters({
       </FormControl>
 
       <FormControl size="small">
-        <InputLabel>Expense Type</InputLabel>
+        <InputLabel id="expense-filter-type-label">Expense type</InputLabel>
         <Select
-          label="Expense Type"
+          labelId="expense-filter-type-label"
+          label="Expense type"
           value={filters.type}
           onChange={(event: SelectChangeEvent<string>) =>
             onChange({

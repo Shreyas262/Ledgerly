@@ -539,7 +539,7 @@ export function ExpenseDetailsPage({
 
             <Stack spacing={0.5}>
               <Typography variant="body2" color="text.secondary">
-                Expense Date
+                Expense date
               </Typography>
 
               <Typography variant="body1">{formatDate(expense.expenseDate)}</Typography>
@@ -551,7 +551,7 @@ export function ExpenseDetailsPage({
               </Typography>
 
               <Typography variant="body1">
-                {expense.employeeName ?? expense.employeeId}
+                {expense.employeeName ?? "—"}
                 {expense.employeeRemoved ? " (removed)" : ""}
               </Typography>
             </Stack>
@@ -562,7 +562,7 @@ export function ExpenseDetailsPage({
               </Typography>
 
               <Typography variant="body1">
-                {expense.teamName ?? expense.teamId}
+                {expense.teamName ?? "—"}
               </Typography>
             </Stack>
 
@@ -572,7 +572,7 @@ export function ExpenseDetailsPage({
               </Typography>
 
               <Typography variant="body1">
-                {expense.departmentName ?? expense.departmentId}
+                {expense.departmentName ?? "—"}
               </Typography>
             </Stack>
           </Stack>
@@ -637,15 +637,13 @@ export function ExpenseDetailsPage({
                       </Typography>
                     </Stack>
                   )}
-                  {(expense.reimbursement.processedByName ||
-                    expense.reimbursement.processedBy) && (
+                  {expense.reimbursement.processedByName && (
                     <Stack spacing={0.5}>
                       <Typography variant="body2" color="text.secondary">
                         Processed by
                       </Typography>
                       <Typography variant="body1">
-                        {expense.reimbursement.processedByName ??
-                          expense.reimbursement.processedBy}
+                        {expense.reimbursement.processedByName}
                       </Typography>
                     </Stack>
                   )}

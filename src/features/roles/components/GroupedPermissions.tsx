@@ -1,15 +1,10 @@
 import { Box, Chip, Stack, Typography } from "@mui/material";
 import type { Permission } from "../types/role";
-import { permissionGroups } from "../constants/permissions";
+import { permissionActionLabel, permissionGroups } from "../constants/permissions";
 
 interface GroupedPermissionsProps {
   permissions: readonly Permission[] | readonly string[];
 }
-
-const actionLabel = (permission: string) => {
-  const action = permission.split(".")[1] ?? permission;
-  return action.charAt(0).toUpperCase() + action.slice(1);
-};
 
 /** Permissions grouped by area, each shown as its action (Read, Create, …). */
 export function GroupedPermissions({ permissions }: GroupedPermissionsProps) {
@@ -41,7 +36,7 @@ export function GroupedPermissions({ permissions }: GroupedPermissionsProps) {
           </Typography>
           <Stack direction="row" spacing={0.75} useFlexGap sx={{ flexWrap: "wrap" }}>
             {items.map((permission) => (
-              <Chip key={permission} label={actionLabel(permission)} size="small" variant="outlined" title={permission} />
+              <Chip key={permission} label={permissionActionLabel(permission)} size="small" variant="outlined" title={permission} />
             ))}
           </Stack>
         </Stack>

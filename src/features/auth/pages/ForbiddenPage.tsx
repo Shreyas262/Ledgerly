@@ -36,7 +36,7 @@ export function ForbiddenPage() {
         variant="contained"
         onClick={() => navigate("/dashboard")}
       >
-        Back to dashboard
+        Back to Dashboard
       </Button>
     </Stack>
   );

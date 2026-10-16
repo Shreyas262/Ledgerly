@@ -293,7 +293,7 @@ export function BudgetDetailsPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRollover(null)} disabled={rollingOver}>Not now</Button>
+          <Button onClick={() => setRollover(null)} disabled={rollingOver}>Not Now</Button>
           <Button
             variant="contained"
             disabled={rollingOver || !rollover?.name.trim() || !rollover.startDate || !rollover.endDate || rollover.startDate > rollover.endDate}
@@ -309,7 +309,7 @@ export function BudgetDetailsPage() {
               }
             }}
           >
-            Create draft
+            Create Draft
           </Button>
         </DialogActions>
       </Dialog>

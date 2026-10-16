@@ -112,7 +112,7 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
               variant="outlined"
               disabled={isUploading || isRemoving}
             >
-              Add documents
+              Add Documents
               <input
                 key={fileInputKey}
                 hidden

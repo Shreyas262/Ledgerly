@@ -91,6 +91,8 @@ export function UserProfilePage() {
             <Stack spacing={2}>
               <Typography variant="h6">Edit profile</Typography>
               <UserProfileForm
+                // Starts again from the saved values when they change.
+                key={`${user.id}:${user.name}:${user.email}`}
                 user={user}
                 onSubmit={handleUpdate}
                 onCancel={() => setIsEditing(false)}
@@ -122,7 +124,7 @@ export function UserProfilePage() {
                 onClick={() => setIsEditing(true)}
                 sx={{ alignSelf: { xs: "flex-start", sm: "center" }, flexShrink: 0 }}
               >
-                Edit profile
+                Edit Profile
               </Button>
             </Stack>
           )}
