@@ -1,5 +1,6 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
+import { openObjectUrlInNewTab } from "../../../utils/openInNewTab";
 import { useState, type ChangeEvent } from "react";
 import {
   Alert,
@@ -45,21 +46,9 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
 
   const openDocument = async (documentId: string) => {
     setActionError(null);
-    // Open the tab synchronously so it is not treated as a blocked popup,
-    // then point it at the authorized content once it has been retrieved.
-    const previewWindow = window.open("", "_blank");
-    if (previewWindow) previewWindow.opener = null;
-
     try {
-      const objectUrl = await fetchDocumentContent(documentId).unwrap();
-      if (previewWindow) {
-        previewWindow.location.href = objectUrl;
-      } else {
-        window.open(objectUrl, "_blank", "noopener,noreferrer");
-      }
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      await openObjectUrlInNewTab(() => fetchDocumentContent(documentId).unwrap());
     } catch (caught) {
-      previewWindow?.close();
       setActionError(getApiErrorMessage(caught, "The document could not be opened."));
     }
   };

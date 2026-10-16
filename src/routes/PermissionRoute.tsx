@@ -12,7 +12,7 @@ interface PermissionRouteProps {
 
 export function PermissionRoute({ permission }: PermissionRouteProps) {
   const { user, isLoading } = useAuth();
-  const { can } = usePermissions();
+  const { canAny } = usePermissions();
 
   if (isLoading) {
     return null;
@@ -22,11 +22,7 @@ export function PermissionRoute({ permission }: PermissionRouteProps) {
     return <Navigate to="/auth/login" replace />;
   }
 
-  const permissions: readonly Permission[] = Array.isArray(permission)
-    ? permission
-    : [permission as Permission];
-
-  if (!permissions.some((item) => can(item))) {
+  if (!canAny(permission)) {
     return <ForbiddenPage />;
   }
 

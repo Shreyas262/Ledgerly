@@ -37,7 +37,7 @@ export function AppLayout() {
       >
         <Topbar
           isMobile={isMobile}
-          mobileSidebaropen={mobileSidebarOpen}
+          mobileSidebarOpen={mobileSidebarOpen}
           onMobileMenuClick={handleOpenMobileSidebar}
         />
 

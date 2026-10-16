@@ -11,10 +11,11 @@ import type {
   OrganizationBudget,
   TeamBudgetAllocation,
 } from "../../features/budgets/types/budget";
-import { authorizeRequest } from "../services/authorizationService";
+import { authorizeRequest, resolveAuthenticatedPrincipal } from "../services/authorizationService";
 import { authorizationError } from "../services/authorizationHttp";
 import { runAuditedTransaction } from "../services/auditService";
 import { getRecord, listRecords } from "../services/mockDataService";
+import { formatCurrency } from "../../utils/currency";
 import {
   buildBudgetView,
   getExpenseCreationEligibility,
@@ -22,7 +23,6 @@ import {
   isBudgetVisibleTo,
   loadBudgetHierarchy,
 } from "../services/budgetService";
-import { resolveAuthenticatedPrincipal } from "../services/authorizationService";
 import type { Department, Team } from "../../features/organizations/types/organization";
 
 function badRequest(message: string) {
@@ -54,7 +54,6 @@ const EXPENSE_TYPES = new Set<ExpenseType>([
   "OTHER",
 ]);
 
-const money = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 
 function validateMoney(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
@@ -227,7 +226,7 @@ export const budgetsHandlers = [
       .filter((item) => item.organizationBudgetId === existing.id)
       .reduce((sum, item) => sum + item.amount, 0);
     if (allocated > body.amount) {
-      return budgetExceeded(`The organization budget cannot be lower than its department allocations (${money(allocated)}).`);
+      return budgetExceeded(`The organization budget cannot be lower than its department allocations (${formatCurrency(allocated)}).`);
     }
 
     if (existing.status === "active") {
@@ -363,7 +362,7 @@ export const budgetsHandlers = [
       .filter((item) => item.organizationBudgetId === budget.id && item.id !== existing?.id)
       .reduce((sum, item) => sum + item.amount, 0);
     if (allocatedElsewhere + body.amount > budget.amount) {
-      return budgetExceeded(`Department allocations cannot exceed the organization budget. ${money(budget.amount - allocatedElsewhere)} is still available.`);
+      return budgetExceeded(`Department allocations cannot exceed the organization budget. ${formatCurrency(budget.amount - allocatedElsewhere)} is still available.`);
     }
 
     if (existing) {
@@ -371,7 +370,7 @@ export const budgetsHandlers = [
         teamAllocations.filter((item) => item.departmentAllocationId === existing.id).reduce((sum, item) => sum + item.amount, 0) +
         expenseTypeBudgets.filter((item) => item.departmentAllocationId === existing.id && !item.teamAllocationId).reduce((sum, item) => sum + item.amount, 0);
       if (childTotal > body.amount) {
-        return budgetExceeded(`The department allocation cannot be lower than what is already assigned to its teams (${money(childTotal)}).`);
+        return budgetExceeded(`The department allocation cannot be lower than what is already assigned to its teams (${formatCurrency(childTotal)}).`);
       }
     }
 
@@ -394,7 +393,7 @@ export const budgetsHandlers = [
       entityType: "BUDGET",
       entityId: allocation.id,
       metadata: { organizationBudgetId: budget.id, departmentId: allocation.departmentId, previousAmount: existing?.amount, newAmount: allocation.amount },
-      description: `Allocated ${money(allocation.amount)} to ${department.name}.`,
+      description: `Allocated ${formatCurrency(allocation.amount)} to ${department.name}.`,
     }, (transaction) => transaction.objectStore("departmentBudgetAllocations").put(allocation));
 
     return HttpResponse.json(await buildBudgetView(budget, access.principal));
@@ -432,14 +431,14 @@ export const budgetsHandlers = [
       .filter((item) => item.departmentAllocationId === departmentAllocation.id && item.id !== existing?.id)
       .reduce((sum, item) => sum + item.amount, 0) + legacyTypeTotal;
     if (allocatedElsewhere + body.amount > departmentAllocation.amount) {
-      return budgetExceeded(`Team allocations cannot exceed the department allocation. ${money(departmentAllocation.amount - allocatedElsewhere)} is still available.`);
+      return budgetExceeded(`Team allocations cannot exceed the department allocation. ${formatCurrency(departmentAllocation.amount - allocatedElsewhere)} is still available.`);
     }
     if (existing) {
       const typeTotal = expenseTypeBudgets
         .filter((item) => item.teamAllocationId === existing.id)
         .reduce((sum, item) => sum + item.amount, 0);
       if (typeTotal > body.amount) {
-        return budgetExceeded(`The team allocation cannot be lower than its expense-type budgets (${money(typeTotal)}).`);
+        return budgetExceeded(`The team allocation cannot be lower than its expense-type budgets (${formatCurrency(typeTotal)}).`);
       }
     }
 
@@ -464,7 +463,7 @@ export const budgetsHandlers = [
       entityType: "BUDGET",
       entityId: allocation.id,
       metadata: { organizationBudgetId: budget.id, departmentId: allocation.departmentId, teamId: team.id, previousAmount: existing?.amount, newAmount: allocation.amount },
-      description: `Allocated ${money(allocation.amount)} to team ${team.name}.`,
+      description: `Allocated ${formatCurrency(allocation.amount)} to team ${team.name}.`,
     }, (transaction) => transaction.objectStore("teamBudgetAllocations").put(allocation));
 
     return HttpResponse.json(await buildBudgetView(budget, access.principal));
@@ -494,7 +493,7 @@ export const budgetsHandlers = [
       .filter((item) => item.teamAllocationId === teamAllocation.id && item.id !== existing?.id)
       .reduce((sum, item) => sum + item.amount, 0);
     if (allocatedElsewhere + body.amount > teamAllocation.amount) {
-      return budgetExceeded(`Expense-type budgets cannot exceed the team allocation. ${money(teamAllocation.amount - allocatedElsewhere)} is still available.`);
+      return budgetExceeded(`Expense-type budgets cannot exceed the team allocation. ${formatCurrency(teamAllocation.amount - allocatedElsewhere)} is still available.`);
     }
 
     const now = new Date().toISOString();
@@ -520,7 +519,7 @@ export const budgetsHandlers = [
       entityType: "BUDGET",
       entityId: typeBudget.id,
       metadata: { organizationBudgetId: budget.id, teamId: teamAllocation.teamId, expenseType: body.expenseType, previousAmount: existing?.amount, newAmount: body.amount },
-      description: `Set the ${EXPENSE_TYPE_LABELS[body.expenseType as ExpenseType] ?? body.expenseType} budget for ${(await getRecord<{ name: string }>("teams", teamAllocation.teamId))?.name ?? "a team"} to ${money(body.amount)}.`,
+      description: `Set the ${EXPENSE_TYPE_LABELS[body.expenseType as ExpenseType] ?? body.expenseType} budget for ${(await getRecord<{ name: string }>("teams", teamAllocation.teamId))?.name ?? "a team"} to ${formatCurrency(body.amount)}.`,
     }, (transaction) => transaction.objectStore("expenseTypeBudgets").put(typeBudget));
 
     return HttpResponse.json(await buildBudgetView(budget, access.principal));

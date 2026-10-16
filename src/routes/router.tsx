@@ -1,194 +1,60 @@
-import { StartPageRedirect } from "./StartPageRedirect";
+import { lazy, type ComponentType, type LazyExoticComponent } from "react";
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router-dom";
-
-import { lazy } from "react";
 
 import { AppLayout } from "../layouts/AppLayout/AppLayout";
 import { RouteErrorPage } from "../components/common/RouteErrorPage";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { PermissionRoute } from "./PermissionRoute";
 import { AccountTypeRoute } from "./AccountTypeRoute";
-import { administrationPermissions } from "../features/roles/constants/permissions";
+import { StartPageRedirect } from "./StartPageRedirect";
+import { administrationPermissions, approvalPermissions } from "../features/roles/constants/permissions";
 
-const DashboardPage = lazy(() =>
-  import("../features/dashboard/pages/DashboardPage").then((module) => ({
-    default: module.DashboardPage,
-  })),
-);
-const LoginPage = lazy(() =>
-  import("../features/auth/pages/LoginPage").then((module) => ({
-    default: module.LoginPage,
-  })),
-);
-const ExpensesPage = lazy(() =>
-  import("../features/expenses/pages/ExpensesPage").then((module) => ({
-    default: module.ExpensesPage,
-  })),
-);
-const ExpenseDetailsPage = lazy(() =>
-  import("../features/expenses/pages/ExpenseDetailsPage").then((module) => ({
-    default: module.ExpenseDetailsPage,
-  })),
-);
-const RolesPage = lazy(() =>
-  import("../features/roles/pages/RolesPage").then((module) => ({
-    default: module.RolesPage,
-  })),
-);
-const NotFound = lazy(() =>
-  import("../pages/NotFound").then((module) => ({ default: module.NotFound })),
-);
-const UsersPage = lazy(() =>
-  import("../features/users/pages/UsersPage").then((module) => ({
-    default: module.UsersPage,
-  })),
-);
-const CreateExpensePage = lazy(() =>
-  import("../features/expenses/pages/CreateExpensePage").then((module) => ({
-    default: module.CreateExpensePage,
-  })),
-);
-const EditExpensePage = lazy(() =>
-  import("../features/expenses/pages/EditExpensePage").then((module) => ({
-    default: module.EditExpensePage,
-  })),
-);
-const ApprovalsPage = lazy(() =>
-  import("../features/approvals/pages/ApprovalPage").then((module) => ({
-    default: module.ApprovalsPage,
-  })),
-);
-const BudgetsPage = lazy(() =>
-  import("../features/budgets/pages/BudgetsPage").then((module) => ({
-    default: module.BudgetsPage,
-  })),
-);
-const BudgetDetailsPage = lazy(() =>
-  import("../features/budgets/pages/BudgetDetailsPage").then((module) => ({
-    default: module.BudgetDetailsPage,
-  })),
-);
-const EditBudgetPage = lazy(() =>
-  import("../features/budgets/pages/EditBudgetPage").then((module) => ({
-    default: module.EditBudgetPage,
-  })),
-);
-const CreateBudgetPage = lazy(() =>
-  import("../features/budgets/pages/CreateBudgetPage").then((module) => ({
-    default: module.CreateBudgetPage,
-  })),
-);
-const AnalyticsPage = lazy(() =>
-  import("../features/analytics/pages/AnalyticsPage").then((module) => ({
-    default: module.AnalyticsPage,
-  })),
-);
-const PolicyDetailsPage = lazy(() =>
-  import("../features/policies/pages/PolicyDetailsPage").then((module) => ({
-    default: module.PolicyDetailsPage,
-  })),
-);
-const CreatePolicyPage = lazy(() =>
-  import("../features/policies/pages/CreatePolicyPage").then((module) => ({
-    default: module.CreatePolicyPage,
-  })),
-);
-const EditPolicyPage = lazy(() =>
-  import("../features/policies/pages/EditPolicyPage").then((module) => ({
-    default: module.EditPolicyPage,
-  })),
-);
-const PoliciesPage = lazy(() =>
-  import("../features/policies/pages/PoliciesPage").then((module) => ({
-    default: module.PoliciesPage,
-  })),
-);
-const UserProfilePage = lazy(() =>
-  import("../features/userProfile/pages/UserProfilePage").then((module) => ({
-    default: module.UserProfilePage,
-  })),
-);
-const SettingsPage = lazy(() =>
-  import("../features/settings/pages/SettingsPage").then((module) => ({
-    default: module.SettingsPage,
-  })),
-);
+/** Loads a page from its own chunk when its route is first opened. */
+// `any` mirrors React.lazy's own constraint; each page keeps its prop types.
+function lazyPage<K extends string, M extends Record<K, ComponentType<any>>>(
+  load: () => Promise<M>,
+  exportName: K,
+): LazyExoticComponent<M[K]> {
+  return lazy(() => load().then((module) => ({ default: module[exportName] })));
+}
+
+const DashboardPage = lazyPage(() => import("../features/dashboard/pages/DashboardPage"), "DashboardPage");
+const LoginPage = lazyPage(() => import("../features/auth/pages/LoginPage"), "LoginPage");
+const ExpensesPage = lazyPage(() => import("../features/expenses/pages/ExpensesPage"), "ExpensesPage");
+const ExpenseDetailsPage = lazyPage(() => import("../features/expenses/pages/ExpenseDetailsPage"), "ExpenseDetailsPage");
+const RolesPage = lazyPage(() => import("../features/roles/pages/RolesPage"), "RolesPage");
+const NotFound = lazyPage(() => import("../pages/NotFound"), "NotFound");
+const UsersPage = lazyPage(() => import("../features/users/pages/UsersPage"), "UsersPage");
+const CreateExpensePage = lazyPage(() => import("../features/expenses/pages/CreateExpensePage"), "CreateExpensePage");
+const EditExpensePage = lazyPage(() => import("../features/expenses/pages/EditExpensePage"), "EditExpensePage");
+const ApprovalsPage = lazyPage(() => import("../features/approvals/pages/ApprovalPage"), "ApprovalsPage");
+const BudgetsPage = lazyPage(() => import("../features/budgets/pages/BudgetsPage"), "BudgetsPage");
+const BudgetDetailsPage = lazyPage(() => import("../features/budgets/pages/BudgetDetailsPage"), "BudgetDetailsPage");
+const EditBudgetPage = lazyPage(() => import("../features/budgets/pages/EditBudgetPage"), "EditBudgetPage");
+const CreateBudgetPage = lazyPage(() => import("../features/budgets/pages/CreateBudgetPage"), "CreateBudgetPage");
+const AnalyticsPage = lazyPage(() => import("../features/analytics/pages/AnalyticsPage"), "AnalyticsPage");
+const PolicyDetailsPage = lazyPage(() => import("../features/policies/pages/PolicyDetailsPage"), "PolicyDetailsPage");
+const CreatePolicyPage = lazyPage(() => import("../features/policies/pages/CreatePolicyPage"), "CreatePolicyPage");
+const EditPolicyPage = lazyPage(() => import("../features/policies/pages/EditPolicyPage"), "EditPolicyPage");
+const PoliciesPage = lazyPage(() => import("../features/policies/pages/PoliciesPage"), "PoliciesPage");
+const UserProfilePage = lazyPage(() => import("../features/userProfile/pages/UserProfilePage"), "UserProfilePage");
+const SettingsPage = lazyPage(() => import("../features/settings/pages/SettingsPage"), "SettingsPage");
 const AuditPage = lazy(() => import("../features/audit/pages/AuditPage"));
-const AuditDetailsPage = lazy(() =>
-  import("../features/audit/pages/AuditDetailsPage").then((module) => ({
-    default: module.default,
-  })),
-);
-const MyTeamPage = lazy(() =>
-  import("../features/userProfile/pages/MyTeamPage").then((module) => ({
-    default: module.MyTeamPage,
-  })),
-);
-const AccountPage = lazy(() =>
-  import("../features/userProfile/pages/AccountPage").then((module) => ({
-    default: module.AccountPage,
-  })),
-);
-const ActivityPage = lazy(() =>
-  import("../features/activity/pages/ActivityPage").then((module) => ({
-    default: module.ActivityPage,
-  })),
-);
-const AdminPage = lazy(() =>
-  import("../features/organizations/pages/AdminPage").then((module) => ({
-    default: module.AdminPage,
-  })),
-);
-const OrganizationAdminPage = lazy(() =>
-  import("../features/organizations/pages/OrganizationAdminPage").then(
-    (module) => ({ default: module.OrganizationAdminPage }),
-  ),
-);
-const LandingPage = lazy(() =>
-  import("../pages/LandingPage").then((module) => ({
-    default: module.LandingPage,
-  })),
-);
-const RegisterPage = lazy(() =>
-  import("../features/auth/pages/RegisterPage").then((module) => ({
-    default: module.RegisterPage,
-  })),
-);
-const PersonalDashboardPage = lazy(() =>
-  import("../features/personal/pages/PersonalDashboardPage").then((module) => ({
-    default: module.PersonalDashboardPage,
-  })),
-);
-const PersonalExpensesPage = lazy(() =>
-  import("../features/personal/pages/PersonalExpensesPage").then((module) => ({
-    default: module.PersonalExpensesPage,
-  })),
-);
-const PersonalExpenseFormPage = lazy(() =>
-  import("../features/personal/pages/PersonalExpenseFormPage").then((module) => ({
-    default: module.PersonalExpenseFormPage,
-  })),
-);
-const PersonalExpenseDetailsPage = lazy(() =>
-  import("../features/personal/pages/PersonalExpenseDetailsPage").then((module) => ({
-    default: module.PersonalExpenseDetailsPage,
-  })),
-);
-const PersonalBudgetsPage = lazy(() =>
-  import("../features/personal/pages/PersonalBudgetsPage").then((module) => ({
-    default: module.PersonalBudgetsPage,
-  })),
-);
-const PersonalAnalyticsPage = lazy(() =>
-  import("../features/personal/pages/PersonalAnalyticsPage").then((module) => ({
-    default: module.PersonalAnalyticsPage,
-  })),
-);
-const PlatformOrganizationsPage = lazy(() =>
-  import("../features/platform/pages/PlatformOrganizationsPage").then((module) => ({
-    default: module.PlatformOrganizationsPage,
-  })),
-);
+const AuditDetailsPage = lazy(() => import("../features/audit/pages/AuditDetailsPage"));
+const MyTeamPage = lazyPage(() => import("../features/userProfile/pages/MyTeamPage"), "MyTeamPage");
+const AccountPage = lazyPage(() => import("../features/userProfile/pages/AccountPage"), "AccountPage");
+const ActivityPage = lazyPage(() => import("../features/activity/pages/ActivityPage"), "ActivityPage");
+const AdminPage = lazyPage(() => import("../features/organizations/pages/AdminPage"), "AdminPage");
+const OrganizationAdminPage = lazyPage(() => import("../features/organizations/pages/OrganizationAdminPage"), "OrganizationAdminPage");
+const LandingPage = lazyPage(() => import("../pages/LandingPage"), "LandingPage");
+const RegisterPage = lazyPage(() => import("../features/auth/pages/RegisterPage"), "RegisterPage");
+const PersonalDashboardPage = lazyPage(() => import("../features/personal/pages/PersonalDashboardPage"), "PersonalDashboardPage");
+const PersonalExpensesPage = lazyPage(() => import("../features/personal/pages/PersonalExpensesPage"), "PersonalExpensesPage");
+const PersonalExpenseFormPage = lazyPage(() => import("../features/personal/pages/PersonalExpenseFormPage"), "PersonalExpenseFormPage");
+const PersonalExpenseDetailsPage = lazyPage(() => import("../features/personal/pages/PersonalExpenseDetailsPage"), "PersonalExpenseDetailsPage");
+const PersonalBudgetsPage = lazyPage(() => import("../features/personal/pages/PersonalBudgetsPage"), "PersonalBudgetsPage");
+const PersonalAnalyticsPage = lazyPage(() => import("../features/personal/pages/PersonalAnalyticsPage"), "PersonalAnalyticsPage");
+const PlatformOrganizationsPage = lazyPage(() => import("../features/platform/pages/PlatformOrganizationsPage"), "PlatformOrganizationsPage");
 
 /** Organization pages; personal accounts are sent to their own home (§5.15). */
 const organizationRoutes: RouteObject[] = [
@@ -246,9 +112,7 @@ const organizationRoutes: RouteObject[] = [
     // Approvals hosts both managerial review and finance
     // reimbursement; each tab is gated by its own permission.
     element: (
-      <PermissionRoute
-        permission={["expenses.approve", "reimbursements.manage"]}
-      />
+      <PermissionRoute permission={approvalPermissions} />
     ),
     children: [
       {

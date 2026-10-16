@@ -12,6 +12,7 @@ import { indexedDbRepository } from "../repositories/indexedDbRepository";
 import { listRecords, listRecordsByIndex } from "./mockDataService";
 import { appendAuditEvent, type AuditEventInput } from "./auditService";
 import { todayDate } from "./budgetService";
+import { formatCurrency } from "../../utils/currency";
 import { DETAILED_DESCRIPTION_MIN as DETAILED_DESCRIPTION_LENGTH } from "../../features/policies/utils/policyConstants";
 
 interface PolicyExpense {
@@ -36,7 +37,6 @@ export const MONTHLY_LIMIT_STATUSES = new Set([
 
 const RECEIPT_REQUIRED = "A receipt or supporting document is required before submission.";
 
-const money = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 const DAY_MS = 86_400_000;
 const daysBetween = (from: string, to: string) =>
   Math.round((new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from.slice(0, 10)}T00:00:00Z`).getTime()) / DAY_MS);
@@ -138,13 +138,13 @@ export function evaluatePolicyRules(
 
   const rules = policy?.rules ?? {};
   if (rules.maximumAmount && input.amount > rules.maximumAmount.amount) {
-    add("maximumAmount", rules.maximumAmount.enforcement, `Amount exceeds the maximum of ${money(rules.maximumAmount.amount)} per expense.`);
+    add("maximumAmount", rules.maximumAmount.enforcement, `Amount exceeds the maximum of ${formatCurrency(rules.maximumAmount.amount)} per expense.`);
   }
   if (rules.monthlyLimit && context.monthlySpent + input.amount > rules.monthlyLimit.amount) {
     add(
       "monthlyLimit",
       rules.monthlyLimit.enforcement,
-      `This takes your monthly total to ${money(context.monthlySpent + input.amount)}, above the ${money(rules.monthlyLimit.amount)} monthly limit.`,
+      `This takes your monthly total to ${formatCurrency(context.monthlySpent + input.amount)}, above the ${formatCurrency(rules.monthlyLimit.amount)} monthly limit.`,
     );
   }
   if (rules.submissionDeadline && daysBetween(input.expenseDate, context.today) > rules.submissionDeadline.days) {
@@ -165,7 +165,7 @@ export function evaluatePolicyRules(
     add(
       "descriptionRequiredAbove",
       rules.descriptionRequiredAbove.enforcement,
-      `Expenses above ${money(rules.descriptionRequiredAbove.amount)} need a detailed description (at least ${DETAILED_DESCRIPTION_LENGTH} characters).`,
+      `Expenses above ${formatCurrency(rules.descriptionRequiredAbove.amount)} need a detailed description (at least ${DETAILED_DESCRIPTION_LENGTH} characters).`,
     );
   }
   if (rules.noFutureDates && input.expenseDate.slice(0, 10) > context.today) {

@@ -11,6 +11,16 @@ const rawBaseQuery = fetchBaseQuery({
   baseUrl: "/api",
 });
 
+/** Error code used when the response does not name one. */
+const DEFAULT_CODES: Record<number, string> = {
+  400: "BAD_REQUEST",
+  401: "UNAUTHENTICATED",
+  403: "FORBIDDEN",
+  404: "NOT_FOUND",
+  409: "CONFLICT",
+  422: "VALIDATION_ERROR",
+};
+
 const toApiError = (error: FetchBaseQueryError): ApiError => {
   const status = typeof error.status === "number" ? error.status : 500;
   const payload =
@@ -23,19 +33,7 @@ const toApiError = (error: FetchBaseQueryError): ApiError => {
     code:
       typeof payload?.code === "string"
         ? payload.code
-        : status === 400
-          ? "BAD_REQUEST"
-          : status === 401
-            ? "UNAUTHENTICATED"
-            : status === 403
-              ? "FORBIDDEN"
-              : status === 404
-                ? "NOT_FOUND"
-                : status === 409
-                  ? "CONFLICT"
-                  : status === 422
-                    ? "VALIDATION_ERROR"
-                    : "INTERNAL_ERROR",
+        : DEFAULT_CODES[status] ?? "INTERNAL_ERROR",
     message:
       typeof payload?.message === "string"
         ? payload.message

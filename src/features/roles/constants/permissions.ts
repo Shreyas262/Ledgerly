@@ -68,6 +68,9 @@ export const permissionGroups: Record<string, Permission[]> = {
 
 export const allPermissions: Permission[] = Object.values(permissionGroups).flat();
 /** Permissions that each open at least one Administration page. */
+/** Either Approvals tab: managerial review or finance reimbursement (§22.13). */
+export const approvalPermissions: Permission[] = ["expenses.approve", "reimbursements.manage"];
+
 export const administrationPermissions: Permission[] = [
   "users.read",
   "roles.read",

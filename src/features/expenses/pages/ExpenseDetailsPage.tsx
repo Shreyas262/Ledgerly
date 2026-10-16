@@ -1,7 +1,7 @@
 import { PolicyEvaluationPanel } from "../../policies/components/PolicyEvaluationPanel";
 import { formatCurrency } from "../../../utils/currency";
 import { formatDate } from "../../../utils/format";
-import { EXPENSE_STATUS_LABELS } from "../types/expense";
+import { EXPENSE_STATUS_LABELS, EXPENSE_TYPE_LABELS } from "../types/expense";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import {
   Alert,
@@ -42,9 +42,7 @@ import { useState } from "react";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ForbiddenPage } from "../../auth/pages/ForbiddenPage";
-import { isForbiddenError } from "../../auth/utils/authErrors";
 
-import { EXPENSE_TYPE_LABELS } from "../types/expense";
 import { isStatus } from "../../../services/api/apiErrors";
 import { DocumentPanel } from "../../documents/components/DocumentPanel";
 import { Amount } from "../../../components/common/Amount";
@@ -145,7 +143,7 @@ export function ExpenseDetailsPage({
   }
 
   if (isError || !expense) {
-    if (isForbiddenError(expenseError)) {
+    if (isStatus(expenseError, 403)) {
       return <ForbiddenPage />;
     }
 
@@ -184,7 +182,7 @@ export function ExpenseDetailsPage({
     try {
       await approveExpense(expense.id).unwrap();
     } catch {
-      // Error is exposed through isApproveError.
+      // Error is exposed through approveError.
     }
   };
 
@@ -204,7 +202,7 @@ export function ExpenseDetailsPage({
       setIsRejectDialogOpen(false);
       setRejectionReason("");
     } catch {
-      // Error is exposed through isRejectError.
+      // Error is exposed through rejectError.
     }
   };
 
@@ -213,7 +211,7 @@ export function ExpenseDetailsPage({
     try {
       await restoreExpense(expense.id).unwrap();
     } catch {
-      // Error is exposed through isRestoreError.
+      // Error is exposed through restoreError.
     }
   };
 
@@ -222,7 +220,7 @@ export function ExpenseDetailsPage({
     try {
       await startReimbursement(expense.id).unwrap();
     } catch {
-      // Error is exposed through isStartReimbursementError.
+      // Error is exposed through startReimbursementError.
     }
   };
 
@@ -231,7 +229,7 @@ export function ExpenseDetailsPage({
     try {
       await reimburseExpense(expense.id).unwrap();
     } catch {
-      // Error is exposed through isReimburseError.
+      // Error is exposed through reimburseError.
     }
   };
 

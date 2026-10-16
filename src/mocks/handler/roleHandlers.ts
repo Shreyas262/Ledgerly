@@ -1,6 +1,7 @@
 import { apiError } from "../services/apiError";
 import { applyCollectionQuery, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
+import { API_BASE_URL } from "./constants";
 
 import {
   authorizeCollection,
@@ -32,8 +33,6 @@ interface CreateRoleBody {
   description?: string;
   isSystemRole?: boolean;
 }
-
-const API_BASE_URL = "/api";
 
 export const roleHandlers = [
   http.get(`${API_BASE_URL}/roles`, async ({ request }) => {

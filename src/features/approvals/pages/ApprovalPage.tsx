@@ -36,14 +36,9 @@ export function ApprovalsPage() {
   const canReimburse = can("reimbursements.manage");
 
   const requestedTab = searchParams.get("tab") as ApprovalTab | null;
+  // Review is the default tab; Reimbursement opens when requested and allowed.
   const tab: ApprovalTab =
-    requestedTab === "reimbursement" && canReimburse
-      ? "reimbursement"
-      : requestedTab === "review" && canReview
-        ? "review"
-        : canReview
-          ? "review"
-          : "reimbursement";
+    (requestedTab === "reimbursement" && canReimburse) || !canReview ? "reimbursement" : "review";
 
   return (
     <Stack spacing={3}>

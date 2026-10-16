@@ -1,5 +1,6 @@
 import type { AnalyticsInterval, AnalyticsQuery } from "../types/analytics";
 import { EXPENSE_TYPES, type ExpenseType } from "../../expenses/types/expense";
+import { toDateOnly } from "../../../utils/format";
 
 export type DatePreset =
   | "this_month"
@@ -21,22 +22,19 @@ export const DEFAULT_PRESET: DatePreset = "this_month";
 /** Maximum range accepted by the API (§26.3). */
 export const MAX_RANGE_DAYS = 366;
 
-const pad = (value: number) => String(value).padStart(2, "0");
-const localDate = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-
 export function presetRange(preset: Exclude<DatePreset, "custom">, now = new Date()): { from: string; to: string } {
   const year = now.getFullYear();
   const month = now.getMonth();
-  const to = localDate(now);
+  const to = toDateOnly(now);
   switch (preset) {
     case "this_month":
-      return { from: localDate(new Date(year, month, 1)), to };
+      return { from: toDateOnly(new Date(year, month, 1)), to };
     case "last_3_months":
-      return { from: localDate(new Date(year, month, now.getDate() - 89)), to };
+      return { from: toDateOnly(new Date(year, month, now.getDate() - 89)), to };
     case "this_quarter":
-      return { from: localDate(new Date(year, month - (month % 3), 1)), to };
+      return { from: toDateOnly(new Date(year, month - (month % 3), 1)), to };
     case "last_12_months":
-      return { from: localDate(new Date(year, month - 11, 1)), to };
+      return { from: toDateOnly(new Date(year, month - 11, 1)), to };
   }
 }
 

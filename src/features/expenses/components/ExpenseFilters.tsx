@@ -37,7 +37,6 @@ export function ExpenseFilters({
   onChange,
   onReset,
 }: ExpenseFiltersProps) {
-  // Corrected type for TextField
   const handleSearchChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -47,15 +46,12 @@ export function ExpenseFilters({
     });
   };
 
-  // Fixed: Uses SelectChangeEvent instead of React.ChangeEvent<HTMLInputElement>
   const handleStatusChange = (event: SelectChangeEvent<string>) => {
     onChange({
       ...filters,
       status: event.target.value as ExpenseStatus | "all",
     });
   };
-
-
 
   const activeCount = [
     filters.search.trim() !== "",

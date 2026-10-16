@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { API_BASE_URL, EMAIL_PATTERN } from "./constants";
 
 import { apiError } from "../services/apiError";
 import { resolveAuthenticatedPrincipal } from "../services/authorizationService";
@@ -8,8 +9,6 @@ import { hashPassword } from "../services/passwordService";
 import { bootstrapRoles } from "../data/bootstrap";
 import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 
-const API_BASE_URL = "/api";
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 const DEFAULT_UNIT_NAME = "General";
 

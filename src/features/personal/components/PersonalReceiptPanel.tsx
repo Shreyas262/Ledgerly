@@ -13,6 +13,7 @@ import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
 import { formatDate } from "../../../utils/format";
+import { openObjectUrlInNewTab } from "../../../utils/openInNewTab";
 import {
   useFetchPersonalDocumentContentMutation,
   useGetPersonalDocumentsQuery,
@@ -38,16 +39,9 @@ export function PersonalReceiptPanel({ expenseId }: PersonalReceiptPanelProps) {
 
   const openDocument = async (documentId: string) => {
     setActionError(null);
-    // Open the tab synchronously so it is not treated as a blocked popup.
-    const previewWindow = window.open("", "_blank");
-    if (previewWindow) previewWindow.opener = null;
     try {
-      const objectUrl = await fetchContent(documentId).unwrap();
-      if (previewWindow) previewWindow.location.href = objectUrl;
-      else window.open(objectUrl, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      await openObjectUrlInNewTab(() => fetchContent(documentId).unwrap());
     } catch (caught) {
-      previewWindow?.close();
       setActionError(getApiErrorMessage(caught, "The document could not be opened."));
     }
   };

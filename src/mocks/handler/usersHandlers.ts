@@ -1,6 +1,7 @@
 import { apiError } from "../services/apiError";
 import { applyCollectionQueryResult, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
+import { API_BASE_URL, EMAIL_PATTERN } from "./constants";
 
 import {
   authorizeCollection,
@@ -10,6 +11,11 @@ import { authorizationError } from "../services/authorizationHttp";
 import { runAuditedTransaction } from "../services/auditService";
 import { hashPassword } from "../services/passwordService";
 import { findOtherActiveManager } from "./organizationHandlers";
+import {
+  getRecord,
+  listRecords,
+  listRecordsByIndex,
+} from "../services/mockDataService";
 
 /** One manager per team: the response when the team already has one. */
 async function teamManagerConflict(teamId: string, userId: string | undefined) {
@@ -18,14 +24,6 @@ async function teamManagerConflict(teamId: string, userId: string | undefined) {
     ? apiError(409, `This team already has a manager (${String(existingManager.name ?? existingManager.id)}). A team can have only one manager.`, "TEAM_HAS_MANAGER")
     : null;
 }
-
-import {
-  getRecord,
-  listRecords,
-  listRecordsByIndex,
-} from "../services/mockDataService";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface MockUser {
   id: string;
@@ -47,7 +45,6 @@ interface MockCredential {
   password: string;
 }
 
-const API_BASE_URL = "/api";
 
 /**
  * Validates explicit finance authority (§22.7). Only Finance users carry it;

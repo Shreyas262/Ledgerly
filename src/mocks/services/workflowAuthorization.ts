@@ -2,6 +2,7 @@ import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import type { Permission } from "../../features/roles/types/role";
 import type { Expense } from "../../features/expenses/types/expense";
 import { getRecord } from "./mockDataService";
+import { formatCurrency } from "../../utils/currency";
 
 export interface WorkflowAuthorizationFailure {
   status: 403;
@@ -80,7 +81,7 @@ export function getReviewDenialReason(
 ): string | null {
   const escalated = expense.policyEvaluation?.details.escalated === true;
   const threshold = expense.policyEvaluation?.details.approvalThreshold;
-  const aboveThreshold = `It is above the ${threshold !== undefined ? `₹${threshold.toLocaleString("en-IN")} ` : ""}policy approval threshold`;
+  const aboveThreshold = `It is above the ${threshold !== undefined ? `${formatCurrency(threshold)} ` : ""}policy approval threshold`;
 
   if (expense.organizationId !== principal.organizationId || owner.organizationId !== principal.organizationId) {
     return "The expense is outside your organization.";

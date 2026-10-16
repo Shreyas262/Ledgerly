@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { API_BASE_URL, EMAIL_PATTERN } from "./constants";
 import { apiError } from "../services/apiError";
 
 import {
@@ -58,8 +59,6 @@ interface MockCredential {
   password: string;
 }
 
-const API_BASE_URL = "/api";
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 
 /** Active, unexpired sessions of a user other than the given one. */

@@ -21,6 +21,7 @@ import { UserProfileForm } from "../components/UserProfileForm";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
+import { PageHeader } from "../../../components/common/PageHeader";
 import { humanize } from "../../../utils/format";
 import { accountTypeOf } from "../../auth/utils/accountType";
 
@@ -31,7 +32,6 @@ const ACCOUNT_LABELS: Partial<Record<AccountType, string>> = {
   personal: "Personal account",
   platform: "Platform operator",
 };
-import { PageHeader } from "../../../components/common/PageHeader";
 
 export function UserProfilePage() {
   const [isEditing, setIsEditing] = useState(false);

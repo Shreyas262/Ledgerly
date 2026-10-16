@@ -1,6 +1,7 @@
 import { apiError } from "../services/apiError";
 import { applyCollectionQuery, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
+import { API_BASE_URL } from "./constants";
 
 import { authorizeCollection, authorizeRequest } from "../services/authorizationService";
 import { authorizationError } from "../services/authorizationHttp";
@@ -38,8 +39,6 @@ interface UserReference { id: string; organizationId: string; departmentId: stri
 interface ExpenseReference { id: string; organizationId: string; departmentId: string; teamId: string; }
 interface BudgetReference { id: string; organizationId: string; departmentId?: string; }
 interface DepartmentBudgetReference { id: string; organizationId: string; departmentId: string; }
-
-const API_BASE_URL = "/api";
 
 async function roleNamesById(): Promise<Map<string, string>> {
   const roles = await listRecords<{ id: string; name: string }>("roles");

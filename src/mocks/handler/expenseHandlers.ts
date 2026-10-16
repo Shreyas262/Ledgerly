@@ -2,7 +2,7 @@ import { apiError } from "../services/apiError";
 import { formatDate } from "../../utils/format";
 import { applyCollectionQueryResult, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
-import type { ExpenseType } from "../../features/expenses/types/expense";
+import { EXPENSE_TYPES, type ExpenseType } from "../../features/expenses/types/expense";
 import type { PolicyEvaluation } from "../../features/policies/types/policy";
 
 import type { ExpenseStatus } from "../../features/expenses/types/expense";
@@ -78,17 +78,7 @@ interface MockExpense {
 }
 
 
-const EXPENSE_TYPES = new Set<ExpenseType>([
-  "MEALS",
-  "TRAVEL",
-  "ACCOMMODATION",
-  "TRANSPORTATION",
-  "ENTERTAINMENT",
-  "OFFICE_SUPPLIES",
-  "COMMUNICATION",
-  "TRAINING",
-  "OTHER",
-]);
+const EXPENSE_TYPE_VALUES = new Set<string>(EXPENSE_TYPES);
 
 function isValidDateOnly(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -115,7 +105,7 @@ function validateExpenseBody(body: unknown): {
   const currency = value.currency;
   const expenseDate = typeof value.expenseDate === "string" ? value.expenseDate : "";
 
-  if (typeof type !== "string" || !EXPENSE_TYPES.has(type as ExpenseType)) fieldErrors.type = "A valid expense type is required.";
+  if (typeof type !== "string" || !EXPENSE_TYPE_VALUES.has(type)) fieldErrors.type = "A valid expense type is required.";
   if (!title) fieldErrors.title = "Title is required.";
   if (!description) fieldErrors.description = "Description is required.";
   if (!Number.isFinite(amount) || amount <= 0) fieldErrors.amount = "Amount must be greater than zero.";
