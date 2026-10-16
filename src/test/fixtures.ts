@@ -37,7 +37,7 @@ const DEMO_TEAMS_BY_DEPARTMENT: Record<string, string[]> = {
  * Fixes the current date for date-dependent rules. Only Date is faked:
  * fake-indexeddb schedules its work on real timers.
  */
-export function useFixedToday(date: string): void {
+export function withFixedToday(date: string): void {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(`${date}T10:00:00`));

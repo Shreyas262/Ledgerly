@@ -4,7 +4,7 @@ import type { AuthUser } from "../../features/auth/types/auth";
 import type { OrganizationBudget, OrganizationBudgetView } from "../../features/budgets/types/budget";
 import { getRecord, listRecords, saveRecord } from "../services/mockDataService";
 import { apiFetch, demoAccounts, setupApiServer, signIn } from "../../test/apiServer";
-import { auditEventsFor, givenBudget, givenExpense, useFixedToday, type DemoRole } from "../../test/fixtures";
+import { auditEventsFor, givenBudget, givenExpense, withFixedToday, type DemoRole } from "../../test/fixtures";
 
 setupApiServer();
 
@@ -279,7 +279,7 @@ describe("budget utilization", () => {
 
 // §28.16: expenses may be created only under an active, allocated budget.
 describe("expense creation requires an active, allocated budget", () => {
-  useFixedToday("2026-10-16");
+  withFixedToday("2026-10-16");
 
   const expenseBody = (expenseDate = "2026-10-10") => ({
     type: "MEALS",

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Expense } from "../../features/expenses/types/expense";
 import type { ExpensePolicy, PolicyEvaluationResult, PolicyRules } from "../../features/policies/types/policy";
-import { givenExpense, givenPolicy, useFixedToday } from "../../test/fixtures";
+import { givenExpense, givenPolicy, withFixedToday } from "../../test/fixtures";
 import {
   evaluateExpensePolicy,
   evaluatePolicyRules,
@@ -142,7 +142,7 @@ describe("selectApplicablePolicy", () => {
 });
 
 describe("evaluateExpensePolicy", () => {
-  useFixedToday(TODAY);
+  withFixedToday(TODAY);
 
   const evaluate = (expense: Expense) => evaluateExpensePolicy({ ...expense });
 
