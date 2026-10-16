@@ -91,7 +91,13 @@ describe("review, approve and reject", () => {
     const response = await post(`/api/expenses/${expense.id}/approve`, await signInAs("manager"));
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ code: "INVALID_STATE_TRANSITION" });
+    const body = (await response.json()) as { code: string; message: string };
+    expect(body).toMatchObject({
+      code: "INVALID_STATE_TRANSITION",
+      message: "This action is no longer available because the expense is now submitted. Refresh to see its current status.",
+    });
+    // No internal transition or status identifiers in user-facing text.
+    expect(body.message).not.toMatch(/APPROVE|_/);
   });
 
   it("requires a reason to reject, and shows it to the owner", async () => {

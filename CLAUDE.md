@@ -47,6 +47,12 @@ npm run test:watch
   `src/test/apiServer.ts`, so authentication and authorization are exercised as in the app.
 - Tests assert behavior and authorization outcomes (including negative cases), not implementation details. Use
   `vi.setSystemTime` for date-dependent rules; each scenario creates the data (e.g. budgets) it needs.
+- **Every new feature ships with tests** for its behavior: service/API tests for new mock backend rules and endpoints,
+  component tests (`renderPage()` in `src/test/renderPage.tsx`) for new pages and UI flows, including negative and
+  authorization cases.
+- **Existing tests are the regression suite.** Never delete, skip or weaken a test to make a change pass. If a test
+  fails because behavior was intentionally changed, update it to the new intended behavior and call this out in the
+  explanation; otherwise fix the code, not the test.
 
 Production on Netlify sets `VITE_ENABLE_MOCKS=true`, so the mock backend also runs in the deployed app.
 

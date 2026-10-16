@@ -74,6 +74,10 @@ describe("ApprovalsPage review queue", () => {
     await user.click(screen.getAllByRole("button", { name: "Start Review" }).at(-1)!);
 
     expect(await screen.findByText("Conflict")).toBeInTheDocument();
+    expect(
+      screen.getByText("This action is no longer available because the expense is now under review. Refresh to see its current status."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/START_REVIEW|under_review/)).not.toBeInTheDocument();
     expect(screen.queryByTestId("current-location")).not.toBeInTheDocument();
   });
 

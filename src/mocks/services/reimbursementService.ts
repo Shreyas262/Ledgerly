@@ -1,5 +1,5 @@
 import type { Expense } from "../../features/expenses/types/expense";
-import { transitionExpenseState } from "../../features/expenses/domain/expenseStateMachine";
+import { transitionOrConflict, workflowForbidden, workflowReasonRequired } from "./workflowErrors";
 import { listRecords, listRecordsByIndex } from "./mockDataService";
 import { authorizeExpenseFinance } from "./workflowAuthorization";
 import { runAuditedTransaction } from "./auditService";
@@ -64,10 +64,10 @@ export async function startReimbursement(
   const authorization = await authorizeExpenseFinance(principal, expense);
 
   if (authorization.allowed === false) {
-    throw new Error(authorization.error.message);
+    throw workflowForbidden(authorization.error.message);
   }
 
-  const status = transitionExpenseState(
+  const status = transitionOrConflict(
     "START_REIMBURSEMENT",
     expense.status,
   );
@@ -112,10 +112,10 @@ export async function reimburseExpense(
   const authorization = await authorizeExpenseFinance(principal, expense);
 
   if (authorization.allowed === false) {
-    throw new Error(authorization.error.message);
+    throw workflowForbidden(authorization.error.message);
   }
 
-  const status = transitionExpenseState("REIMBURSE", expense.status);
+  const status = transitionOrConflict("REIMBURSE", expense.status);
   const now = new Date().toISOString();
 
   const updatedExpense: Expense = {
@@ -159,14 +159,14 @@ export async function cancelFinancialExpense(
   const authorization = await authorizeExpenseFinance(principal, expense);
 
   if (authorization.allowed === false) {
-    throw new Error(authorization.error.message);
+    throw workflowForbidden(authorization.error.message);
   }
 
-  const status = transitionExpenseState("CANCEL", expense.status);
+  const status = transitionOrConflict("CANCEL", expense.status);
   const cancellationReason = reason.trim();
 
   if (!cancellationReason) {
-    throw new Error("A cancellation reason is required.");
+    throw workflowReasonRequired("A cancellation reason is required.");
   }
   const now = new Date().toISOString();
 
