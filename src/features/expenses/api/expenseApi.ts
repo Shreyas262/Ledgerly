@@ -1,7 +1,7 @@
 import type { CollectionQuery, CollectionQueryResult } from "../../../types/api";
 import { buildCollectionQuery } from "../../../services/api/queryParams";
 import { baseApi } from "../../../services/api/baseApi";
-import type { CreateExpenseRequest, Expense, ExpenseScope, UpdateExpenseRequest } from "../types/expense";
+import type { BulkSubmitResult, CreateExpenseRequest, Expense, ExpenseScope, UpdateExpenseRequest } from "../types/expense";
 import type { ExpenseComment, ExpenseCommentThread } from "../types/comment";
 
 export interface GetExpensesArgs {
@@ -97,6 +97,17 @@ export const expensesApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, id) => expenseChangeTags(id),
     }),
 
+    // Results come back per draft; every draft sent may have changed.
+    bulkSubmitExpenses: builder.mutation<BulkSubmitResult[], string[]>({
+      query: (expenseIds) => ({
+        url: "/expenses/bulk-submit",
+        method: "POST",
+        body: { expenseIds },
+      }),
+      transformResponse: (response: { results: BulkSubmitResult[] }) => response.results,
+      invalidatesTags: (_result, _error, expenseIds) => expenseIds.flatMap((id) => expenseChangeTags(id)),
+    }),
+
     startExpenseReview: builder.mutation<Expense, string>({
       query: (id) => ({
         url: `/expenses/${id}/review`,
@@ -182,6 +193,7 @@ export const {
   useCreateExpenseMutation,
   useUpdateExpenseMutation,
   useSubmitExpenseMutation,
+  useBulkSubmitExpensesMutation,
   useStartExpenseReviewMutation,
   useRestoreExpenseMutation,
   useStartReimbursementMutation,
