@@ -45,6 +45,7 @@ import { ForbiddenPage } from "../../auth/pages/ForbiddenPage";
 
 import { isStatus } from "../../../services/api/apiErrors";
 import { DocumentPanel } from "../../documents/components/DocumentPanel";
+import { ExpenseComments } from "../components/ExpenseComments";
 import { Amount } from "../../../components/common/Amount";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { BackLink } from "../../../components/navigation/BackLink";
@@ -746,6 +747,7 @@ export function ExpenseDetailsPage({
         onCancel={() => setIsCancelDialogOpen(false)}
       />
       <DocumentPanel expenseId={expense.id} canManage={canManageDocuments} />
+      <ExpenseComments expenseId={expense.id} />
     </Stack>
   );
 }

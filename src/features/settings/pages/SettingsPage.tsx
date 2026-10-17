@@ -51,6 +51,7 @@ function Section({ title, description, children }: { title: string; description:
 
 const NOTIFICATION_OPTIONS: Array<{ category: NotificationCategory; label: string; help: string; reviewersOnly?: boolean }> = [
   { category: "EXPENSE_UPDATES", label: "Updates on my expenses", help: "When a review starts, or an expense is approved, rejected or cancelled." },
+  { category: "COMMENTS", label: "Comments", help: "When someone comments on an expense you own, are reviewing or have commented on." },
   { category: "REIMBURSEMENTS", label: "Reimbursements", help: "When reimbursement of your expense starts and when it is paid." },
   { category: "POLICY_ALERTS", label: "Policy notices", help: "When you submit an expense with policy warnings or above an approval threshold." },
   { category: "REVIEW_QUEUE", label: "Work waiting for me", help: "Expenses waiting for your review or reimbursement.", reviewersOnly: true },

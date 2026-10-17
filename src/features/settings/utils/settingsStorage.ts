@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     REVIEW_QUEUE: true,
     POLICY_ALERTS: true,
     BUDGET_ALERTS: true,
+    COMMENTS: true,
   },
 };
 

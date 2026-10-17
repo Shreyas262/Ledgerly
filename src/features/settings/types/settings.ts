@@ -14,7 +14,8 @@ export type NotificationCategory =
   | "REIMBURSEMENTS"
   | "REVIEW_QUEUE"
   | "POLICY_ALERTS"
-  | "BUDGET_ALERTS";
+  | "BUDGET_ALERTS"
+  | "COMMENTS";
 
 export interface UserSettings {
   theme: ThemePreference;

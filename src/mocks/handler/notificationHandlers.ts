@@ -1,11 +1,13 @@
 import { http, HttpResponse } from "msw";
 import { apiError } from "../services/apiError";
-import { resolveAuthenticatedPrincipal } from "../services/authorizationService";
-import { listRecords, listRecordsByIndex } from "../services/mockDataService";
+import { isExpenseVisibleToPrincipal, isWithinScope, resolveAuthenticatedPrincipal, resolveExpenseReadScope } from "../services/authorizationService";
+import { getStoredComments, type StoredExpenseComment } from "../services/expenseCommentService";
+import { getRecord, listRecords, listRecordsByIndex } from "../services/mockDataService";
 import { getApprovalQueue } from "../services/approvalService";
 import { getReimbursementQueue } from "../services/reimbursementService";
 import { authorizeExpenseFinance } from "../services/workflowAuthorization";
 import { getExpenseCreationEligibility, todayDate } from "../services/budgetService";
+import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import type { Expense } from "../../features/expenses/types/expense";
 import type { AuditEvent } from "../../features/audit/types/audit";
 import type { OrganizationBudget } from "../../features/budgets/types/budget";
@@ -15,6 +17,19 @@ import { formatDate } from "../../utils/format";
 
 const WINDOW_DAYS = 30;
 const LIMIT = 40;
+
+/** Whether the user may still open the expense, as `GET /api/expenses/:id` decides. */
+function canReadExpense(principal: AuthenticatedPrincipal, expense: Expense): boolean {
+  return (
+    principal.effectivePermissions.includes("expenses.read") &&
+    isExpenseVisibleToPrincipal(principal, expense) &&
+    isWithinScope(
+      principal,
+      { organizationId: expense.organizationId, ownerId: expense.employeeId, teamId: expense.teamId, departmentId: expense.departmentId },
+      resolveExpenseReadScope(principal, expense),
+    )
+  );
+}
 
 const latest = (dates: Array<string | undefined>) =>
   dates.filter((date): date is string => Boolean(date)).sort().at(-1) ?? new Date().toISOString();
@@ -77,6 +92,32 @@ export const notificationHandlers = [
           break;
         }
       }
+    }
+
+    // Comments by others on expenses the user owns, is reviewing or has commented on (§29.10).
+    const threads = new Map<string, StoredExpenseComment[]>();
+    for (const event of events) {
+      if (event.action !== "EXPENSE_COMMENTED" || event.actorId === principal.userId || new Date(event.timestamp).getTime() < since) continue;
+      const expense = expenseById.get(event.entityId) ?? (await getRecord<Expense>("expenses", event.entityId));
+      if (!expense || !canReadExpense(principal, expense)) continue;
+      if (!threads.has(expense.id)) threads.set(expense.id, await getStoredComments(expense.id));
+      const thread = threads.get(expense.id) ?? [];
+      const involved =
+        expense.employeeId === principal.userId ||
+        expense.reviewedBy === principal.userId ||
+        thread.some((comment) => comment.authorId === principal.userId && comment.createdAt < event.timestamp);
+      const comment = thread.find((item) => item.id === event.metadata?.commentId);
+      if (!involved || !comment) continue;
+      const excerpt = comment.body.length > 80 ? `${comment.body.slice(0, 80).trimEnd()}…` : comment.body;
+      notifications.push({
+        id: event.id,
+        category: "COMMENTS",
+        severity: "info",
+        title: "New comment",
+        message: `${nameOf(event.actorId)} commented on "${expense.title}": "${excerpt}"`,
+        link: `/expenses/${expense.id}`,
+        timestamp: event.timestamp,
+      });
     }
 
     // Work waiting for the user.

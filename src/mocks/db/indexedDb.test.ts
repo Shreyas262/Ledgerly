@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { closeDatabase, DB_NAME, DB_VERSION, MOCK_STORES, readAll, readAllByIndex } from "./indexedDb";
 
 const PERSONAL_STORES = ["personalExpenses", "personalBudgets", "personalDocuments"];
+// Stores added after version 19.
+const LATER_STORES = [...PERSONAL_STORES, "expenseComments"];
 
 function request<T>(open: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -13,12 +15,12 @@ function request<T>(open: IDBRequest<T>): Promise<T> {
 
 /**
  * Creates the database as a browser on version 19 would hold it: every store
- * except the personal ones, with records in the old policy shape.
+ * except those added later, with records in the old policy shape.
  */
 async function givenVersion19Database(records: { policies: object[]; users: object[] }): Promise<void> {
   const open = indexedDB.open(DB_NAME, 19);
   open.onupgradeneeded = () => {
-    for (const storeName of MOCK_STORES.filter((name) => !PERSONAL_STORES.includes(name))) {
+    for (const storeName of MOCK_STORES.filter((name) => !LATER_STORES.includes(name))) {
       open.result.createObjectStore(storeName, { keyPath: storeName === "credentials" ? "userId" : "id" });
     }
   };
@@ -102,10 +104,12 @@ describe("IndexedDB migrations", () => {
     expect(await readAll("users")).toEqual([user]);
     // Version 21 adds the personal stores, read by owner.
     expect(await readAllByIndex("personalExpenses", "ownerId", "user-personal-1")).toEqual([]);
+    // Version 22 adds expense comments, read per expense.
+    expect(await readAllByIndex("expenseComments", "expenseId", "expense-1")).toEqual([]);
 
     const database = await openWithoutUpgrade();
     expect(database.version).toBe(DB_VERSION);
-    expect([...database.objectStoreNames]).toEqual(expect.arrayContaining(PERSONAL_STORES));
+    expect([...database.objectStoreNames]).toEqual(expect.arrayContaining(LATER_STORES));
     database.close();
   });
 });
