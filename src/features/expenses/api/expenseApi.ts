@@ -1,7 +1,8 @@
 import type { CollectionQuery, CollectionQueryResult } from "../../../types/api";
 import { buildCollectionQuery } from "../../../services/api/queryParams";
 import { baseApi } from "../../../services/api/baseApi";
-import type { CreateExpenseRequest, Expense, ExpenseScope, UpdateExpenseRequest } from "../types/expense";
+import type { BulkSubmitResult, CreateExpenseRequest, Expense, ExpenseScope, UpdateExpenseRequest } from "../types/expense";
+import type { ExpenseComment, ExpenseCommentThread } from "../types/comment";
 
 export interface GetExpensesArgs {
   scope: ExpenseScope;
@@ -15,6 +16,8 @@ export interface GetExpensesArgs {
  */
 const expenseChangeTags = (id: string, { budgets = false } = {}) => [
   { type: "Expense" as const, id },
+  // Whether the thread takes new comments depends on the status.
+  { type: "ExpenseComment" as const, id },
   { type: "Expense" as const, id: "LIST" },
   { type: "Expense" as const, id: "APPROVAL_QUEUE" },
   { type: "Expense" as const, id: "REIMBURSEMENT_QUEUE" },
@@ -94,6 +97,17 @@ export const expensesApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, id) => expenseChangeTags(id),
     }),
 
+    // Results come back per draft; every draft sent may have changed.
+    bulkSubmitExpenses: builder.mutation<BulkSubmitResult[], string[]>({
+      query: (expenseIds) => ({
+        url: "/expenses/bulk-submit",
+        method: "POST",
+        body: { expenseIds },
+      }),
+      transformResponse: (response: { results: BulkSubmitResult[] }) => response.results,
+      invalidatesTags: (_result, _error, expenseIds) => expenseIds.flatMap((id) => expenseChangeTags(id)),
+    }),
+
     startExpenseReview: builder.mutation<Expense, string>({
       query: (id) => ({
         url: `/expenses/${id}/review`,
@@ -156,6 +170,20 @@ export const expensesApi = baseApi.injectEndpoints({
 
       invalidatesTags: (_result, _error, { id }) => expenseChangeTags(id),
     }),
+
+    getExpenseComments: builder.query<ExpenseCommentThread, string>({
+      query: (id) => `/expenses/${id}/comments`,
+      providesTags: (_result, _error, id) => [{ type: "ExpenseComment", id }],
+    }),
+
+    addExpenseComment: builder.mutation<ExpenseComment, { id: string; body: string }>({
+      query: ({ id, body }) => ({
+        url: `/expenses/${id}/comments`,
+        method: "POST",
+        body: { body },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: "ExpenseComment", id }],
+    }),
   }),
 });
 
@@ -165,6 +193,7 @@ export const {
   useCreateExpenseMutation,
   useUpdateExpenseMutation,
   useSubmitExpenseMutation,
+  useBulkSubmitExpensesMutation,
   useStartExpenseReviewMutation,
   useRestoreExpenseMutation,
   useStartReimbursementMutation,
@@ -172,4 +201,6 @@ export const {
   useCancelExpenseMutation,
   useApproveExpenseMutation,
   useRejectExpenseMutation,
+  useGetExpenseCommentsQuery,
+  useAddExpenseCommentMutation,
 } = expensesApi;

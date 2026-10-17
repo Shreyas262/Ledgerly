@@ -10,3 +10,16 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Built files have content hashes in their names, so they never change. Long
+# caching lets receipt reading work offline once its files have been loaded.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# OCR language data lives in a versioned folder, so it never changes either.
+[[headers]]
+  for = "/ocr/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

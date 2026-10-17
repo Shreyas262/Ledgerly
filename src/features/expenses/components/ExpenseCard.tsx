@@ -3,6 +3,7 @@ import { EXPENSE_STATUS_LABELS, EXPENSE_TYPE_LABELS, type ExpenseStatus } from "
 import {
   Box,
   Button,
+  Checkbox,
   Chip,
   Card,
   CardContent,
@@ -25,6 +26,9 @@ interface ExpenseCardProps {
   onStartReview?: (expense: Expense) => void;
   isSubmitting?: boolean;
   isStartingReview?: boolean;
+  /** Selection for submitting several drafts at once; offered only on drafts that can be submitted. */
+  selected?: boolean;
+  onSelectedChange?: (expense: Expense, selected: boolean) => void;
 }
 
 interface StatusConfig {
@@ -85,6 +89,8 @@ export function ExpenseCard({
   onStartReview,
   isSubmitting = false,
   isStartingReview = false,
+  selected = false,
+  onSelectedChange,
 }: ExpenseCardProps) {
   const policyFlags = {
     escalated: expense.policyEvaluation?.details.escalated === true,
@@ -100,6 +106,9 @@ export function ExpenseCard({
     expense.status === "draft" &&
     expense.employeeId === user?.id &&
     can("expenses.submit");
+
+  // Like the Submit button, selection needs a receipt (§21.14).
+  const canSelect = Boolean(onSelectedChange) && canSubmit && Boolean(expense.documentIds?.length);
 
   const canStartReview =
     variant === "approval" &&
@@ -122,6 +131,15 @@ export function ExpenseCard({
             gap: 2,
           }}
         >
+          <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
+          {canSelect && (
+            <Checkbox
+              checked={selected}
+              onChange={(event) => onSelectedChange?.(expense, event.target.checked)}
+              slotProps={{ input: { "aria-label": `Select ${expense.title}` } }}
+              sx={{ mt: -0.75, ml: -1 }}
+            />
+          )}
           <Stack spacing={0.5}>
             <Typography variant="subtitle1">
               {expense.title}
@@ -157,6 +175,7 @@ export function ExpenseCard({
             >
               {formatDate(expense.expenseDate)}
             </Typography>
+          </Stack>
           </Stack>
 
           <Box

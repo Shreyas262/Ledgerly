@@ -1,8 +1,7 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
   Alert,
   Button,
-  Chip,
   Grid,
   InputAdornment,
   MenuItem,
@@ -11,7 +10,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { AttachFileOutlined } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { PageHeader } from "../../../components/common/PageHeader";
@@ -38,10 +36,11 @@ import {
   type PersonalExpenseType,
 } from "../types/personal";
 import { todayDate } from "../utils/personalFormat";
-import { RECEIPT_ACCEPT, validateReceiptFile } from "../utils/receiptFiles";
+import { ReceiptAttachmentField } from "../../documents/components/ReceiptAttachmentField";
+import type { ReceiptDetails } from "../../documents/utils/parseReceiptText";
+import { applyReceiptDetails, describeReceiptFill, type ReceiptFieldMap } from "../../documents/utils/receiptFill";
 
 const MAX_DESCRIPTION_LENGTH = 500;
-const MAX_RECEIPTS = 5;
 
 interface FormState {
   amount: string;
@@ -51,7 +50,13 @@ interface FormState {
   description: string;
 }
 
-type FieldErrors = Partial<Record<keyof FormState | "receipts", string>>;
+type FieldErrors = Partial<Record<keyof FormState, string>>;
+
+const RECEIPT_FIELDS: ReceiptFieldMap<FormState> = {
+  amount: { field: "amount", label: "amount" },
+  date: { field: "expenseDate", label: "date" },
+  merchant: { field: "description", label: "description" },
+};
 
 const toFormState = (expense?: PersonalExpense): FormState => ({
   amount: expense ? String(expense.amount) : "",
@@ -102,7 +107,9 @@ function ExpenseForm({ expense }: { expense?: PersonalExpense }) {
   const [form, setForm] = useState<FormState>(() => toFormState(expense));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [receipts, setReceipts] = useState<File[]>([]);
-  const [fileInputKey, setFileInputKey] = useState(0);
+  const [receiptNotice, setReceiptNotice] = useState<string | null>(null);
+  // Fields the user has typed in are never overwritten by a receipt.
+  const editedFields = useRef(new Set<keyof FormState>());
 
   const [createExpense, { isLoading: isCreating, error: createError }] = useCreatePersonalExpenseMutation();
   const [updateExpense, { isLoading: isUpdating, error: updateError }] = useUpdatePersonalExpenseMutation();
@@ -114,25 +121,23 @@ function ExpenseForm({ expense }: { expense?: PersonalExpense }) {
   const backTo = expense ? `/personal/expenses/${expense.id}` : "/personal/expenses";
 
   const setField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
+    editedFields.current.add(field);
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
   };
 
-  const handleReceipts = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    setFileInputKey((current) => current + 1);
-    const invalid = files.map(validateReceiptFile).find(Boolean);
-    if (invalid) {
-      setErrors((current) => ({ ...current, receipts: invalid }));
-      return;
-    }
-    const next = [...receipts, ...files.filter((file) => !receipts.some((item) => item.name === file.name))];
-    if (next.length > MAX_RECEIPTS) {
-      setErrors((current) => ({ ...current, receipts: `Attach at most ${MAX_RECEIPTS} files.` }));
-      return;
-    }
-    setErrors((current) => ({ ...current, receipts: undefined }));
-    setReceipts(next);
+  const handleReceiptRead = (receipt: ReceiptDetails, file: File) => {
+    setForm((current) => applyReceiptDetails(current, receipt, RECEIPT_FIELDS, editedFields.current).form);
+    // Errors of the filled fields no longer apply; they are checked again on saving.
+    setErrors((current) => {
+      const next = { ...current };
+      for (const { field } of Object.values(RECEIPT_FIELDS)) {
+        if (!editedFields.current.has(field)) delete next[field];
+      }
+      return next;
+    });
+    // Which fields are filled depends only on the receipt and the edited fields, not on current values.
+    setReceiptNotice(describeReceiptFill(file.name, applyReceiptDetails(form, receipt, RECEIPT_FIELDS, editedFields.current)));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -197,6 +202,15 @@ function ExpenseForm({ expense }: { expense?: PersonalExpense }) {
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack component="form" spacing={3} onSubmit={handleSubmit} noValidate>
           {saveError && !Object.keys(serverErrors).length && <ApiFeedback error={saveError} />}
+
+          {!isEdit && (
+            <ReceiptAttachmentField files={receipts} onFilesChange={setReceipts} onRead={handleReceiptRead} disabled={isSaving} />
+          )}
+          {receiptNotice && (
+            <Alert severity="info" onClose={() => setReceiptNotice(null)}>
+              {receiptNotice}
+            </Alert>
+          )}
 
           <Grid container spacing={2.5}>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -277,34 +291,10 @@ function ExpenseForm({ expense }: { expense?: PersonalExpense }) {
             </Grid>
           </Grid>
 
-          {isEdit ? (
+          {isEdit && (
             <Typography variant="body2" color="text.secondary">
               Receipts and documents are managed on the expense's page.
             </Typography>
-          ) : (
-            <Stack spacing={1.5}>
-              <Stack spacing={0.25}>
-                <Typography variant="subtitle2">Receipts (optional)</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  JPG, PNG or PDF up to 5 MB each. You can also add them later.
-                </Typography>
-              </Stack>
-              <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", alignItems: "center" }}>
-                <Button component="label" variant="outlined" startIcon={<AttachFileOutlined />} disabled={isSaving}>
-                  Attach files
-                  <input key={fileInputKey} hidden type="file" multiple accept={RECEIPT_ACCEPT} onChange={handleReceipts} />
-                </Button>
-                {receipts.map((file) => (
-                  <Chip
-                    key={file.name}
-                    label={file.name}
-                    onDelete={isSaving ? undefined : () => setReceipts((current) => current.filter((item) => item !== file))}
-                    sx={{ maxWidth: 260 }}
-                  />
-                ))}
-              </Stack>
-              {fieldError("receipts") && <Alert severity="warning">{fieldError("receipts")}</Alert>}
-            </Stack>
           )}
 
           <Stack direction={{ xs: "column-reverse", sm: "row" }} spacing={1.5} sx={{ justifyContent: "flex-end" }}>

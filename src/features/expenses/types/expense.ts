@@ -137,6 +137,14 @@ export interface UpdateExpenseRequest {
   expenseDate: ISODateString;
 }
 
+/** Most drafts submitted at once: one page of the expense list. */
+export const MAX_BULK_SUBMIT = 25;
+
+/** What happened to one draft of a bulk submission, in request order. */
+export type BulkSubmitResult =
+  | { expenseId: EntityId; ok: true; expense: Expense }
+  | { expenseId: EntityId; ok: false; status: number; code: string; message: string };
+
 export interface ExpenseFilter {
   search: string;
   status: ExpenseStatus | "all";

@@ -1,5 +1,5 @@
 const DB_NAME = "ledgerly";
-export const DB_VERSION = 21;
+export const DB_VERSION = 22;
 
 export const MOCK_STORES = [
   "users",
@@ -21,6 +21,7 @@ export const MOCK_STORES = [
   "personalExpenses",
   "personalBudgets",
   "personalDocuments",
+  "expenseComments",
 ] as const;
 
 export type MockStoreName = (typeof MOCK_STORES)[number];
@@ -414,6 +415,15 @@ const migrations: Record<number, Migration> = {
     const documents = transaction.objectStore("personalDocuments");
     if (!documents.indexNames.contains("expenseId")) {
       documents.createIndex("expenseId", "expenseId", { unique: false });
+    }
+  },
+
+  22: (database, transaction) => {
+    // Expense comment threads (§29.10), read per expense.
+    createStoreIfMissing(database, "expenseComments");
+    const comments = transaction.objectStore("expenseComments");
+    if (!comments.indexNames.contains("expenseId")) {
+      comments.createIndex("expenseId", "expenseId", { unique: false });
     }
   },
 };

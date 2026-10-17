@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 
 
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import {
   useGetExpenseByIdQuery,
@@ -45,6 +45,7 @@ import { ForbiddenPage } from "../../auth/pages/ForbiddenPage";
 
 import { isStatus } from "../../../services/api/apiErrors";
 import { DocumentPanel } from "../../documents/components/DocumentPanel";
+import { ExpenseComments } from "../components/ExpenseComments";
 import { Amount } from "../../../components/common/Amount";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { BackLink } from "../../../components/navigation/BackLink";
@@ -99,6 +100,11 @@ export function ExpenseDetailsPage({
 
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [budgetWarnings, setBudgetWarnings] = useState<string[]>([]);
+  // Receipts that could not be attached when the expense was created.
+  const location = useLocation();
+  const [receiptError, setReceiptError] = useState<string | null>(
+    (location.state as { receiptError?: string } | null)?.receiptError ?? null,
+  );
 
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
@@ -336,6 +342,10 @@ export function ExpenseDetailsPage({
             <Typography key={warning} variant="body2">{warning}</Typography>
           ))}
         </Alert>
+      )}
+
+      {receiptError && (
+        <Alert severity="warning" onClose={() => setReceiptError(null)}>{receiptError}</Alert>
       )}
 
       {needsReceipt && (
@@ -737,6 +747,7 @@ export function ExpenseDetailsPage({
         onCancel={() => setIsCancelDialogOpen(false)}
       />
       <DocumentPanel expenseId={expense.id} canManage={canManageDocuments} />
+      <ExpenseComments expenseId={expense.id} />
     </Stack>
   );
 }

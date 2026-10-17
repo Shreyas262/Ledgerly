@@ -2,7 +2,15 @@ import { apiError } from "../services/apiError";
 import { formatDate } from "../../utils/format";
 import { applyCollectionQueryResult, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
-import { EXPENSE_TYPES, type Expense, type ExpenseStatus, type ExpenseType } from "../../features/expenses/types/expense";
+import {
+  EXPENSE_TYPES,
+  MAX_BULK_SUBMIT,
+  type BulkSubmitResult,
+  type Expense,
+  type ExpenseStatus,
+  type ExpenseType,
+} from "../../features/expenses/types/expense";
+import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import { transitionExpenseState } from "../../features/expenses/domain/expenseStateMachine";
 import {
   authorizeRequest,
@@ -18,13 +26,10 @@ import {
 } from "../services/authorizedExpenseRecords";
 import { authorizationError } from "../services/authorizationHttp";
 import { runAuditedTransaction } from "../services/auditService";
-import {
-  evaluateExpensePolicy,
-  isSubmissionAllowed,
-  persistExpenseSubmissionEvaluation,
-} from "../services/policyService";
+import { evaluateExpensePolicy } from "../services/policyService";
 import { getRecord } from "../services/mockDataService";
-import { findActiveBudgetForDate, getBudgetWarnings, getExpenseCreationEligibility, todayDate } from "../services/budgetService";
+import { findActiveBudgetForDate, getExpenseCreationEligibility, todayDate } from "../services/budgetService";
+import { submitDraftExpense } from "../services/submissionService";
 
 /**
  * Expenses may be created only while an active budget covers today, and must
@@ -129,7 +134,7 @@ async function authorizeOwnerOperation(
   expense: Expense,
   permission: "expenses.update" | "expenses.submit",
   allowedStates: readonly ExpenseStatus[],
-) {
+): Promise<{ error: Response } | { principal: AuthenticatedPrincipal }> {
   const principalAuthorization = await authorizeRequest(request, {
     permission,
     scope: "ORGANIZATION",
@@ -386,53 +391,62 @@ export const expensesHandlers = [
       return authorization.error;
     }
 
-    const evaluation = await evaluateExpensePolicy(expense);
-    const submissionAllowed = isSubmissionAllowed(evaluation);
+    const outcome = await submitDraftExpense(authorization.principal, expense);
+    return outcome.ok
+      ? HttpResponse.json(outcome.expense)
+      : apiError(outcome.status, outcome.message, outcome.code, outcome.details);
+  }),
 
-    await persistExpenseSubmissionEvaluation(
-      expense,
-      evaluation,
-      submissionAllowed,
-      {
-        organizationId: expense.organizationId,
-        actorId: authorization.principal.userId,
-        action: submissionAllowed ? "EXPENSE_SUBMITTED" : "EXPENSE_SUBMISSION_REJECTED",
-        entityType: "EXPENSE",
-        entityId: expense.id,
-        previousState: expense.status,
-        newState: submissionAllowed ? "submitted" : expense.status,
-        metadata: { policyId: evaluation.policyId, evaluationResult: evaluation.result },
-        description: submissionAllowed
-          ? `Submitted expense ${expense.title} for review.`
-          : `Submission of expense ${expense.title} was blocked by policy.`,
-      },
-    );
+  // Several of the user's drafts at once (§13). Each draft is authorized and
+  // submitted exactly as by the single endpoint, in its own transaction; one
+  // refusal does not stop the others.
+  http.post("/api/expenses/bulk-submit", async ({ request }) => {
+    const principalAuthorization = await authorizeRequest(request, {
+      permission: "expenses.submit",
+      scope: "ORGANIZATION",
+    });
 
-    const evaluatedExpense = {
-      ...expense,
-      status: submissionAllowed ? "submitted" : expense.status,
-      policyId: evaluation.policyId,
-      policyEvaluation: evaluation,
-      ...(submissionAllowed ? { submittedAt: evaluation.evaluatedAt } : {}),
-      updatedAt: evaluation.evaluatedAt,
-    };
+    if (principalAuthorization.allowed === false) {
+      return authorizationError(principalAuthorization);
+    }
 
-    if (!submissionAllowed) {
-      return apiError(
-        422,
-        evaluation.result === "MISSING_INFORMATION"
-          ? (evaluation.details.missingInformation ?? []).join(" ") ||
-            "Expense is missing information required by the applicable policy."
-          : (evaluation.details.violatedRules ?? []).join(" ") ||
-            "Expense violates the applicable policy.",
-        "POLICY_VIOLATION",
-        { evaluation, expense: evaluatedExpense },
+    const payload = (await request.json().catch(() => null)) as { expenseIds?: unknown } | null;
+    const expenseIds = payload?.expenseIds;
+    if (
+      !Array.isArray(expenseIds) ||
+      expenseIds.length === 0 ||
+      expenseIds.length > MAX_BULK_SUBMIT ||
+      !expenseIds.every((id): id is string => typeof id === "string" && id.length > 0) ||
+      new Set(expenseIds).size !== expenseIds.length
+    ) {
+      return apiError(422, `Select between 1 and ${MAX_BULK_SUBMIT} different expenses to submit.`);
+    }
+
+    const results: BulkSubmitResult[] = [];
+    for (const expenseId of expenseIds) {
+      const expense = await getRecord<Expense>("expenses", expenseId);
+      if (!expense) {
+        results.push({ expenseId, ok: false, status: 404, code: "NOT_FOUND", message: "Expense not found." });
+        continue;
+      }
+
+      const authorization = await authorizeOwnerOperation(request, expense, "expenses.submit", ["draft"]);
+      if ("error" in authorization) {
+        // The refusal the single endpoint would return for this draft.
+        const refusal = (await authorization.error.json()) as { status: number; code: string; message: string };
+        results.push({ expenseId, ok: false, status: refusal.status, code: refusal.code, message: refusal.message });
+        continue;
+      }
+
+      const outcome = await submitDraftExpense(authorization.principal, expense);
+      results.push(
+        outcome.ok
+          ? { expenseId, ok: true, expense: outcome.expense }
+          : { expenseId, ok: false, status: outcome.status, code: outcome.code, message: outcome.message },
       );
     }
 
-    // Non-blocking: tell the submitter if this expense would exceed a budget.
-    const budgetWarnings = await getBudgetWarnings(evaluatedExpense);
-    return HttpResponse.json({ ...evaluatedExpense, ...(budgetWarnings.length ? { budgetWarnings } : {}) });
+    return HttpResponse.json({ results });
   }),
 
   http.post("/api/expenses/:id/restore", async ({ params, request }) => {

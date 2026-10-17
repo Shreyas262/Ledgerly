@@ -49,4 +49,5 @@ export const demoAccounts = {
   manager: { email: "manager@ledgerly.com", password: "manager123" },
   finance: { email: "finance@ledgerly.com", password: "finance123" },
   admin: { email: "admin@ledgerly.com", password: "admin123" },
+  personal: { email: "personal@ledgerly.com", password: "personal123" },
 } as const;
