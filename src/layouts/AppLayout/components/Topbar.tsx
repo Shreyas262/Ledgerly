@@ -23,13 +23,13 @@ import { useConfirm } from "../../../components/common/ConfirmProvider";
 
 interface TopbarProps {
   isMobile: boolean;
-  mobileSidebaropen: boolean;
+  mobileSidebarOpen: boolean;
   onMobileMenuClick: () => void;
 }
 
 export function Topbar({
   isMobile,
-  mobileSidebaropen,
+  mobileSidebarOpen,
   onMobileMenuClick,
 }: TopbarProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -85,7 +85,7 @@ export function Topbar({
             <IconButton
               edge="start"
               aria-label="Open navigation menu"
-              aria-expanded={mobileSidebaropen}
+              aria-expanded={mobileSidebarOpen}
               onClick={onMobileMenuClick}
             >
               <MenuOutlined />

@@ -117,9 +117,6 @@ export function ExpensesPage() {
   const expenses = expenseResult?.data ?? [];
 
   const [submitExpense, { error: submitError }] = useSubmitExpenseMutation();
-  if (!can("expenses.read")) {
-    return <ErrorState title="Access denied" message="You do not have permission to view expenses." />;
-  }
 
   if (isLoading) {
     return <LoadingState />;

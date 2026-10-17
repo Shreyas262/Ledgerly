@@ -1,5 +1,5 @@
 import { formatDate } from "../../../utils/format";
-import { EXPENSE_STATUS_LABELS } from "../types/expense";
+import { EXPENSE_STATUS_LABELS, EXPENSE_TYPE_LABELS, type ExpenseStatus } from "../types/expense";
 import {
   Box,
   Button,
@@ -11,7 +11,6 @@ import {
 } from "@mui/material";
 import type { ChipProps } from "@mui/material";
 
-import { EXPENSE_TYPE_LABELS, type ExpenseStatus } from "../types/expense";
 import type { Expense } from "../types/expense";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
@@ -149,7 +148,7 @@ export function ExpenseCard({
               variant="body2"
               color="text.secondary"
             >
-              {expense.teamName ?? expense.teamId} · {expense.departmentName ?? expense.departmentId}
+              {expense.teamName ?? "—"} · {expense.departmentName ?? "—"}
             </Typography>
 
             <Typography
@@ -218,7 +217,7 @@ export function ExpenseCard({
               disabled={!expense.documentIds?.length}
               title={expense.documentIds?.length ? undefined : "Attach a receipt before submitting"}
             >
-              {expense.documentIds?.length ? "Submit" : "Receipt required"}
+              {expense.documentIds?.length ? "Submit" : "Receipt Required"}
             </Button>
           )}
 

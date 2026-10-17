@@ -1,6 +1,7 @@
 import { useTheme } from "@mui/material";
 
 import { PERSONAL_EXPENSE_TYPES, type PersonalExpenseType } from "../types/personal";
+import { toDateOnly } from "../../../utils/format";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -23,7 +24,7 @@ export function currentMonth(): string {
 
 /** Today's calendar date in local time, YYYY-MM-DD. */
 export function todayDate(): string {
-  return `${currentMonth()}-${String(new Date().getDate()).padStart(2, "0")}`;
+  return toDateOnly();
 }
 
 export function shiftMonth(month: string, delta: number): string {

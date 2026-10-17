@@ -8,6 +8,21 @@ export interface GetExpensesArgs {
   query?: CollectionQuery;
 }
 
+/**
+ * Every view an expense change can affect: the expense itself, the lists and
+ * queues it appears in, and the summaries built from it. Steps from approval
+ * onward also refresh budgets.
+ */
+const expenseChangeTags = (id: string, { budgets = false } = {}) => [
+  { type: "Expense" as const, id },
+  { type: "Expense" as const, id: "LIST" },
+  { type: "Expense" as const, id: "APPROVAL_QUEUE" },
+  { type: "Expense" as const, id: "REIMBURSEMENT_QUEUE" },
+  { type: "Dashboard" as const, id: "SUMMARY" },
+  { type: "Analytics" as const, id: "SUMMARY" },
+  ...(budgets ? ["Budgets" as const] : []),
+];
+
 export const expensesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getExpenses: builder.query<CollectionQueryResult<Expense>, GetExpensesArgs>({
@@ -15,7 +30,6 @@ export const expensesApi = baseApi.injectEndpoints({
         const queryString = buildCollectionQuery(query);
         return `/expenses${queryString}${queryString ? "&" : "?"}scope=${scope}`;
       },
-      transformResponse: (response: CollectionQueryResult<Expense>) => response,
       providesTags: (result) =>
         result
           ? [
@@ -68,14 +82,7 @@ export const expensesApi = baseApi.injectEndpoints({
         body,
       }),
 
-      invalidatesTags: (_result, _error, { id }) => [
-        { type: "Expense", id },
-        { type: "Expense", id: "LIST" },
-        { type: "Expense", id: "APPROVAL_QUEUE" },
-        { type: "Expense", id: "REIMBURSEMENT_QUEUE" },
-        { type: "Dashboard", id: "SUMMARY" },
-        { type: "Analytics", id: "SUMMARY" },
-      ],
+      invalidatesTags: (_result, _error, { id }) => expenseChangeTags(id),
     }),
 
     submitExpense: builder.mutation<Expense, string>({
@@ -84,26 +91,7 @@ export const expensesApi = baseApi.injectEndpoints({
         method: "POST",
       }),
 
-      invalidatesTags: (_result, _error, id) => [
-        {
-          type: "Expense",
-          id,
-        },
-        {
-          type: "Expense",
-          id: "LIST",
-        },
-        {
-          type: "Expense",
-          id: "APPROVAL_QUEUE",
-        },
-        {
-          type: "Expense",
-          id: "REIMBURSEMENT_QUEUE",
-        },
-        { type: "Dashboard", id: "SUMMARY" },
-        { type: "Analytics", id: "SUMMARY" },
-      ],
+      invalidatesTags: (_result, _error, id) => expenseChangeTags(id),
     }),
 
     startExpenseReview: builder.mutation<Expense, string>({
@@ -112,26 +100,7 @@ export const expensesApi = baseApi.injectEndpoints({
         method: "POST",
       }),
 
-      invalidatesTags: (_result, _error, id) => [
-        {
-          type: "Expense",
-          id,
-        },
-        {
-          type: "Expense",
-          id: "LIST",
-        },
-        {
-          type: "Expense",
-          id: "APPROVAL_QUEUE",
-        },
-        {
-          type: "Expense",
-          id: "REIMBURSEMENT_QUEUE",
-        },
-        { type: "Dashboard", id: "SUMMARY" },
-        { type: "Analytics", id: "SUMMARY" },
-      ],
+      invalidatesTags: (_result, _error, id) => expenseChangeTags(id),
     }),
     
     approveExpense: builder.mutation<Expense, string>({
@@ -140,27 +109,7 @@ export const expensesApi = baseApi.injectEndpoints({
         method: "POST",
       }),
 
-      invalidatesTags: (_result, _error, id) => [
-        {
-          type: "Expense",
-          id,
-        },
-        {
-          type: "Expense",
-          id: "LIST",
-        },
-        {
-          type: "Expense",
-          id: "APPROVAL_QUEUE",
-        },
-        {
-          type: "Expense",
-          id: "REIMBURSEMENT_QUEUE",
-        },
-        { type: "Dashboard", id: "SUMMARY" },
-        { type: "Analytics", id: "SUMMARY" },
-        "Budgets",
-      ],
+      invalidatesTags: (_result, _error, id) => expenseChangeTags(id, { budgets: true }),
     }),
 
     restoreExpense: builder.mutation<Expense, string>({
@@ -168,14 +117,7 @@ export const expensesApi = baseApi.injectEndpoints({
         url: `/expenses/${id}/restore`,
         method: "POST",
       }),
-      invalidatesTags: (_result, _error, id) => [
-        { type: "Expense", id },
-        { type: "Expense", id: "LIST" },
-        { type: "Expense", id: "APPROVAL_QUEUE" },
-        { type: "Expense", id: "REIMBURSEMENT_QUEUE" },
-        { type: "Dashboard", id: "SUMMARY" },
-        { type: "Analytics", id: "SUMMARY" },
-      ],
+      invalidatesTags: (_result, _error, id) => expenseChangeTags(id),
     }),
 
     startReimbursement: builder.mutation<Expense, string>({
@@ -183,15 +125,7 @@ export const expensesApi = baseApi.injectEndpoints({
         url: `/expenses/${id}/start-reimbursement`,
         method: "POST",
       }),
-      invalidatesTags: (_result, _error, id) => [
-        { type: "Expense", id },
-        { type: "Expense", id: "LIST" },
-        { type: "Expense", id: "APPROVAL_QUEUE" },
-        { type: "Expense", id: "REIMBURSEMENT_QUEUE" },
-        { type: "Dashboard", id: "SUMMARY" },
-        { type: "Analytics", id: "SUMMARY" },
-        "Budgets",
-      ],
+      invalidatesTags: (_result, _error, id) => expenseChangeTags(id, { budgets: true }),
     }),
 
     reimburseExpense: builder.mutation<Expense, string>({
@@ -199,15 +133,7 @@ export const expensesApi = baseApi.injectEndpoints({
         url: `/expenses/${id}/reimburse`,
         method: "POST",
       }),
-      invalidatesTags: (_result, _error, id) => [
-        { type: "Expense", id },
-        { type: "Expense", id: "LIST" },
-        { type: "Expense", id: "APPROVAL_QUEUE" },
-        { type: "Expense", id: "REIMBURSEMENT_QUEUE" },
-        { type: "Dashboard", id: "SUMMARY" },
-        { type: "Analytics", id: "SUMMARY" },
-        "Budgets",
-      ],
+      invalidatesTags: (_result, _error, id) => expenseChangeTags(id, { budgets: true }),
     }),
 
     cancelExpense: builder.mutation<Expense, { id: string; reason?: string }>({
@@ -216,15 +142,7 @@ export const expensesApi = baseApi.injectEndpoints({
         method: "POST",
         body: reason ? { reason } : {},
       }),
-      invalidatesTags: (_result, _error, { id }) => [
-        { type: "Expense", id },
-        { type: "Expense", id: "LIST" },
-        { type: "Expense", id: "APPROVAL_QUEUE" },
-        { type: "Expense", id: "REIMBURSEMENT_QUEUE" },
-        { type: "Dashboard", id: "SUMMARY" },
-        { type: "Analytics", id: "SUMMARY" },
-        "Budgets",
-      ],
+      invalidatesTags: (_result, _error, { id }) => expenseChangeTags(id, { budgets: true }),
     }),
 
     rejectExpense: builder.mutation<Expense,{id: string; reason: string;}>({
@@ -236,26 +154,7 @@ export const expensesApi = baseApi.injectEndpoints({
         },
       }),
 
-      invalidatesTags: (_result, _error, { id }) => [
-        {
-          type: "Expense",
-          id,
-        },
-        {
-          type: "Expense",
-          id: "LIST",
-        },
-        {
-          type: "Expense",
-          id: "APPROVAL_QUEUE",
-        },
-        {
-          type: "Expense",
-          id: "REIMBURSEMENT_QUEUE",
-        },
-        { type: "Dashboard", id: "SUMMARY" },
-        { type: "Analytics", id: "SUMMARY" },
-      ],
+      invalidatesTags: (_result, _error, { id }) => expenseChangeTags(id),
     }),
   }),
 });

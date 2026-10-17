@@ -9,7 +9,13 @@ export function usePermissions() {
     return hasPermission(user, permission);
   }
 
+  /** A single permission, or any one of a list. */
+  function canAny(permission: Permission | readonly Permission[]): boolean {
+    return typeof permission === "string" ? can(permission) : permission.some(can);
+  }
+
   return {
     can,
+    canAny,
   };
 }

@@ -162,7 +162,7 @@ export function PersonalDashboardPage() {
                         Set a monthly budget to see how much you have left to spend.
                       </Typography>
                       <Button component={RouterLink} to="/personal/budgets" variant="outlined" startIcon={<SavingsOutlined />}>
-                        Create a budget
+                        Create a Budget
                       </Button>
                     </Stack>
                   </CardContent>
@@ -183,14 +183,14 @@ export function PersonalDashboardPage() {
               <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 1 }}>
                 <Typography variant="h6">Recent transactions</Typography>
                 {summary.recent.length > 0 && (
-                  <Button component={RouterLink} to="/personal/expenses" size="small">View all</Button>
+                  <Button component={RouterLink} to="/personal/expenses" size="small">View All</Button>
                 )}
               </Stack>
               {summary.recent.length === 0 ? (
                 <Stack spacing={1.5} sx={{ alignItems: "flex-start", py: 2 }}>
                   <Typography color="text.secondary">You have not recorded any expenses yet.</Typography>
                   <Button component={RouterLink} to="/personal/expenses/new" variant="contained" startIcon={<AddOutlined />}>
-                    Add your first expense
+                    Add Your First Expense
                   </Button>
                 </Stack>
               ) : (

@@ -11,6 +11,8 @@ import type {
 } from "../../features/budgets/types/budget";
 import { EXPENSE_TYPE_LABELS } from "../../features/expenses/types/expense";
 import { listRecords, listRecordsByIndex } from "./mockDataService";
+import { formatCurrency } from "../../utils/currency";
+import { toDateOnly } from "../../utils/format";
 
 /**
  * Budget hierarchy (§28): organization budget → department allocations
@@ -166,8 +168,7 @@ export async function buildBudgetView(
 
 /** Today's date (YYYY-MM-DD). */
 export function todayDate(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return toDateOnly();
 }
 
 /** The active organization budget whose period covers the date, if any. */
@@ -250,7 +251,6 @@ export async function findOverlappingActiveBudget(
   );
 }
 
-const money = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 
 /**
  * Non-blocking budget notices for an expense being submitted: would it take
@@ -273,7 +273,7 @@ export async function getBudgetWarnings(expense: Expense): Promise<string[]> {
   const check = (label: string, allocated: number, alreadySpent: number) => {
     if (alreadySpent + expense.amount > allocated) {
       warnings.push(
-        `This expense would take ${label} over budget: ${money(alreadySpent)} spent + ${money(expense.amount)} exceeds ${money(allocated)}.`,
+        `This expense would take ${label} over budget: ${formatCurrency(alreadySpent)} spent + ${formatCurrency(expense.amount)} exceeds ${formatCurrency(allocated)}.`,
       );
     }
   };

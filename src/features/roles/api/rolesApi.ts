@@ -3,7 +3,7 @@ import { buildCollectionQuery } from "../../../services/api/queryParams";
 import { baseApi } from "../../../services/api/baseApi";
 
 import type { Role, CreateRolePayload, UpdateRolePayload } from "../types/role";
-import type { ID } from "../../../types/common";
+import type { EntityId } from "../../../types/common";
 
 export const rolesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -19,7 +19,7 @@ export const rolesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Roles"]
     }),
-    updateRole: builder.mutation<Role, {id: ID, data: UpdateRolePayload}>({
+    updateRole: builder.mutation<Role, {id: EntityId, data: UpdateRolePayload}>({
       query: ({id, data}) => ({
         url: `/roles/${id}`,
         method: "PUT",
@@ -28,7 +28,7 @@ export const rolesApi = baseApi.injectEndpoints({
       // Role permissions are the users' effective permissions.
       invalidatesTags: ["Roles", "Users", "User"],
     }),
-    deleteRole: builder.mutation<void, ID>({
+    deleteRole: builder.mutation<void, EntityId>({
       query: (id) => ({
         url: `/roles/${id}`,
         method: "DELETE",

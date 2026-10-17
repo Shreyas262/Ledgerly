@@ -1,7 +1,7 @@
 import type { CollectionQuery } from "../../../types/api";
 import { buildCollectionQuery } from "../../../services/api/queryParams";
 import { baseApi } from "../../../services/api/baseApi";
-import type { ID } from "../../../types/common";
+import type { EntityId } from "../../../types/common";
 import type { Department, Organization, Team } from "../types/organization";
 
 export interface DepartmentPayload {
@@ -10,7 +10,7 @@ export interface DepartmentPayload {
 }
 
 export interface TeamPayload {
-  departmentId: ID;
+  departmentId: EntityId;
   name: string;
   status?: Team["status"];
 }
@@ -29,11 +29,11 @@ export const organizationApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/departments", method: "POST", body }),
       invalidatesTags: ["Departments", "Teams"],
     }),
-    updateDepartment: builder.mutation<Department, { id: ID; body: DepartmentPayload }>({
+    updateDepartment: builder.mutation<Department, { id: EntityId; body: DepartmentPayload }>({
       query: ({ id, body }) => ({ url: `/departments/${id}`, method: "PUT", body }),
       invalidatesTags: ["Departments", "Teams"],
     }),
-    deleteDepartment: builder.mutation<void, ID>({
+    deleteDepartment: builder.mutation<void, EntityId>({
       query: (id) => ({ url: `/departments/${id}`, method: "DELETE" }),
       invalidatesTags: ["Departments"],
     }),
@@ -45,20 +45,20 @@ export const organizationApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/teams", method: "POST", body }),
       invalidatesTags: ["Teams"],
     }),
-    updateTeam: builder.mutation<Team, { id: ID; body: TeamPayload }>({
+    updateTeam: builder.mutation<Team, { id: EntityId; body: TeamPayload }>({
       query: ({ id, body }) => ({ url: `/teams/${id}`, method: "PUT", body }),
       // Members follow the team into its department.
       invalidatesTags: ["Teams", "Users", "User"],
     }),
-    deleteTeam: builder.mutation<void, ID>({
+    deleteTeam: builder.mutation<void, EntityId>({
       query: (id) => ({ url: `/teams/${id}`, method: "DELETE" }),
       invalidatesTags: ["Teams"],
     }),
-    addTeamMember: builder.mutation<unknown, { teamId: ID; userId: ID }>({
+    addTeamMember: builder.mutation<unknown, { teamId: EntityId; userId: EntityId }>({
       query: ({ teamId, userId }) => ({ url: `/teams/${teamId}/members`, method: "POST", body: { userId } }),
       invalidatesTags: ["Users", "User", "Teams"],
     }),
-    setDepartmentFinanceUsers: builder.mutation<unknown, { departmentId: ID; userIds: ID[] }>({
+    setDepartmentFinanceUsers: builder.mutation<unknown, { departmentId: EntityId; userIds: EntityId[] }>({
       query: ({ departmentId, userIds }) => ({ url: `/departments/${departmentId}/finance-users`, method: "PUT", body: { userIds } }),
       invalidatesTags: ["Users", "User", "Departments"],
     }),

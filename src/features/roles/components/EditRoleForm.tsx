@@ -5,12 +5,9 @@ import type { SyntheticEvent } from "react";
 
 import {
   Button,
-  Checkbox,
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
-  FormGroup,
   TextField,
   Stack,
   Typography,
@@ -22,7 +19,7 @@ import type {
   RoleName,
 } from "../types/role";
 
-import { allPermissions } from "../constants/permissions";
+import { PermissionChecklist } from "./PermissionChecklist";
 
 import { useUpdateRoleMutation } from "../api/rolesApi";
 
@@ -47,21 +44,6 @@ export function EditRoleForm({
     { isLoading, isError, error },
   ] = useUpdateRoleMutation();
   const confirm = useConfirm();
-
-  function handlePermissionChange(
-    permission: Permission,
-  ) {
-    setSelectedPermissions((currentPermissions) => {
-      if (currentPermissions.includes(permission)) {
-        return currentPermissions.filter(
-          (currentPermission) =>
-            currentPermission !== permission,
-        );
-      }
-
-      return [...currentPermissions, permission];
-    });
-  }
 
   async function handleSubmit(
     event: SyntheticEvent,
@@ -103,24 +85,7 @@ export function EditRoleForm({
               Permissions
             </Typography>
 
-            <FormGroup>
-              {allPermissions.map((permission) => (
-                <FormControlLabel
-                  key={permission}
-                  control={
-                    <Checkbox
-                      checked={selectedPermissions.includes(
-                        permission,
-                      )}
-                      onChange={() =>
-                        handlePermissionChange(permission)
-                      }
-                    />
-                  }
-                  label={permission}
-                />
-              ))}
-            </FormGroup>
+            <PermissionChecklist value={selectedPermissions} onChange={setSelectedPermissions} />
           </Stack>
 
           {isError && <ApiFeedback error={error} />}

@@ -34,7 +34,7 @@ import { CreateRoleForm } from "../components/CreateRoleForm";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 
-import type { ID } from "../../../types/common";
+import type { EntityId } from "../../../types/common";
 import type { Role, RoleName } from "../types/role";
 import { PageHeader } from "../../../components/common/PageHeader";
 
@@ -60,13 +60,13 @@ export function RolesPage() {
 
   const confirm = useConfirm();
   const [deletingRoleId, setDeletingRoleId] =
-    useState<ID | null>(null);
+    useState<EntityId | null>(null);
 
   const [editingRole, setEditingRole] =
     useState<Role | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  async function handleDelete(roleId: ID) {
+  async function handleDelete(roleId: EntityId) {
     if (!(await confirm({ title: "Delete Role", message: "Delete this role? This cannot be undone.", confirmLabel: "Delete", destructive: true }))) {
       return;
     }

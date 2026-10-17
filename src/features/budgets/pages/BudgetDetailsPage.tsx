@@ -40,7 +40,7 @@ import {
 } from "../../expenses/types/expense";
 import { BudgetProgress } from "../components/BudgetProgress";
 import { formatCurrency } from "../../../utils/currency";
-import { formatDate, humanize } from "../../../utils/format";
+import { formatDate, humanize, toDateOnly } from "../../../utils/format";
 import { budgetViewTitle } from "../utils/budgetViewTitle";
 import type { DepartmentBudgetView, OrganizationBudgetView } from "../types/budget";
 import { useConfirm, type ConfirmOptions } from "../../../components/common/ConfirmProvider";
@@ -53,9 +53,6 @@ type Runner = (
   confirmation?: ConfirmOptions,
 ) => Promise<boolean>;
 
-const toDateInput = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
 /** Suggests the next period: starts the day after, same length. */
 function nextPeriod(budget: OrganizationBudgetView) {
   const start = new Date(`${budget.startDate}T00:00:00`);
@@ -65,7 +62,7 @@ function nextPeriod(budget: OrganizationBudgetView) {
   nextStart.setDate(nextStart.getDate() + 1);
   const nextEnd = new Date(nextStart);
   nextEnd.setDate(nextEnd.getDate() + lengthDays);
-  return { startDate: toDateInput(nextStart), endDate: toDateInput(nextEnd) };
+  return { startDate: toDateOnly(nextStart), endDate: toDateOnly(nextEnd) };
 }
 
 
@@ -107,7 +104,7 @@ export function BudgetDetailsPage() {
   };
 
   const allocatedToDepartments = budget.departmentAllocations.reduce((sum, item) => sum + item.amount, 0);
-  const periodEnded = budget.status === "active" && budget.endDate < toDateInput(new Date());
+  const periodEnded = budget.status === "active" && budget.endDate < toDateOnly(new Date());
   const openRollover = () => setRollover({ name: `${budget.name} (next period)`, ...nextPeriod(budget) });
   const handleClose = async () => {
     const closed = await run(
@@ -139,9 +136,9 @@ export function BudgetDetailsPage() {
         title={viewTitle.title}
         chips={<Chip size="small" label={humanize(budget.status)} color={budget.status === "active" ? "success" : "default"} />}
         description={`${viewTitle.parentName ? `Part of ${viewTitle.parentName} · ` : ""}${formatDate(budget.startDate)} – ${formatDate(budget.endDate)}`}
-        actions={isAdmin && (editable || budget.status === "closed") ? (
+        actions={isAdmin ? (
           <>
-            {isAdmin && editable && (
+            {editable && (
               <Stack direction="row" spacing={1}>
                 {budget.status === "draft" && (
                   <Button
@@ -163,7 +160,7 @@ export function BudgetDetailsPage() {
                 <Button onClick={openRollover}>Start Next Period</Button>
               </Stack>
             )}
-            {isAdmin && budget.status === "closed" && (
+            {budget.status === "closed" && (
               <Stack direction="row" spacing={1}>
                 <Button
                   variant="outlined"
@@ -296,7 +293,7 @@ export function BudgetDetailsPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRollover(null)} disabled={rollingOver}>Not now</Button>
+          <Button onClick={() => setRollover(null)} disabled={rollingOver}>Not Now</Button>
           <Button
             variant="contained"
             disabled={rollingOver || !rollover?.name.trim() || !rollover.startDate || !rollover.endDate || rollover.startDate > rollover.endDate}
@@ -312,7 +309,7 @@ export function BudgetDetailsPage() {
               }
             }}
           >
-            Create draft
+            Create Draft
           </Button>
         </DialogActions>
       </Dialog>

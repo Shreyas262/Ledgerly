@@ -27,7 +27,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import { useDeferredValue, useMemo, useState } from "react";
 
-import { useGetUsersQuery } from "../api/usersApi";
+import { useGetUsersQuery, useDeleteUserMutation, useUpdateUserStatusMutation } from "../api/usersApi";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
@@ -37,10 +37,6 @@ import { CreateUserForm } from "../components/CreateUserForm";
 import { EditUserDialog } from "../components/EditUserDialog";
 import { ConfirmDialog } from "../../../components/common/ConfirmDialog";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
-import {
-  useDeleteUserMutation,
-  useUpdateUserStatusMutation,
-} from "../api/usersApi";
 import { useGetDepartmentsQuery, useGetTeamsQuery } from "../../organizations/api/organizationApi";
 import { useGetRolesQuery } from "../../roles/api/rolesApi";
 import { GroupedPermissions } from "../../roles/components/GroupedPermissions";

@@ -23,7 +23,6 @@ interface SectionHubProps {
   title: string;
   description: string;
   items: SectionHubItem[];
-  footer?: ReactNode;
 }
 
 /** Landing page for a group of related pages (e.g. Account, Administration). */

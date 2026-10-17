@@ -7,13 +7,14 @@ import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import type { CreateOrganizationBudgetRequest } from "../types/budget";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { BackLink } from "../../../components/navigation/BackLink";
+import { formatCurrency } from "../../../utils/currency";
 
 export function CreateBudgetPage() {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const [createBudget, { isLoading, error }] = useCreateBudgetMutation();
   const handleSubmit = async (data: CreateOrganizationBudgetRequest) => {
-    if (!(await confirm({ title: "Create Budget", message: `Create "${data.name}" (₹${data.amount.toLocaleString("en-IN")}) as a draft?`, confirmLabel: "Create" }))) return;
+    if (!(await confirm({ title: "Create Budget", message: `Create "${data.name}" (${formatCurrency(data.amount)}) as a draft?`, confirmLabel: "Create" }))) return;
     try {
       const created = await createBudget(data).unwrap();
       navigate(`/budgets/${created.id}`);

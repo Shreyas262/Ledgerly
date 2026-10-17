@@ -2,10 +2,7 @@ import { apiError } from "../services/apiError";
 import { formatDate } from "../../utils/format";
 import { applyCollectionQueryResult, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
-import type { ExpenseType } from "../../features/expenses/types/expense";
-import type { PolicyEvaluation } from "../../features/policies/types/policy";
-
-import type { ExpenseStatus } from "../../features/expenses/types/expense";
+import { EXPENSE_TYPES, type Expense, type ExpenseStatus, type ExpenseType } from "../../features/expenses/types/expense";
 import { transitionExpenseState } from "../../features/expenses/domain/expenseStateMachine";
 import {
   authorizeRequest,
@@ -54,41 +51,7 @@ async function checkBudgetPeriod(
   return null;
 }
 
-interface MockExpense {
-  id: string;
-  organizationId: string;
-  departmentId: string;
-  teamId: string;
-  employeeId: string;
-  type?: ExpenseType;
-  title: string;
-  description: string;
-  amount: number;
-  currency: "INR";
-  status: string;
-  expenseDate: string;
-  createdAt: string;
-  updatedAt: string;
-  rejectionReason?: string;
-  policyId?: string;
-  policyEvaluation?: PolicyEvaluation;
-  submittedAt?: string;
-  documentIds?: string[];
-  [key: string]: unknown;
-}
-
-
-const EXPENSE_TYPES = new Set<ExpenseType>([
-  "MEALS",
-  "TRAVEL",
-  "ACCOMMODATION",
-  "TRANSPORTATION",
-  "ENTERTAINMENT",
-  "OFFICE_SUPPLIES",
-  "COMMUNICATION",
-  "TRAINING",
-  "OTHER",
-]);
+const EXPENSE_TYPE_VALUES = new Set<string>(EXPENSE_TYPES);
 
 function isValidDateOnly(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -115,7 +78,7 @@ function validateExpenseBody(body: unknown): {
   const currency = value.currency;
   const expenseDate = typeof value.expenseDate === "string" ? value.expenseDate : "";
 
-  if (typeof type !== "string" || !EXPENSE_TYPES.has(type as ExpenseType)) fieldErrors.type = "A valid expense type is required.";
+  if (typeof type !== "string" || !EXPENSE_TYPE_VALUES.has(type)) fieldErrors.type = "A valid expense type is required.";
   if (!title) fieldErrors.title = "Title is required.";
   if (!description) fieldErrors.description = "Description is required.";
   if (!Number.isFinite(amount) || amount <= 0) fieldErrors.amount = "Amount must be greater than zero.";
@@ -136,7 +99,7 @@ function validateExpenseBody(body: unknown): {
   };
 }
 
-function getExpenseResource(expense: MockExpense) {
+function getExpenseResource(expense: Expense) {
   return {
     organizationId: expense.organizationId,
     ownerId: expense.employeeId,
@@ -163,7 +126,7 @@ function expenseNotFound() {
  */
 async function authorizeOwnerOperation(
   request: Request,
-  expense: MockExpense,
+  expense: Expense,
   permission: "expenses.update" | "expenses.submit",
   allowedStates: readonly ExpenseStatus[],
 ) {
@@ -225,7 +188,7 @@ export const expensesHandlers = [
   }),
 
   http.get("/api/expenses/:id", async ({ params, request }) => {
-    const expense = await getRecord<MockExpense>(
+    const expense = await getRecord<Expense>(
       "expenses",
       String(params.id),
     );
@@ -281,7 +244,7 @@ export const expensesHandlers = [
 
     const now = new Date().toISOString();
 
-    const newExpense: MockExpense = {
+    const newExpense: Expense = {
       id: crypto.randomUUID(),
       organizationId: authorization.principal.organizationId,
       departmentId: authorization.principal.departmentId,
@@ -327,7 +290,7 @@ export const expensesHandlers = [
 
   http.put("/api/expenses/:id", async ({ params, request }) => {
     const expenseId = String(params.id);
-    const existingExpense = await getRecord<MockExpense>(
+    const existingExpense = await getRecord<Expense>(
       "expenses",
       expenseId,
     );
@@ -355,7 +318,7 @@ export const expensesHandlers = [
     const periodError = await checkBudgetPeriod(existingExpense, body.expenseDate, false);
     if (periodError) return periodError;
 
-    const updatedExpense: MockExpense = {
+    const updatedExpense: Expense = {
       ...existingExpense,
       ...body,
       organizationId: existingExpense.organizationId,
@@ -403,7 +366,7 @@ export const expensesHandlers = [
   }),
 
   http.post("/api/expenses/:id/submit", async ({ params, request }) => {
-    const expense = await getRecord<MockExpense>(
+    const expense = await getRecord<Expense>(
       "expenses",
       String(params.id),
     );
@@ -468,12 +431,12 @@ export const expensesHandlers = [
     }
 
     // Non-blocking: tell the submitter if this expense would exceed a budget.
-    const budgetWarnings = await getBudgetWarnings(evaluatedExpense as unknown as Parameters<typeof getBudgetWarnings>[0]);
+    const budgetWarnings = await getBudgetWarnings(evaluatedExpense);
     return HttpResponse.json({ ...evaluatedExpense, ...(budgetWarnings.length ? { budgetWarnings } : {}) });
   }),
 
   http.post("/api/expenses/:id/restore", async ({ params, request }) => {
-    const expense = await getRecord<MockExpense>(
+    const expense = await getRecord<Expense>(
       "expenses",
       String(params.id),
     );
@@ -494,9 +457,9 @@ export const expensesHandlers = [
     }
 
     const now = new Date().toISOString();
-    const restoredExpense: MockExpense = {
+    const restoredExpense: Expense = {
       ...expense,
-      status: transitionExpenseState("RESTORE", expense.status as ExpenseStatus),
+      status: transitionExpenseState("RESTORE", expense.status),
       updatedAt: now,
     };
 

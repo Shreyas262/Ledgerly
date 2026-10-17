@@ -1,5 +1,5 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { SyntheticEvent } from "react";
 
 import {
@@ -69,14 +69,12 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
     useUpdateUserMutation();
 
   /*
-   * Populate the form whenever a different user
-   * is selected.
+   * Populate the form whenever a different user is selected. This happens
+   * while rendering, so the dialog never shows the previous user's values.
    */
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-
+  const [populatedFor, setPopulatedFor] = useState<User | null>(null);
+  if (user && user !== populatedFor) {
+    setPopulatedFor(user);
     setName(user.name);
     setEmail(user.email);
     setPassword("");
@@ -84,7 +82,7 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
     setDepartmentId(user.departmentId);
     setTeamId(user.teamId);
     setFinanceDepartmentIds(user.financeDepartmentIds ?? []);
-  }, [user]);
+  }
 
   /*
    * Find the role returned by the API.
@@ -157,7 +155,7 @@ export function EditUserDialog({ user, open, onClose }: EditUserDialogProps) {
               />
 
               <TextField
-                label="New Password"
+                label="New password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}

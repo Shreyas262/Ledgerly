@@ -109,3 +109,30 @@ describe("IndexedDB migrations", () => {
     database.close();
   });
 });
+
+describe("IndexedDB connections across tabs", () => {
+  it("releases its connection when a newer version opens in another tab", async () => {
+    await readAll("users");
+
+    const newer = indexedDB.open(DB_NAME, DB_VERSION + 1);
+    const opened = new Promise<IDBDatabase>((resolve, reject) => {
+      newer.onsuccess = () => resolve(newer.result);
+      newer.onerror = () => reject(newer.error);
+      newer.onblocked = () => reject(new Error("The upgrade was blocked."));
+    });
+
+    const database = await opened;
+    expect(database.version).toBe(DB_VERSION + 1);
+    database.close();
+  });
+
+  it("fails instead of waiting when an older tab keeps the database open", async () => {
+    const olderTab = await request(indexedDB.open(DB_NAME, 1));
+
+    await expect(readAll("users")).rejects.toThrow("The database is in use by another Ledgerly tab.");
+
+    // Once the other tab lets go, the next request opens the upgraded database.
+    olderTab.close();
+    expect(await readAll("users")).toEqual([]);
+  });
+});

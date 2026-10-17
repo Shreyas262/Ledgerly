@@ -24,7 +24,7 @@ import { NavLink, useLocation } from "react-router-dom";
 
 import type { Permission } from "../../../features/roles/types/role";
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
-import { administrationPermissions } from "../../../features/roles/constants/permissions";
+import { administrationPermissions, approvalPermissions } from "../../../features/roles/constants/permissions";
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { accountTypeOf } from "../../../features/auth/utils/accountType";
 import type { AccountType } from "../../../features/auth/types/auth";
@@ -67,7 +67,7 @@ const primaryItems: NavigationItem[] = [
     label: "Approvals",
     path: "/approvals",
     icon: <RequestQuoteOutlined />,
-    permission: ["expenses.approve", "reimbursements.manage"],
+    permission: approvalPermissions,
   },
   {
     label: "Budgets",
@@ -144,16 +144,12 @@ function isItemActive(item: NavigationItem, pathname: string): boolean {
 }
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { can } = usePermissions();
+  const { canAny } = usePermissions();
   const { user } = useAuth();
   const { pathname } = useLocation();
   const accountType = accountTypeOf(user);
 
-  const isVisible = (item: NavigationItem) =>
-    !item.permission ||
-    (Array.isArray(item.permission)
-      ? item.permission.some((permission) => can(permission))
-      : can(item.permission as Permission));
+  const isVisible = (item: NavigationItem) => !item.permission || canAny(item.permission);
 
   const renderItem = (item: NavigationItem) => {
     const active = isItemActive(item, pathname);

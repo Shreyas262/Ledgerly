@@ -160,11 +160,11 @@ export function ReimbursementQueue() {
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {EXPENSE_TYPE_LABELS[expense.type] ?? expense.type} · Employee:{" "}
-                      {expense.employeeName ?? expense.employeeId}
+                      {expense.employeeName ?? "—"}
                       {expense.employeeRemoved ? " (removed)" : ""}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {expense.teamName ?? expense.teamId} · {expense.departmentName ?? expense.departmentId}
+                      {expense.teamName ?? "—"} · {expense.departmentName ?? "—"}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Amount:{" "}

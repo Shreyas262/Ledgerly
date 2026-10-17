@@ -15,7 +15,11 @@ export const formatDateTime = (value: string | null | undefined): string => {
   return `${formatDate(value)}, ${time}`;
 };
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** A date's local calendar day as YYYY-MM-DD, the format expense dates are entered in. */
+export const toDateOnly = (date: Date = new Date()): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const MONTHS =["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /**
  * Formats a date as e.g. "27 Sep 2026". Calendar dates (YYYY-MM-DD) are shown

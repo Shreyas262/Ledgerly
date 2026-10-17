@@ -8,6 +8,7 @@ import type {
 } from "../../features/analytics/types/analytics";
 import type { ExpenseStatus, ExpenseType } from "../../features/expenses/types/expense";
 import type { PolicyEvaluation, PolicyFindingRule } from "../../features/policies/types/policy";
+import { toDateOnly } from "../../utils/format";
 
 export interface AnalyticsExpenseRecord {
   amount: number;
@@ -93,17 +94,15 @@ function isValidDate(value: string): boolean {
 }
 
 // Default ranges use the local calendar date, matching how expense dates are entered.
-const localDate = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 function dateOnlyDaysAgo(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() - days);
-  return localDate(date);
+  return toDateOnly(date);
 }
 
 function today(): string {
-  return localDate(new Date());
+  return toDateOnly(new Date());
 }
 
 export function normalizeAnalyticsRange(query: AnalyticsQuery): AnalyticsQuery {

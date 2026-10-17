@@ -13,7 +13,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const { data, isLoading, isFetching, isError, refetch } =
+  const { data, isLoading, isFetching, isSuccess, isError, refetch } =
     useGetCurrentUserQuery();
 
   const user = data?.data ?? null;
@@ -23,7 +23,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       value={{
         user,
         isAuthenticated: !isError && user !== null,
-        isLoading: isLoading || isFetching,
+        // Refreshing a known user (e.g. after a profile update) keeps the app
+        // mounted; only an unconfirmed session counts as loading.
+        isLoading: isLoading || (isFetching && !isSuccess),
         refetchUser: refetch,
       }}
     >

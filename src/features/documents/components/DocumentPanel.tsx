@@ -1,5 +1,6 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
+import { openObjectUrlInNewTab } from "../../../utils/openInNewTab";
 import { useState, type ChangeEvent } from "react";
 import {
   Alert,
@@ -11,7 +12,6 @@ import {
 } from "@mui/material";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
-import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import {
   useFetchDocumentContentMutation,
   useGetExpenseDocumentsQuery,
@@ -29,10 +29,11 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
     data: documents = [],
     isLoading,
     isError,
+    refetch,
   } = useGetExpenseDocumentsQuery(expenseId);
   const [removeDocument, { isLoading: isRemoving }] =
     useRemoveDocumentMutation();
-  const [uploadDocument, { isLoading: isUploading, error: uploadError }] =
+  const [uploadDocument, { isLoading: isUploading }] =
     useUploadDocumentMutation();
   const confirm = useConfirm();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -45,21 +46,9 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
 
   const openDocument = async (documentId: string) => {
     setActionError(null);
-    // Open the tab synchronously so it is not treated as a blocked popup,
-    // then point it at the authorized content once it has been retrieved.
-    const previewWindow = window.open("", "_blank");
-    if (previewWindow) previewWindow.opener = null;
-
     try {
-      const objectUrl = await fetchDocumentContent(documentId).unwrap();
-      if (previewWindow) {
-        previewWindow.location.href = objectUrl;
-      } else {
-        window.open(objectUrl, "_blank", "noopener,noreferrer");
-      }
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      await openObjectUrlInNewTab(() => fetchDocumentContent(documentId).unwrap());
     } catch (caught) {
-      previewWindow?.close();
       setActionError(getApiErrorMessage(caught, "The document could not be opened."));
     }
   };
@@ -123,7 +112,7 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
               variant="outlined"
               disabled={isUploading || isRemoving}
             >
-              Add documents
+              Add Documents
               <input
                 key={fileInputKey}
                 hidden
@@ -136,9 +125,13 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
           )}
         </Stack>
         {actionError && <Alert severity="error">{actionError}</Alert>}
-        {uploadError && <ApiFeedback error={uploadError} />}
         {isError && (
-          <Alert severity="error">Documents could not be loaded.</Alert>
+          <Alert
+            severity="error"
+            action={<Button color="inherit" size="small" onClick={() => refetch()}>Retry</Button>}
+          >
+            Documents could not be loaded.
+          </Alert>
         )}
         {isLoading && (
           <Typography color="text.secondary">Loading documents…</Typography>
@@ -161,7 +154,7 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
                 : `${name} could not be uploaded.`}
           </Alert>
         ))}
-        {!isLoading && documents.length === 0 && (
+        {!isLoading && !isError && documents.length === 0 && (
           <Typography color="text.secondary">No documents attached.</Typography>
         )}
         {documents.map((document, index) => (

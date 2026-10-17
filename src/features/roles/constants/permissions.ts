@@ -67,6 +67,16 @@ export const permissionGroups: Record<string, Permission[]> = {
 };
 
 export const allPermissions: Permission[] = Object.values(permissionGroups).flat();
+
+/** The action part of a permission as shown to users, e.g. "expenses.read" → "Read". */
+export const permissionActionLabel = (permission: string): string => {
+  const action = permission.split(".")[1] ?? permission;
+  return action.charAt(0).toUpperCase() + action.slice(1);
+};
+
+/** Either Approvals tab: managerial review or finance reimbursement (§22.13). */
+export const approvalPermissions: Permission[] = ["expenses.approve", "reimbursements.manage"];
+
 /** Permissions that each open at least one Administration page. */
 export const administrationPermissions: Permission[] = [
   "users.read",

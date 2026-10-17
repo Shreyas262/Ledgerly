@@ -21,6 +21,7 @@ import { UserProfileForm } from "../components/UserProfileForm";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
+import { PageHeader } from "../../../components/common/PageHeader";
 import { humanize } from "../../../utils/format";
 import { accountTypeOf } from "../../auth/utils/accountType";
 
@@ -31,7 +32,6 @@ const ACCOUNT_LABELS: Partial<Record<AccountType, string>> = {
   personal: "Personal account",
   platform: "Platform operator",
 };
-import { PageHeader } from "../../../components/common/PageHeader";
 
 export function UserProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -91,6 +91,8 @@ export function UserProfilePage() {
             <Stack spacing={2}>
               <Typography variant="h6">Edit profile</Typography>
               <UserProfileForm
+                // Starts again from the saved values when they change.
+                key={`${user.id}:${user.name}:${user.email}`}
                 user={user}
                 onSubmit={handleUpdate}
                 onCancel={() => setIsEditing(false)}
@@ -122,7 +124,7 @@ export function UserProfilePage() {
                 onClick={() => setIsEditing(true)}
                 sx={{ alignSelf: { xs: "flex-start", sm: "center" }, flexShrink: 0 }}
               >
-                Edit profile
+                Edit Profile
               </Button>
             </Stack>
           )}
