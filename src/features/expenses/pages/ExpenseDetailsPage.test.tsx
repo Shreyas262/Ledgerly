@@ -76,3 +76,21 @@ describe("ExpenseDetailsPage review", () => {
     expect(await readExpense(expense.id)).toMatchObject({ status: "rejected", rejectionReason: "Missing itemised bill" });
   });
 });
+
+describe("ExpenseDetailsPage after creation", () => {
+  it("shows receipts that could not be attached when the expense was created", async () => {
+    const expense = await givenExpense({ status: "draft", documentIds: [] });
+    const receiptError = "The expense was created, but bill.pdf could not be attached. You can add it below.";
+
+    const { user } = await renderPage(<ExpenseDetailsPage mode="default" />, {
+      path: "/expenses/:id",
+      route: `/expenses/${expense.id}`,
+      state: { receiptError },
+      as: "employee",
+    });
+
+    expect(await screen.findByText(receiptError)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByText(receiptError)).not.toBeInTheDocument();
+  });
+});

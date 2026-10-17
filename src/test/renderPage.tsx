@@ -12,7 +12,6 @@ import { AuthProvider } from "../features/auth/context/AuthContext";
 import { baseApi } from "../services/api/baseApi";
 import { createAppTheme } from "../theme/theme";
 import { demoAccounts, setupApiServer, signIn } from "./apiServer";
-import type { DemoRole } from "./fixtures";
 
 const NativeRequest = globalThis.Request;
 
@@ -51,11 +50,17 @@ export async function navigatedTo(): Promise<string> {
 /**
  * Renders a page with the app's providers, a fresh API cache and a memory
  * router. With `as`, the demo user signs in through the API first and the
- * session cookie is set as the browser would hold it.
+ * session cookie is set as the browser would hold it. With `state`, the route
+ * is opened with that navigation state, as after a redirect from another page.
  */
 export async function renderPage(
   element: ReactElement,
-  { path = "/", route = path, as }: { path?: string; route?: string; as?: DemoRole } = {},
+  {
+    path = "/",
+    route = path,
+    state,
+    as,
+  }: { path?: string; route?: string; state?: unknown; as?: keyof typeof demoAccounts } = {},
 ) {
   if (as) {
     const cookie = await signIn(demoAccounts[as].email, demoAccounts[as].password);
@@ -71,7 +76,7 @@ export async function renderPage(
       { path, element },
       { path: "*", element: <CurrentLocation /> },
     ],
-    { initialEntries: [route] },
+    { initialEntries: [state === undefined ? route : { pathname: route, state }] },
   );
 
   const user = userEvent.setup();

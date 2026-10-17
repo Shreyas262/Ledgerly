@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 
 
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import {
   useGetExpenseByIdQuery,
@@ -99,6 +99,11 @@ export function ExpenseDetailsPage({
 
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [budgetWarnings, setBudgetWarnings] = useState<string[]>([]);
+  // Receipts that could not be attached when the expense was created.
+  const location = useLocation();
+  const [receiptError, setReceiptError] = useState<string | null>(
+    (location.state as { receiptError?: string } | null)?.receiptError ?? null,
+  );
 
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
@@ -336,6 +341,10 @@ export function ExpenseDetailsPage({
             <Typography key={warning} variant="body2">{warning}</Typography>
           ))}
         </Alert>
+      )}
+
+      {receiptError && (
+        <Alert severity="warning" onClose={() => setReceiptError(null)}>{receiptError}</Alert>
       )}
 
       {needsReceipt && (

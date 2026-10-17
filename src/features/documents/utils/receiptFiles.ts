@@ -1,6 +1,9 @@
-// Same limits as organization documents.
+// The limits the organization and personal document endpoints enforce.
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+
+/** Receipts that can be attached while creating an expense. */
+export const MAX_RECEIPTS = 5;
 
 export const RECEIPT_ACCEPT = ACCEPTED_TYPES.join(",");
 
