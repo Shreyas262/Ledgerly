@@ -9,6 +9,7 @@ import { auditHandlers } from "./handler/auditHandlers";
 import { authGuardHandler } from "./handler/authGuard";
 import { workflowHandlers } from "./handler/workflowHandlers";
 import { documentHandlers } from "./handler/documentHandlers";
+import { expenseCommentHandlers } from "./handler/expenseCommentHandlers";
 import { dashboardHandlers } from "./handler/dashboardHandlers";
 import { analyticsHandlers } from "./handler/analyticsHandlers";
 import { teamHandlers } from "./handler/teamHandlers";
@@ -22,6 +23,7 @@ export const handlers = [
   ...expensesHandlers,
   ...workflowHandlers,
   ...documentHandlers,
+  ...expenseCommentHandlers,
   ...dashboardHandlers,
   ...analyticsHandlers,
   ...roleHandlers,

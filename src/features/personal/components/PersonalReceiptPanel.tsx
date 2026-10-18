@@ -20,7 +20,7 @@ import {
   useRemovePersonalDocumentMutation,
   useUploadPersonalDocumentMutation,
 } from "../api/personalApi";
-import { RECEIPT_ACCEPT, validateReceiptFile } from "../utils/receiptFiles";
+import { RECEIPT_ACCEPT, validateReceiptFile } from "../../documents/utils/receiptFiles";
 
 interface PersonalReceiptPanelProps {
   expenseId: string;

@@ -77,6 +77,7 @@ export const baseApi = createApi({
     "Departments",
     "Teams",
     "Document",
+    "ExpenseComment",
     "PersonalExpense",
     "PersonalBudget",
     "PersonalDocument",

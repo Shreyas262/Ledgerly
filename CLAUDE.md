@@ -14,10 +14,10 @@ React 19 + TypeScript + Vite app; the "backend" is Mock Service Worker + Indexed
    change, and add or update tests for the behavior changed. Report failures honestly with their output.
 5. **Explain the result.** After implementing, explain what changed and why, file by file, plus verification results and
    any remaining issues.
-6. **Branch per phase.** Each roadmap phase is developed on its own branch created from `main`
-   (`phase-<n>-<short-name>`). Never commit directly to `main`.
-7. **Commit and push to the phase branch** once an approved item is implemented and verified. One focused commit per
-   item. Never force-push.
+6. **Branch per phase.** Each roadmap phase is developed on its own branch created from `main`, named after its content.
+   Never mention phases or phase numbers in branch names, commits or pull requests. Never commit directly to `main`.
+7. **Commit and push to the branch** once an approved item is implemented and verified. One focused commit per
+   item. Never force-push. Never include co authored by sentences in commits or pushes or PRs.
 8. **Pull request at phase completion only.** Ask before opening the PR to `main`, and never merge it without approval.
 9. **Track progress.** Mark completed items in the project roadmap and record follow-ups discovered during the work.
 
