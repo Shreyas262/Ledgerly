@@ -18,8 +18,9 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
-import { formatCurrency } from "../../../utils/currency";
+import { formatMoney } from "../../../utils/currency";
 import { formatDate, formatDateTime } from "../../../utils/format";
+import { describePaidAmount, describeRate } from "../../currency/utils/rateText";
 import { useDeletePersonalExpenseMutation, useGetPersonalExpenseQuery } from "../api/personalApi";
 import { PAYMENT_METHOD_LABELS, PERSONAL_EXPENSE_TYPE_LABELS } from "../types/personal";
 import { PersonalReceiptPanel } from "../components/PersonalReceiptPanel";
@@ -55,7 +56,7 @@ export function PersonalExpenseDetailsPage() {
     const receipts = expense.documentIds.length;
     if (!(await confirm({
       title: "Delete Expense",
-      message: `Delete "${expense.description}" (${formatCurrency(expense.amount)})${receipts ? ` and its ${receipts} ${receipts === 1 ? "receipt" : "receipts"}` : ""}? This cannot be undone.`,
+      message: `Delete "${expense.description}" (${formatMoney(expense.amount)})${receipts ? ` and its ${receipts} ${receipts === 1 ? "receipt" : "receipts"}` : ""}? This cannot be undone.`,
       confirmLabel: "Delete",
       destructive: true,
     }))) return;
@@ -71,7 +72,7 @@ export function PersonalExpenseDetailsPage() {
     <Stack spacing={3}>
       <BackLink to="/personal/expenses" label="Expenses" />
       <PageHeader
-        title={formatCurrency(expense.amount)}
+        title={formatMoney(expense.amount)}
         description={expense.description}
         chips={<Chip size="small" label={PERSONAL_EXPENSE_TYPE_LABELS[expense.type]} />}
         actions={
@@ -91,10 +92,17 @@ export function PersonalExpenseDetailsPage() {
 
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <Grid container spacing={2.5}>
-          <Detail label="Amount" value={formatCurrency(expense.amount)} />
+          <Detail label="Amount" value={formatMoney(expense.amount)} />
           <Detail label="Date" value={formatDate(expense.expenseDate)} />
           <Detail label="Type" value={PERSONAL_EXPENSE_TYPE_LABELS[expense.type]} />
           <Detail label="Payment method" value={PAYMENT_METHOD_LABELS[expense.paymentMethod]} />
+          {expense.conversion && (
+            <Detail
+              label="Paid as"
+              value={`${describePaidAmount(expense.conversion)} at ${describeRate(expense.conversion.originalCurrency, expense.conversion)}.`}
+              wide
+            />
+          )}
           <Detail label="Description" value={expense.description} wide />
           <Detail label="Recorded" value={formatDateTime(expense.createdAt)} />
           <Detail label="Last updated" value={formatDateTime(expense.updatedAt)} />

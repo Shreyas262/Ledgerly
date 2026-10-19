@@ -77,6 +77,29 @@ describe("ExpenseDetailsPage review", () => {
   });
 });
 
+describe("ExpenseDetailsPage amounts in other currencies", () => {
+  const conversion = { originalAmount: 60, originalCurrency: "USD", rate: 94.96, rateDate: "2026-10-16" } as const;
+
+  it("shows the rupee amount with the amount as paid and its exchange rate", async () => {
+    const expense = await givenExpense({ amount: 5_697.6, conversion: { ...conversion, source: "ECB" } });
+
+    await renderOwnExpense(expense.id);
+
+    expect(await screen.findByText("Paid as USD 60.00 at 1 USD = ₹94.96, the European Central Bank rate for 16 Oct 2026.")).toBeInTheDocument();
+    expect(screen.getAllByText("₹5,697.60").length).toBeGreaterThan(0);
+  });
+
+  it("says when an approximate rate was used", async () => {
+    const expense = await givenExpense({ amount: 5_697.6, conversion: { ...conversion, source: "REFERENCE" } });
+
+    await renderOwnExpense(expense.id);
+
+    expect(await screen.findByText(
+      "Paid as USD 60.00 at 1 USD = ₹94.96, an approximate rate from 16 Oct 2026 used because current rates could not be retrieved.",
+    )).toBeInTheDocument();
+  });
+});
+
 describe("ExpenseDetailsPage after creation", () => {
   it("shows receipts that could not be attached when the expense was created", async () => {
     const expense = await givenExpense({ status: "draft", documentIds: [] });

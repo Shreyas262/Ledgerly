@@ -11,7 +11,11 @@ export interface ReceiptFill<Form> {
   missing: string[];
 }
 
-const DETAILS: (keyof ReceiptDetails)[] = ["amount", "date", "merchant"];
+const DETAILS: (keyof ReceiptDetails)[] = ["amount", "currency", "date", "merchant"];
+
+// Most receipts do not name their currency; the form then keeps the one
+// chosen, so it is not reported as missing.
+const OPTIONAL_DETAILS = new Set<keyof ReceiptDetails>(["currency"]);
 
 /**
  * Fills a form from a receipt. Fields the user has typed in keep their value;
@@ -32,7 +36,7 @@ export function applyReceiptDetails<Form extends object>(
     if (edited.has(field)) continue;
     const value = details[detail];
     if (value === undefined) {
-      missing.push(label);
+      if (!OPTIONAL_DETAILS.has(detail)) missing.push(label);
       continue;
     }
     next[field] = String(value) as Form[keyof Form];

@@ -2,6 +2,7 @@ import type { ChangeEvent } from "react";
 import { FormControl, InputLabel, MenuItem, Select, TextField } from "@mui/material";
 
 import type { ApiErrorDetails } from "../../../services/api/apiErrors";
+import { AmountCurrencyFields } from "../../currency/components/AmountCurrencyFields";
 import { EXPENSE_TYPES, EXPENSE_TYPE_LABELS, type ExpenseType } from "../types/expense";
 import type { ExpenseFormData } from "../utils/expenseForm";
 
@@ -64,21 +65,14 @@ export function ExpenseFormFields({ value, onChange, fieldErrors, dateRange }: E
         fullWidth
       />
 
-      <TextField
-        label="Amount"
-        name="amount"
-        type="number"
-        value={value.amount}
-        {...errorProps("amount")}
-        onChange={handleChange}
-        required
-        fullWidth
-        slotProps={{
-          htmlInput: {
-            min: 0,
-            step: "0.01",
-          },
-        }}
+      <AmountCurrencyFields
+        amount={value.amount}
+        currency={value.currency}
+        expenseDate={value.expenseDate}
+        onAmountChange={(amount) => onChange({ ...value, amount })}
+        onCurrencyChange={(currency) => onChange({ ...value, currency })}
+        amountError={fieldErrors?.amount?.toString()}
+        currencyError={fieldErrors?.currency?.toString()}
       />
 
       <TextField

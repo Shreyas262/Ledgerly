@@ -1,6 +1,11 @@
+import type { CurrencyCode } from "../../../types/common";
+import { CURRENCY_CODES } from "../../../utils/currency";
+
 /** Expense details read from a receipt; anything that could not be read is left out. */
 export interface ReceiptDetails {
   amount?: number;
+  /** The currency of the amount, when the receipt names one. */
+  currency?: CurrencyCode;
   /** Calendar date as YYYY-MM-DD. */
   date?: string;
   merchant?: string;
@@ -11,6 +16,41 @@ const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "
 // Amounts: Indian (1,23,456.78) and international (123,456.78) grouping, or plain digits.
 const AMOUNT_PATTERN = /(?:₹|\brs\.?|\binr)?\s*(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)(?![\d,]*\d)/gi;
 const CURRENCY_MARKER = /₹|\brs\.?|\binr\b/i;
+
+// Currency symbols, most specific first: "US$" and "S$" before "$", which
+// alone is read as US dollars. "¥" is left out: it is used for both yen and yuan.
+const CURRENCY_SYMBOLS: Array<[RegExp, CurrencyCode]> = [
+  [CURRENCY_MARKER, "INR"],
+  [/US\$/i, "USD"],
+  [/\b(?:S|SG)\$/, "SGD"],
+  [/\b(?:A|AU)\$/, "AUD"],
+  [/\b(?:C|CA)\$/, "CAD"],
+  [/\bHK\$/, "HKD"],
+  [/\bNZ\$/, "NZD"],
+  [/\bR\$/, "BRL"],
+  [/\bMX\$/, "MXN"],
+  [/\$/, "USD"],
+  [/€/, "EUR"],
+  [/£/, "GBP"],
+  [/฿/, "THB"],
+  [/₩/, "KRW"],
+  [/₱/, "PHP"],
+  [/₪/, "ILS"],
+  [/₺/, "TRY"],
+  [/円/, "JPY"],
+  [/元|\bRMB\b/, "CNY"],
+];
+// Codes count only next to a number. "TRY" also reads as a word ("TRY 2 FOR 1"),
+// so Turkish lira is read from its symbol only.
+const CODES = CURRENCY_CODES.filter((code) => code !== "TRY").join("|");
+const CURRENCY_CODE = new RegExp(`\\b(${CODES})\\s?\\d|\\d\\s?(${CODES})\\b`);
+
+/** The currency a piece of receipt text names, if any. */
+function currencyIn(text: string): CurrencyCode | undefined {
+  const code = CURRENCY_CODE.exec(text);
+  if (code) return (code[1] ?? code[2]) as CurrencyCode;
+  return CURRENCY_SYMBOLS.find(([marker]) => marker.test(text))?.[1];
+}
 
 // Labelled totals, most specific first. A label wins over any larger stray number.
 const TOTAL_LABELS = [
@@ -34,8 +74,11 @@ export function parseReceiptText(text: string): ReceiptDetails {
     .filter(Boolean);
 
   const details: ReceiptDetails = {};
-  const amount = findAmount(lines);
-  if (amount !== undefined) details.amount = amount;
+  const total = findAmount(lines);
+  if (total) details.amount = total.amount;
+  // The currency printed with the total, otherwise the one the receipt names most.
+  const currency = (total && currencyIn(total.text)) ?? mostNamedCurrency(lines);
+  if (currency) details.currency = currency;
   const date = findDate(lines);
   if (date) details.date = date;
   const merchant = findMerchant(lines);
@@ -52,30 +95,50 @@ function amountsIn(line: string): { value: number; hasCurrency: boolean; hasDeci
     const value = Number(match[1].replace(/,/g, ""));
     // Long digit runs are phone, account or reference numbers.
     if (!Number.isFinite(value) || value <= 0 || match[1].replace(/[,.]/g, "").length > 9) return [];
-    return [{ value, hasCurrency: CURRENCY_MARKER.test(match[0]), hasDecimals: match[1].includes(".") }];
+    // A currency symbol or code right before or after the number marks it as money.
+    const start = match.index ?? 0;
+    const around = cleaned.slice(Math.max(0, start - 4), start + match[0].length + 4);
+    return [{ value, hasCurrency: CURRENCY_MARKER.test(match[0]) || currencyIn(around) !== undefined, hasDecimals: match[1].includes(".") }];
   });
 }
 
-function findAmount(lines: string[]): number | undefined {
+/** The amount paid, and the receipt text it was read from. */
+function findAmount(lines: string[]): { amount: number; text: string } | undefined {
   for (const label of TOTAL_LABELS) {
     for (let index = lines.length - 1; index >= 0; index -= 1) {
       const line = lines[index];
       if (!label.test(line) || NOT_A_TOTAL.test(line)) continue;
       // The amount is usually at the end of the line, otherwise on the next one.
       const onLine = amountsIn(line.replace(label, " "));
-      const candidates = onLine.length ? onLine : amountsIn(lines[index + 1] ?? "");
+      const next = lines[index + 1] ?? "";
+      const candidates = onLine.length ? onLine : amountsIn(next);
       const amount = candidates.at(-1)?.value;
-      if (amount !== undefined) return round(amount);
+      if (amount !== undefined) return { amount: round(amount), text: onLine.length ? line : `${line} ${next}` };
     }
   }
 
   // Without a labelled total, the largest amount that looks like money.
   const money = lines
     .filter((line) => !IDENTIFIER_LINE.test(line))
-    .flatMap(amountsIn)
+    .flatMap((line) => amountsIn(line).map((amount) => ({ ...amount, line })))
     .filter((amount) => amount.hasCurrency || amount.hasDecimals);
   if (!money.length) return undefined;
-  return round(Math.max(...money.map((amount) => amount.value)));
+  const largest = money.reduce((best, amount) => (amount.value > best.value ? amount : best));
+  return { amount: round(largest.value), text: largest.line };
+}
+
+/** The currency named on the most lines; the first one named breaks a tie. */
+function mostNamedCurrency(lines: string[]): CurrencyCode | undefined {
+  const counts = new Map<CurrencyCode, number>();
+  for (const line of lines) {
+    const currency = currencyIn(line);
+    if (currency) counts.set(currency, (counts.get(currency) ?? 0) + 1);
+  }
+  let named: CurrencyCode | undefined;
+  for (const [currency, count] of counts) {
+    if (!named || count > counts.get(named)!) named = currency;
+  }
+  return named;
 }
 
 const round = (value: number) => Math.round(value * 100) / 100;
@@ -112,9 +175,13 @@ function datesIn(line: string): string[] {
 }
 
 function findDate(lines: string[]): string | undefined {
-  // A line labelled as the date wins over dates elsewhere, such as a due date.
-  const labelled = lines.filter((line) => /\bdate\b|\bdated\b|\bdt\b/i.test(line) && !/\bdue\b/i.test(line));
-  for (const line of [...labelled, ...lines]) {
+  const isDueDate = (line: string) => /\bdue\b/i.test(line);
+  const labelled = lines.filter(
+    (line) => /\bdate\b|\bdated\b|\bdt\b/i.test(line) && !isDueDate(line),
+  );
+  const fallback = lines.filter((line) => !isDueDate(line));
+
+  for (const line of [...labelled, ...fallback]) {
     const [date] = datesIn(line);
     if (date) return date;
   }

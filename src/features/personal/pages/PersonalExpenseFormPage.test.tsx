@@ -5,9 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { extractReceiptText } from "../../documents/utils/extractReceiptText";
 import type { PersonalExpense } from "../types/personal";
 import { listRecords, saveRecord } from "../../../mocks/services/mockDataService";
-import { server } from "../../../test/apiServer";
+import { server, serveExchangeRates } from "../../../test/apiServer";
 import { withFixedToday } from "../../../test/fixtures";
-import { navigatedTo, renderPage, setupPageTests } from "../../../test/renderPage";
+import { navigatedTo, renderPage, selectOption, setupPageTests } from "../../../test/renderPage";
 import { PersonalExpenseFormPage } from "./PersonalExpenseFormPage";
 
 // Reading receipts runs PDF.js and Tesseract in browser workers; the tests supply the text they would read.
@@ -43,8 +43,9 @@ describe("PersonalExpenseFormPage receipts", () => {
 
     await user.upload(fileInput(), photo());
 
-    expect(await screen.findByText("Filled from groceries.jpg: amount, date and description. Check them before saving.")).toBeInTheDocument();
+    expect(await screen.findByText("Filled from groceries.jpg: amount, currency, date and description. Check them before saving.")).toBeInTheDocument();
     expect(screen.getByRole("spinbutton", { name: "Amount" })).toHaveValue(860);
+    expect(screen.getByRole("combobox", { name: /^Currency/ })).toHaveTextContent("INR");
     expect(screen.getByLabelText(/^Date/)).toHaveValue("2026-10-12");
     expect(screen.getByRole("textbox", { name: "Description" })).toHaveValue("Fresh Mart");
 
@@ -66,7 +67,7 @@ describe("PersonalExpenseFormPage receipts", () => {
 
     await user.upload(fileInput(), photo());
 
-    expect(await screen.findByText("Filled from groceries.jpg: amount and date. Check them before saving.")).toBeInTheDocument();
+    expect(await screen.findByText("Filled from groceries.jpg: amount, currency and date. Check them before saving.")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Description" })).toHaveValue("Weekly groceries");
   });
 
@@ -104,5 +105,54 @@ describe("PersonalExpenseFormPage receipts", () => {
 
     expect(await screen.findByText("Receipts and documents are managed on the expense's page.")).toBeInTheDocument();
     expect(screen.queryByText("Attach Receipts")).not.toBeInTheDocument();
+  });
+});
+
+describe("PersonalExpenseFormPage currencies", () => {
+  it("previews the rupee amount of another currency and confirms both amounts", async () => {
+    serveExchangeRates({ EUR: 106.86 });
+    const { user } = await renderAddExpense();
+
+    await user.type(screen.getByRole("spinbutton", { name: "Amount" }), "50");
+    await selectOption(user, /^Currency/, /^EUR /);
+    // The date starts as today, a Friday.
+    expect(await screen.findByText(
+      "About ₹5,343 at 1 EUR = ₹106.86, the European Central Bank rate for 16 Oct 2026. The rate is fixed when the expense is saved.",
+    )).toBeInTheDocument();
+
+    await user.type(screen.getByRole("textbox", { name: "Description" }), "Dinner in Paris");
+    await user.click(screen.getByRole("button", { name: "Add Expense" }));
+    expect(await screen.findByRole("dialog", { name: "Add Expense" })).toHaveTextContent('Add "Dinner in Paris" for EUR 50.00 (about ₹5,343)?');
+    await user.click(screen.getAllByRole("button", { name: "Add Expense" }).at(-1)!);
+
+    await navigatedTo();
+    const [expense] = await listRecords<PersonalExpense>("personalExpenses");
+    expect(expense).toMatchObject({ amount: 5_343, currency: "INR", conversion: { originalAmount: 50, originalCurrency: "EUR" } });
+  });
+
+  it("starts editing from the amount as paid", async () => {
+    const expense = await saveRecord<PersonalExpense>("personalExpenses", {
+      id: "personal-expense-1",
+      ownerId: "user-personal-1",
+      type: "DINING",
+      amount: 5_343,
+      currency: "INR",
+      conversion: { originalAmount: 50, originalCurrency: "EUR", rate: 106.86, rateDate: "2026-10-16", source: "ECB" },
+      expenseDate: "2026-10-16",
+      description: "Dinner in Paris",
+      paymentMethod: "CREDIT_CARD",
+      documentIds: [],
+      createdAt: "2026-10-16T10:00:00.000Z",
+      updatedAt: "2026-10-16T10:00:00.000Z",
+    });
+
+    await renderPage(<PersonalExpenseFormPage mode="edit" />, {
+      path: "/personal/expenses/:id/edit",
+      route: `/personal/expenses/${expense.id}/edit`,
+      as: "personal",
+    });
+
+    expect(await screen.findByRole("spinbutton", { name: "Amount" })).toHaveValue(50);
+    expect(screen.getByRole("combobox", { name: /^Currency/ })).toHaveTextContent("EUR");
   });
 });

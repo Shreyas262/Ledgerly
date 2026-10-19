@@ -17,6 +17,7 @@ import type { Expense } from "../types/expense";
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { Amount } from "../../../components/common/Amount";
+import { ConversionNote } from "../../currency/components/ConversionNote";
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -189,9 +190,12 @@ export function ExpenseCard({
               gap: 1,
             }}
           >
-            <Typography variant="h6">
-              <Amount value={expense.amount} currency={expense.currency} />
-            </Typography>
+            <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
+              <Typography variant="h6">
+                <Amount value={expense.amount} currency={expense.currency} />
+              </Typography>
+              <ConversionNote conversion={expense.conversion} />
+            </Box>
 
             <Chip
               label={status.label}

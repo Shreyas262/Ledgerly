@@ -25,6 +25,7 @@ import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { RefreshingState } from "../../../components/common/RefreshingState";
 import { Amount } from "../../../components/common/Amount";
+import { ConversionNote } from "../../currency/components/ConversionNote";
 import { formatDate } from "../../../utils/format";
 import { useGetPersonalExpensesQuery } from "../api/personalApi";
 import {
@@ -158,6 +159,7 @@ export function PersonalExpensesPage() {
                     <TableCell sx={{ whiteSpace: "nowrap" }}>{PAYMENT_METHOD_LABELS[expense.paymentMethod]}</TableCell>
                     <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                       <Amount value={expense.amount} />
+                      <ConversionNote conversion={expense.conversion} />
                     </TableCell>
                   </TableRow>
                 ))}

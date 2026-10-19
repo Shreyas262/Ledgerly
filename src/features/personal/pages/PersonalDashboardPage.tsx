@@ -26,6 +26,7 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { RefreshingState } from "../../../components/common/RefreshingState";
 import { Amount } from "../../../components/common/Amount";
+import { ConversionNote } from "../../currency/components/ConversionNote";
 import { KpiCard } from "../../dashboard/components/KpiCard";
 import { useAuth } from "../../auth/context/AuthContext";
 import { formatCurrency } from "../../../utils/currency";
@@ -205,9 +206,12 @@ export function PersonalDashboardPage() {
                           slotProps={{ primary: { noWrap: true } }}
                           sx={{ minWidth: 0, mr: 2 }}
                         />
-                        <Typography variant="subtitle2" sx={{ flexShrink: 0 }}>
-                          <Amount value={expense.amount} />
-                        </Typography>
+                        <Box sx={{ flexShrink: 0, textAlign: "right" }}>
+                          <Typography variant="subtitle2">
+                            <Amount value={expense.amount} />
+                          </Typography>
+                          <ConversionNote conversion={expense.conversion} />
+                        </Box>
                       </ListItemButton>
                     </Box>
                   ))}

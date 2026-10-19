@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { apiError } from "../../../mocks/services/apiError";
 import { saveRecord } from "../../../mocks/services/mockDataService";
-import { server } from "../../../test/apiServer";
+import { server, serveExchangeRates } from "../../../test/apiServer";
 import { givenExpense, readExpense } from "../../../test/fixtures";
 import { navigatedTo, renderPage, setupPageTests } from "../../../test/renderPage";
 import { EditExpensePage } from "./EditExpensePage";
@@ -31,6 +31,24 @@ describe("EditExpensePage", () => {
 
     expect(await navigatedTo()).toBe(`/expenses/${expense.id}`);
     expect(await readExpense(expense.id)).toMatchObject({ title: "Client dinner", amount: 1_000, status: "draft" });
+  });
+
+  it("starts from the amount as paid and keeps its currency when saved", async () => {
+    serveExchangeRates({ USD: 94.96 });
+    const expense = await givenExpense({
+      status: "draft",
+      amount: 5_697.6,
+      conversion: { originalAmount: 60, originalCurrency: "USD", rate: 94.96, rateDate: "2026-10-01", source: "ECB" },
+    });
+    const { user } = await renderEditPage(expense.id);
+
+    expect(await screen.findByRole("spinbutton", { name: "Amount" })).toHaveValue(60);
+    expect(screen.getByRole("combobox", { name: /^Currency/ })).toHaveTextContent("USD");
+    await user.click(screen.getByRole("button", { name: "Save Changes" }));
+    await user.click(await screen.findByRole("button", { name: "Save" }));
+
+    expect(await navigatedTo()).toBe(`/expenses/${expense.id}`);
+    expect(await readExpense(expense.id)).toMatchObject({ amount: 5_697.6, conversion: { originalAmount: 60, originalCurrency: "USD" } });
   });
 
   it("does not ask to save an amount that is not greater than zero", async () => {

@@ -1,7 +1,11 @@
+import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
 
 import { handlers } from "../mocks/handlers";
+import { EXCHANGE_RATE_SERVICE_URL } from "../mocks/services/exchangeRateService";
+import type { CurrencyCode } from "../types/common";
+import { toDateOnly } from "../utils/format";
 
 const SESSION_COOKIE_NAME = "ledgerly.session";
 
@@ -12,6 +16,37 @@ export function setupApiServer(): void {
   beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
   afterEach(() => server.resetHandlers());
   afterAll(() => server.close());
+}
+
+/** The business day a rate is published for: Friday for a weekend date. */
+function publishedDay(date: string): string {
+  const day = new Date(`${date}T00:00:00Z`);
+  const weekday = day.getUTCDay();
+  day.setUTCDate(day.getUTCDate() - (weekday === 0 ? 2 : weekday === 6 ? 1 : 0));
+  return day.toISOString().slice(0, 10);
+}
+
+/**
+ * Answers the exchange rate service with fixed rates (rupees per unit), the
+ * way it answers: weekends take Friday's rate, "latest" is today's, and other
+ * currencies or later dates are not found. Tests never reach the real service.
+ */
+export function serveExchangeRates(rupeesPerUnit: Partial<Record<CurrencyCode, number>>): void {
+  server.use(
+    http.get(`${EXCHANGE_RATE_SERVICE_URL}/:day`, ({ params, request }) => {
+      const base = new URL(request.url).searchParams.get("base") as CurrencyCode;
+      const today = toDateOnly();
+      const day = params.day === "latest" ? today : String(params.day);
+      const rate = rupeesPerUnit[base];
+      if (!rate || day > today) return HttpResponse.json({ message: "not found" }, { status: 404 });
+      return HttpResponse.json({ amount: 1, base, date: publishedDay(day), rates: { INR: rate } });
+    }),
+  );
+}
+
+/** Makes the exchange rate service unreachable. */
+export function failExchangeRateService(): void {
+  server.use(http.get(`${EXCHANGE_RATE_SERVICE_URL}/:day`, () => HttpResponse.error()));
 }
 
 /** Sends a request to the mock API, optionally as a signed-in user. */

@@ -5,23 +5,25 @@ import { applyReceiptDetails, describeReceiptFill, type ReceiptFieldMap } from "
 interface Form {
   title: string;
   amount: string;
+  currency: string;
   expenseDate: string;
 }
 
 const FIELDS: ReceiptFieldMap<Form> = {
   amount: { field: "amount", label: "amount" },
+  currency: { field: "currency", label: "currency" },
   date: { field: "expenseDate", label: "expense date" },
   merchant: { field: "title", label: "title" },
 };
 
-const EMPTY: Form = { title: "", amount: "", expenseDate: "" };
+const EMPTY: Form = { title: "", amount: "", currency: "INR", expenseDate: "" };
 
 describe("applyReceiptDetails", () => {
   it("fills every field the receipt reveals", () => {
     const fill = applyReceiptDetails(EMPTY, { amount: 609, date: "2026-09-27", merchant: "Cafe" }, FIELDS, new Set());
 
     expect(fill).toEqual({
-      form: { title: "Cafe", amount: "609", expenseDate: "2026-09-27" },
+      form: { title: "Cafe", amount: "609", currency: "INR", expenseDate: "2026-09-27" },
       filled: ["amount", "expense date", "title"],
       missing: [],
     });
@@ -41,6 +43,31 @@ describe("applyReceiptDetails", () => {
     const form = { ...EMPTY, amount: "100" };
 
     expect(applyReceiptDetails(form, { amount: 250 }, FIELDS, new Set()).form.amount).toBe("250");
+  });
+
+  it("fills the currency the receipt names", () => {
+    const fill = applyReceiptDetails(EMPTY, { amount: 45, currency: "USD" }, FIELDS, new Set());
+
+    expect(fill.form).toMatchObject({ amount: "45", currency: "USD" });
+    expect(fill.filled).toEqual(["amount", "currency"]);
+  });
+
+  it("keeps the chosen currency when the receipt names none, without reporting it as missing", () => {
+    const form = { ...EMPTY, currency: "EUR" };
+
+    const fill = applyReceiptDetails(form, { amount: 45, date: "2026-09-27", merchant: "Cafe" }, FIELDS, new Set());
+
+    expect(fill.form.currency).toBe("EUR");
+    expect(fill.missing).toEqual([]);
+  });
+
+  it("keeps a currency the user chose over the one on the receipt", () => {
+    const form = { ...EMPTY, currency: "GBP" };
+
+    const fill = applyReceiptDetails(form, { currency: "USD" }, FIELDS, new Set<keyof Form>(["currency"]));
+
+    expect(fill.form.currency).toBe("GBP");
+    expect(fill.filled).toEqual([]);
   });
 });
 

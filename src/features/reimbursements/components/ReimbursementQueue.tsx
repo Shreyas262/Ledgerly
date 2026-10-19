@@ -1,5 +1,5 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
-import { formatCurrency } from "../../../utils/currency";
+import { formatMoney } from "../../../utils/currency";
 import { useState } from "react";
 import {
   Alert,
@@ -31,6 +31,7 @@ import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { ConfirmDialog } from "../../../components/common/ConfirmDialog";
 import { useAuth } from "../../auth/context/AuthContext";
 import { Amount } from "../../../components/common/Amount";
+import { ConversionNote } from "../../currency/components/ConversionNote";
 
 type ReimbursementView = Extract<
   ExpenseStatus,
@@ -170,6 +171,7 @@ export function ReimbursementQueue() {
                       Amount:{" "}
                       <Amount value={expense.amount} currency={expense.currency} />
                     </Typography>
+                    <ConversionNote conversion={expense.conversion} />
                     {expense.status === "cancelled" && expense.cancellationReason && (
                       <Typography variant="body2" color="text.secondary">
                         Reason: {expense.cancellationReason}
@@ -220,7 +222,7 @@ export function ReimbursementQueue() {
                         loading={isProcessing}
                         disabled={Boolean(processingId) && !isProcessing}
                         onClick={() =>
-                          confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatCurrency(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark Reimbursed" })
+                          confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatMoney(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark Reimbursed" })
                             .then((ok) => { if (ok) void runAction(expense.id, () => reimburseExpense(expense.id).unwrap()); })
                         }
                       >

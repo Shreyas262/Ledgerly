@@ -29,7 +29,10 @@ import {
   today,
   withUsage,
 } from "../services/personalService";
-import { formatCurrency } from "../../utils/currency";
+import { BASE_CURRENCY, formatCurrency, formatMoney, isCurrencyCode, isForeignCurrency } from "../../utils/currency";
+import type { CurrencyCode } from "../../types/common";
+import { conversionAuditDetails, toRupees } from "../services/exchangeRateService";
+import { describePaidAmount } from "../../features/currency/utils/rateText";
 
 const BASE = "/api/personal";
 const MAX_AMOUNT = 10_000_000;
@@ -75,8 +78,12 @@ function parseExpenseBody(body: Record<string, unknown>) {
 
   if (typeof body.type !== "string" || !(body.type in PERSONAL_EXPENSE_TYPE_LABELS)) fieldErrors.type = "Choose an expense type.";
   if (typeof body.paymentMethod !== "string" || !(body.paymentMethod in PAYMENT_METHOD_LABELS)) fieldErrors.paymentMethod = "Choose a payment method.";
+  // Requests that name no currency are in rupees.
+  const currency = body.currency ?? BASE_CURRENCY;
+  if (!isCurrencyCode(currency)) fieldErrors.currency = "Choose a supported currency.";
   if (!Number.isFinite(amount) || amount <= 0) fieldErrors.amount = "Enter an amount greater than zero.";
-  else if (amount > MAX_AMOUNT) fieldErrors.amount = `The amount cannot exceed ${formatCurrency(MAX_AMOUNT)}.`;
+  // Amounts in other currencies are checked against the limit once converted.
+  else if (!isForeignCurrency(currency) && amount > MAX_AMOUNT) fieldErrors.amount = `The amount cannot exceed ${formatCurrency(MAX_AMOUNT)}.`;
   if (!isCalendarDate(body.expenseDate)) fieldErrors.expenseDate = "Enter a valid date.";
   else if (body.expenseDate > today()) fieldErrors.expenseDate = "The date cannot be in the future.";
   if (!description) fieldErrors.description = "Description is required.";
@@ -89,11 +96,33 @@ function parseExpenseBody(body: Record<string, unknown>) {
       type: body.type as PersonalExpenseType,
       paymentMethod: body.paymentMethod as PaymentMethod,
       amount: roundAmount(amount),
+      currency: currency as CurrencyCode,
       expenseDate: body.expenseDate as string,
       description,
     },
   } as const;
 }
+
+/**
+ * Converts a parsed expense to rupees with the rate of its date. Amounts in
+ * other currencies must stay within the limit once converted.
+ */
+async function toStoredAmount(values: { amount: number; currency: CurrencyCode; expenseDate: string }) {
+  const paid = await toRupees(values.amount, values.currency, values.expenseDate);
+  if (paid.conversion && paid.amount > MAX_AMOUNT) {
+    return { ok: false, fieldErrors: { amount: `The amount cannot exceed ${formatCurrency(MAX_AMOUNT)} once converted to rupees.` } } as const;
+  }
+  return {
+    ok: true,
+    values: { amount: paid.amount, currency: BASE_CURRENCY, ...(paid.conversion ? { conversion: paid.conversion } : {}) },
+  } as const;
+}
+
+/** The amount as paid, e.g. "USD 60.00 (₹5,697.60)" or "₹1,200". */
+const describeAmount = (expense: PersonalExpense) =>
+  expense.conversion
+    ? `${describePaidAmount(expense.conversion)} (${formatMoney(expense.amount)})`
+    : formatCurrency(expense.amount);
 
 function parseBudgetBody(body: Record<string, unknown>) {
   const fieldErrors: Record<string, string> = {};
@@ -135,7 +164,8 @@ export const personalHandlers = [
     const { search, ...rest } = query;
     let expenses = (await listOwnExpenses(auth.principal.userId)).sort(byNewest);
 
-    // Search matches what the user sees: description, labels and amount.
+    // Search matches what the user sees: description, labels and amounts,
+    // including the amount as paid in another currency.
     if (search) {
       const needle = search.toLowerCase();
       expenses = expenses.filter((expense) =>
@@ -144,6 +174,8 @@ export const personalHandlers = [
           PERSONAL_EXPENSE_TYPE_LABELS[expense.type],
           PAYMENT_METHOD_LABELS[expense.paymentMethod],
           String(expense.amount),
+          expense.conversion?.originalCurrency ?? "",
+          expense.conversion ? String(expense.conversion.originalAmount) : "",
         ].some((value) => value.toLowerCase().includes(needle)));
     }
 
@@ -164,13 +196,15 @@ export const personalHandlers = [
 
     const parsed = parseExpenseBody((await request.json().catch(() => ({}))) as Record<string, unknown>);
     if (!parsed.ok) return validationError(parsed.fieldErrors);
+    const stored = await toStoredAmount(parsed.values);
+    if (!stored.ok) return validationError(stored.fieldErrors);
 
     const now = new Date().toISOString();
     const expense: PersonalExpense = {
       id: crypto.randomUUID(),
       ownerId: auth.principal.userId,
       ...parsed.values,
-      currency: "INR",
+      ...stored.values,
       documentIds: [],
       createdAt: now,
       updatedAt: now,
@@ -182,8 +216,8 @@ export const personalHandlers = [
         action: "EXPENSE_CREATED",
         entityType: "EXPENSE",
         entityId: expense.id,
-        metadata: { amount: expense.amount, type: expense.type },
-        description: `Added personal expense "${expense.description}" for ${formatCurrency(expense.amount)}.`,
+        metadata: { amount: expense.amount, type: expense.type, ...conversionAuditDetails(expense.conversion) },
+        description: `Added personal expense "${expense.description}" for ${describeAmount(expense)}.`,
       }),
       (transaction) => {
         transaction.objectStore("personalExpenses").put(expense);
@@ -201,11 +235,21 @@ export const personalHandlers = [
 
     const parsed = parseExpenseBody((await request.json().catch(() => ({}))) as Record<string, unknown>);
     if (!parsed.ok) return validationError(parsed.fieldErrors);
+    // Converted again on every save, with the rate of the (possibly changed) date.
+    const stored = await toStoredAmount(parsed.values);
+    if (!stored.ok) return validationError(stored.fieldErrors);
 
-    const updated: PersonalExpense = { ...existing, ...parsed.values, updatedAt: new Date().toISOString() };
-    const changes = (["type", "amount", "expenseDate", "description", "paymentMethod"] as const)
-      .filter((field) => existing[field] !== updated[field])
-      .map((field) => ({ field, previousValue: existing[field], newValue: updated[field] }));
+    const { conversion: _previousConversion, ...existingFields } = existing;
+    const updated: PersonalExpense = { ...existingFields, ...parsed.values, ...stored.values, updatedAt: new Date().toISOString() };
+    const changes = [
+      ...(["type", "amount", "expenseDate", "description", "paymentMethod"] as const)
+        .filter((field) => existing[field] !== updated[field])
+        .map((field) => ({ field, previousValue: existing[field], newValue: updated[field] })),
+      // What was paid, when another currency is involved.
+      ...((existing.conversion || updated.conversion) && describeAmount(existing) !== describeAmount(updated)
+        ? [{ field: "paidAs", previousValue: describeAmount(existing), newValue: describeAmount(updated) }]
+        : []),
+    ];
 
     await runAuditedTransaction(
       ["personalExpenses"],
@@ -213,7 +257,7 @@ export const personalHandlers = [
         action: "EXPENSE_UPDATED",
         entityType: "EXPENSE",
         entityId: updated.id,
-        metadata: { changes },
+        metadata: { changes, ...conversionAuditDetails(updated.conversion) },
         description: `Updated personal expense "${updated.description}".`,
       }),
       (transaction) => {

@@ -1,6 +1,6 @@
 import type {
   EntityId,
-  CurrencyCode,
+  BaseCurrencyCode,
   ISODateString,
   ResourceTimestamps,
 } from "../../../types/common";
@@ -14,7 +14,7 @@ export interface OrganizationBudget extends ResourceTimestamps {
   name: string;
   description?: string;
   amount: number;
-  currency: CurrencyCode;
+  currency: BaseCurrencyCode;
   startDate: ISODateString;
   endDate: ISODateString;
   status: BudgetStatus;
@@ -27,7 +27,7 @@ export interface DepartmentBudgetAllocation extends ResourceTimestamps {
   organizationBudgetId: EntityId;
   departmentId: EntityId;
   amount: number;
-  currency: CurrencyCode;
+  currency: BaseCurrencyCode;
 }
 
 /** Finance splits a department allocation across the department's teams. */
@@ -39,7 +39,7 @@ export interface TeamBudgetAllocation extends ResourceTimestamps {
   departmentId: EntityId;
   teamId: EntityId;
   amount: number;
-  currency: CurrencyCode;
+  currency: BaseCurrencyCode;
 }
 
 /**
@@ -56,7 +56,7 @@ export interface ExpenseTypeBudget extends ResourceTimestamps {
   teamId?: EntityId;
   expenseType: ExpenseType;
   amount: number;
-  currency: CurrencyCode;
+  currency: BaseCurrencyCode;
 }
 
 export interface BudgetUtilization {

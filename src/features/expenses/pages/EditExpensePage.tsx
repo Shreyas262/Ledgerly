@@ -4,9 +4,10 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { ExpensePolicyPreview } from "../../policies/components/ExpensePolicyPreview";
 import { ForbiddenPage } from "../../auth/pages/ForbiddenPage";
+import { useRupeeEstimate } from "../../currency/hooks/useRupeeEstimate";
 import { useGetExpenseByIdQuery, useUpdateExpenseMutation } from "../api/expenseApi";
 import { ExpenseFormFields } from "../components/ExpenseFormFields";
-import { isExpenseFormComplete, toExpenseRequest, type ExpenseFormData } from "../utils/expenseForm";
+import { isExpenseFormComplete, toExpenseForm, toExpenseRequest, type ExpenseFormData } from "../utils/expenseForm";
 import type { Expense } from "../types/expense";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { LoadingState } from "../../../components/common/LoadingState";
@@ -105,13 +106,9 @@ interface EditExpenseFormProps {
 }
 
 function EditExpenseForm({ expense, isSubmitting, error, onReconcile, onSubmit, onCancel }: EditExpenseFormProps) {
-  const [formData, setFormData] = useState<ExpenseFormData>({
-    type: expense.type,
-    title: expense.title,
-    description: expense.description,
-    amount: String(expense.amount),
-    expenseDate: expense.expenseDate,
-  });
+  const [formData, setFormData] = useState<ExpenseFormData>(() => toExpenseForm(expense));
+  // Policies apply to the rupee amount.
+  const estimate = useRupeeEstimate(formData.amount, formData.currency, formData.expenseDate);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -131,7 +128,7 @@ function EditExpenseForm({ expense, isSubmitting, error, onReconcile, onSubmit, 
 
         <ExpensePolicyPreview
           type={formData.type}
-          amount={formData.amount}
+          amount={estimate.rupees === undefined ? "" : String(estimate.rupees)}
           expenseDate={formData.expenseDate}
           description={formData.description}
           expenseId={expense.id}
