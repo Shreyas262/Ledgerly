@@ -2,13 +2,20 @@ import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { Stack, Typography, Button, Alert, Pagination, Tab, Tabs } from "@mui/material";
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
+import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 import { ExpenseCard } from "../components/ExpenseCard";
+import { ExportError } from "../../../components/common/ExportError";
+import { usePdfDownload } from "../../../services/pdf/usePdfDownload";
+import type { CollectionQuery } from "../../../types/api";
+import { toDateOnly } from "../../../utils/format";
+import { buildExpenseReport, describeExpenseFilters, MAX_REPORT_EXPENSES } from "../utils/expenseReportPdf";
 import { BulkSubmitSummary, type BulkSubmitOutcome } from "../components/BulkSubmitSummary";
 import { BulkActionBar } from "../../../components/common/BulkActionBar";
 import { formatCurrency } from "../../../utils/currency";
 
 import {
   useGetExpensesQuery,
+  useLazyGetExpensesQuery,
   useSubmitExpenseMutation,
   useBulkSubmitExpensesMutation,
 } from "../../expenses/api/expenseApi";
@@ -23,6 +30,7 @@ import { useAuth } from "../../../features/auth/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
+  type Expense,
   type ExpenseFilter as ExpenseFiltersState,
   type ExpenseScope,
   initialExpenseFilters,
@@ -62,6 +70,9 @@ interface ScopeViewState {
 
 const initialViewState: ScopeViewState = { filters: initialExpenseFilters, page: 1 };
 
+/** The largest page the expense list returns; reports fetch the view this many at a time. */
+const REPORT_PAGE_SIZE = 100;
+
 export function ExpensesPage() {
   const [submittingExpenseId, setSubmittingExpenseId] = useState<string | null>(
     null,
@@ -98,6 +109,19 @@ export function ExpensesPage() {
     filters.dateTo !== "" &&
     filters.dateFrom > filters.dateTo;
 
+  // The view's filters, shared by the list and the PDF report.
+  const viewQuery: CollectionQuery = {
+    search: filters.search || undefined,
+    filter: {
+      ...(filters.status !== "all" ? { status: filters.status } : {}),
+      ...(filters.type !== "all" ? { type: filters.type } : {}),
+    },
+    from: filters.dateFrom || undefined,
+    to: filters.dateTo || undefined,
+    sort: "expenseDate",
+    sortOrder: "desc",
+  };
+
   const {
     data: expenseResult,
     isLoading,
@@ -105,26 +129,35 @@ export function ExpensesPage() {
     error: loadError,
     refetch,
   } = useGetExpensesQuery(
-    {
-      scope,
-      query: {
-        page,
-        pageSize: 25,
-        search: filters.search || undefined,
-        filter: {
-          ...(filters.status !== "all" ? { status: filters.status } : {}),
-          ...(filters.type !== "all" ? { type: filters.type } : {}),
-        },
-        from: filters.dateFrom || undefined,
-        to: filters.dateTo || undefined,
-        sort: "expenseDate",
-        sortOrder: "desc",
-      },
-    },
+    { scope, query: { ...viewQuery, page, pageSize: 25 } },
     { skip: hasInvalidDateRange },
   );
 
   const expenses = expenseResult?.data ?? [];
+
+  const [fetchExpenses] = useLazyGetExpensesQuery();
+  const pdf = usePdfDownload();
+
+  // Every page of the view, up to the report's limit.
+  const exportReport = () => pdf.download(async () => {
+    const listed: Expense[] = [];
+    let matching = 0;
+    for (let reportPage = 1; listed.length < MAX_REPORT_EXPENSES; reportPage += 1) {
+      const result = await fetchExpenses({ scope, query: { ...viewQuery, page: reportPage, pageSize: REPORT_PAGE_SIZE } }).unwrap();
+      matching = result.total;
+      listed.push(...result.data);
+      if (result.data.length < REPORT_PAGE_SIZE || listed.length >= result.total) break;
+    }
+    return buildExpenseReport({
+      expenses: listed.slice(0, MAX_REPORT_EXPENSES),
+      matching,
+      viewLabel: scopeViews[scope].label,
+      filters: describeExpenseFilters(filters),
+      showEmployee: scope !== "OWN",
+      organizationName: user?.organizationName,
+      generatedBy: user?.name ?? "Ledgerly",
+    });
+  }, `ledgerly-${scopeViews[scope].label.toLowerCase().replace(/\s+/g, "-")}-${toDateOnly()}.pdf`);
 
   const [submitExpense, { error: submitError }] = useSubmitExpenseMutation();
   const [bulkSubmitExpenses, { isLoading: isBulkSubmitting, error: bulkSubmitError }] = useBulkSubmitExpensesMutation();
@@ -199,17 +232,32 @@ export function ExpensesPage() {
     <Stack spacing={3}>
       <PageHeader
         title="Expenses"
-        actions={can("expenses.create") && (
-          <Button
-            variant="contained"
-            startIcon={<AddOutlinedIcon />}
-            onClick={() => navigate("/expenses/new")}
-            disabled={creationBlocked}
-          >
-            Create Expense
-          </Button>
-        )}
+        actions={
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<PictureAsPdfOutlinedIcon />}
+              onClick={exportReport}
+              loading={pdf.isCreating}
+              disabled={hasInvalidDateRange || !expenseResult?.total}
+            >
+              Export PDF
+            </Button>
+            {can("expenses.create") && (
+              <Button
+                variant="contained"
+                startIcon={<AddOutlinedIcon />}
+                onClick={() => navigate("/expenses/new")}
+                disabled={creationBlocked}
+              >
+                Create Expense
+              </Button>
+            )}
+          </Stack>
+        }
       />
+
+      <ExportError error={pdf.error} onClose={pdf.clearError} />
 
       {can("expenses.create") && creationBlocked && (
         <Alert severity="info">

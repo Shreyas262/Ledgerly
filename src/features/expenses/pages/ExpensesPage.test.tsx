@@ -1,9 +1,18 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { http } from "msw";
+import type { TDocumentDefinitions } from "pdfmake/interfaces";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { apiError } from "../../../mocks/services/apiError";
+import { downloadPdf } from "../../../services/pdf/downloadPdf";
+import { server } from "../../../test/apiServer";
 import { givenExpense, givenPolicy, readExpense } from "../../../test/fixtures";
+import { pdfTables, pdfText } from "../../../test/pdfText";
 import { renderPage, setupPageTests } from "../../../test/renderPage";
 import { ExpensesPage } from "./ExpensesPage";
+
+// Creating the file runs pdfmake in the browser; the tests check what would be downloaded.
+vi.mock("../../../services/pdf/downloadPdf", () => ({ downloadPdf: vi.fn() }));
 
 setupPageTests();
 
@@ -101,5 +110,81 @@ describe("ExpensesPage submitting several drafts", () => {
     expect(await screen.findByText("Team member's hotel")).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit Selected" })).not.toBeInTheDocument();
+  });
+});
+
+describe("ExpensesPage PDF report", () => {
+  beforeEach(() => {
+    vi.mocked(downloadPdf).mockReset();
+  });
+
+  async function exportReport(user: Awaited<ReturnType<typeof renderExpenses>>["user"]): Promise<[TDocumentDefinitions, string]> {
+    await user.click(screen.getByRole("button", { name: "Export PDF" }));
+    await waitFor(() => expect(downloadPdf).toHaveBeenCalledTimes(1));
+    return vi.mocked(downloadPdf).mock.calls[0];
+  }
+
+  it("includes every expense in the view, not only the page on screen", async () => {
+    for (let index = 1; index <= 105; index += 1) await givenExpense({ title: `Trip ${index}`, status: "submitted" });
+    const { user } = await renderExpenses();
+    expect(await screen.findAllByText(/^Trip \d+$/)).toHaveLength(25);
+
+    const [report, fileName] = await exportReport(user);
+
+    const [expenses] = pdfTables(report);
+    // The header and total rows, and every expense.
+    expect(expenses).toHaveLength(107);
+    expect(pdfText(report)).toContain("My Expenses");
+    expect(fileName).toMatch(/^ledgerly-my-expenses-\d{4}-\d{2}-\d{2}\.pdf$/);
+  });
+
+  it("lists only what the team view shows, with each employee", async () => {
+    await givenExpense({ title: "Team member's hotel", owner: "employee", status: "submitted" });
+    await givenExpense({ title: "Private draft", owner: "employee", status: "draft" });
+    const { user } = await renderExpenses("manager");
+    await user.click(await screen.findByRole("tab", { name: "Team Expenses" }));
+    await screen.findByText("Team member's hotel");
+
+    const [report] = await exportReport(user);
+
+    const text = pdfText(report);
+    expect(text).toContain("Team Expenses");
+    expect(text).toContain("Team member's hotel");
+    expect(text).not.toContain("Private draft");
+    expect(pdfTables(report)[0][0]).toContain("Employee");
+  });
+
+  it("cannot export a view without expenses", async () => {
+    await renderExpenses();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Export PDF" })).toBeDisabled());
+  });
+
+  it("explains when the PDF could not be created", async () => {
+    vi.mocked(downloadPdf).mockRejectedValue(new Error("Font missing"));
+    await givenExpense({ title: "Taxi", status: "submitted" });
+    const { user } = await renderExpenses();
+    await screen.findByText("Taxi");
+
+    await user.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    expect(await screen.findByText("The PDF could not be created. Try again.")).toBeInTheDocument();
+  });
+
+  it("shows why the expenses could not be loaded and creates nothing", async () => {
+    await givenExpense({ title: "Taxi", status: "submitted" });
+    // Only the report's requests, which fetch 100 expenses at a time, fail.
+    server.use(
+      http.get("/api/expenses", ({ request }) =>
+        new URL(request.url).searchParams.get("pageSize") === "100" ? apiError(403, "You may no longer view these expenses.") : undefined,
+      ),
+    );
+    const { user } = await renderExpenses();
+    await screen.findByText("Taxi");
+
+    await user.click(screen.getByRole("button", { name: "Export PDF" }));
+
+    expect(await screen.findByText("You may no longer view these expenses.")).toBeInTheDocument();
+    expect(downloadPdf).not.toHaveBeenCalled();
   });
 });
