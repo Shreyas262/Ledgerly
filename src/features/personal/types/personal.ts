@@ -1,9 +1,11 @@
 import type {
+  BaseCurrencyCode,
   CurrencyCode,
   EntityId,
   ISODateString,
   ResourceTimestamps,
 } from "../../../types/common";
+import type { CurrencyConversion } from "../../currency/types/currency";
 
 /** Expense types for personal spending; independent of organization expense types. */
 export type PersonalExpenseType =
@@ -62,8 +64,11 @@ export interface PersonalExpense extends ResourceTimestamps {
   id: EntityId;
   ownerId: EntityId;
   type: PersonalExpenseType;
+  /** In rupees: what budgets, summaries and analytics use. */
   amount: number;
-  currency: CurrencyCode;
+  currency: BaseCurrencyCode;
+  /** Present when the expense was paid in another currency and converted to the rupee amount. */
+  conversion?: CurrencyConversion;
   /** Calendar date, YYYY-MM-DD. */
   expenseDate: string;
   description: string;
@@ -73,7 +78,9 @@ export interface PersonalExpense extends ResourceTimestamps {
 
 export interface PersonalExpenseRequest {
   type: PersonalExpenseType;
+  /** The amount as paid, in `currency`; the API converts other currencies to rupees. */
   amount: number;
+  currency: CurrencyCode;
   expenseDate: string;
   description: string;
   paymentMethod: PaymentMethod;

@@ -1,9 +1,11 @@
 import type {
+  BaseCurrencyCode,
   CurrencyCode,
   EntityId,
   ISODateString,
   ResourceTimestamps,
 } from "../../../types/common";
+import type { CurrencyConversion } from "../../currency/types/currency";
 import type { PolicyEvaluation } from "../../policies/types/policy";
 
 export type ExpenseType =
@@ -90,8 +92,11 @@ export interface Expense extends ResourceTimestamps {
   departmentName?: string;
   type: ExpenseType;
   title: string;
+  /** In rupees: what policies, budgets, reimbursement and reports use. */
   amount: number;
-  currency: CurrencyCode;
+  currency: BaseCurrencyCode;
+  /** Present when the expense was paid in another currency and converted to the rupee amount. */
+  conversion?: CurrencyConversion;
   /** Not captured yet; reserved for merchant-based duplicate checks. */
   merchant?: string;
   description: string;
@@ -122,19 +127,14 @@ export interface CreateExpenseRequest {
   type: ExpenseType;
   title: string;
   description: string;
+  /** The amount as paid, in `currency`; the API converts other currencies to rupees. */
   amount: number;
   currency: CurrencyCode;
   expenseDate: ISODateString;
 }
 
-export interface UpdateExpenseRequest {
+export interface UpdateExpenseRequest extends CreateExpenseRequest {
   id: EntityId;
-  type: ExpenseType;
-  title: string;
-  description: string;
-  amount: number;
-  currency: CurrencyCode;
-  expenseDate: ISODateString;
 }
 
 /** Most drafts submitted at once: one page of the expense list. */

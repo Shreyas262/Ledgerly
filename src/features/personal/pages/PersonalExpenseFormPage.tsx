@@ -3,7 +3,6 @@ import {
   Alert,
   Button,
   Grid,
-  InputAdornment,
   MenuItem,
   Paper,
   Stack,
@@ -19,7 +18,10 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { getApiErrorDetails } from "../../../services/api/apiErrors";
-import { formatCurrency } from "../../../utils/currency";
+import type { CurrencyCode } from "../../../types/common";
+import { BASE_CURRENCY, formatMoney } from "../../../utils/currency";
+import { AmountCurrencyFields } from "../../currency/components/AmountCurrencyFields";
+import { useRupeeEstimate } from "../../currency/hooks/useRupeeEstimate";
 import {
   useCreatePersonalExpenseMutation,
   useGetPersonalExpenseQuery,
@@ -43,7 +45,9 @@ import { applyReceiptDetails, describeReceiptFill, type ReceiptFieldMap } from "
 const MAX_DESCRIPTION_LENGTH = 500;
 
 interface FormState {
+  /** The amount as paid, in `currency`. */
   amount: string;
+  currency: CurrencyCode;
   expenseDate: string;
   type: PersonalExpenseType;
   paymentMethod: PaymentMethod;
@@ -54,12 +58,14 @@ type FieldErrors = Partial<Record<keyof FormState, string>>;
 
 const RECEIPT_FIELDS: ReceiptFieldMap<FormState> = {
   amount: { field: "amount", label: "amount" },
+  currency: { field: "currency", label: "currency" },
   date: { field: "expenseDate", label: "date" },
   merchant: { field: "description", label: "description" },
 };
 
 const toFormState = (expense?: PersonalExpense): FormState => ({
-  amount: expense ? String(expense.amount) : "",
+  amount: expense ? String(expense.conversion?.originalAmount ?? expense.amount) : "",
+  currency: expense?.conversion?.originalCurrency ?? BASE_CURRENCY,
   expenseDate: expense?.expenseDate ?? todayDate(),
   type: expense?.type ?? "GROCERIES",
   paymentMethod: expense?.paymentMethod ?? "UPI",
@@ -119,6 +125,7 @@ function ExpenseForm({ expense }: { expense?: PersonalExpense }) {
   const fieldError = (field: keyof FieldErrors) => errors[field] ?? serverErrors[field]?.toString();
   const isSaving = isCreating || isUpdating || isUploading;
   const backTo = expense ? `/personal/expenses/${expense.id}` : "/personal/expenses";
+  const estimate = useRupeeEstimate(form.amount, form.currency, form.expenseDate);
 
   const setField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     editedFields.current.add(field);
@@ -151,15 +158,17 @@ function ExpenseForm({ expense }: { expense?: PersonalExpense }) {
       type: form.type,
       paymentMethod: form.paymentMethod,
       amount,
+      currency: form.currency,
       expenseDate: form.expenseDate,
       description: form.description.trim(),
     };
+    const inRupees = estimate.foreign && estimate.rupees !== undefined ? ` (about ${formatMoney(estimate.rupees)})` : "";
 
     if (!(await confirm({
       title: isEdit ? "Save Changes" : "Add Expense",
       message: isEdit
         ? `Save changes to "${body.description}"?`
-        : `Add "${body.description}" for ${formatCurrency(amount)}${receipts.length ? ` with ${receipts.length} ${receipts.length === 1 ? "receipt" : "receipts"}` : ""}?`,
+        : `Add "${body.description}" for ${formatMoney(amount, form.currency)}${inRupees}${receipts.length ? ` with ${receipts.length} ${receipts.length === 1 ? "receipt" : "receipts"}` : ""}?`,
       confirmLabel: isEdit ? "Save" : "Add Expense",
     }))) return;
 
@@ -214,20 +223,15 @@ function ExpenseForm({ expense }: { expense?: PersonalExpense }) {
 
           <Grid container spacing={2.5}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                label="Amount"
-                type="number"
-                value={form.amount}
-                onChange={(event) => setField("amount", event.target.value)}
-                error={Boolean(fieldError("amount"))}
-                helperText={fieldError("amount")}
-                required
-                fullWidth
+              <AmountCurrencyFields
+                amount={form.amount}
+                currency={form.currency}
+                expenseDate={form.expenseDate}
+                onAmountChange={(amount) => setField("amount", amount)}
+                onCurrencyChange={(currency) => setField("currency", currency)}
+                amountError={fieldError("amount")}
+                currencyError={fieldError("currency")}
                 autoFocus={!isEdit}
-                slotProps={{
-                  input: { startAdornment: <InputAdornment position="start">₹</InputAdornment> },
-                  htmlInput: { min: 0, step: "0.01", inputMode: "decimal" },
-                }}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>

@@ -2,7 +2,11 @@ import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Alert, Button, Chip, Grid, Stack } from "@mui/material";
 import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
+import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 import { ErrorState } from "../../../components/common/ErrorState";
+import { ExportError } from "../../../components/common/ExportError";
+import { usePdfDownload } from "../../../services/pdf/usePdfDownload";
+import { useAuth } from "../../auth/context/AuthContext";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { RefreshingState } from "../../../components/common/RefreshingState";
 import { useGetAnalyticsSummaryQuery } from "../api/analyticsApi";
@@ -27,6 +31,7 @@ import {
   type AnalyticsFilterState,
 } from "../utils/analyticsFilters";
 import { exportAnalyticsCsv } from "../utils/exportAnalyticsCsv";
+import { buildAnalyticsReport } from "../utils/analyticsPdf";
 import { PageHeader } from "../../../components/common/PageHeader";
 
 const EMPTY_OPTIONS = { departments: [], teams: [] };
@@ -58,6 +63,9 @@ export function AnalyticsPage() {
     skip: Boolean(rangeError),
   });
 
+  const { user } = useAuth();
+  const pdf = usePdfDownload();
+
   const setFilters = (next: AnalyticsFilterState) => setSearchParams(writeFilters(next), { replace: true });
   const resetFilters = () => setSearchParams(new URLSearchParams(), { replace: true });
 
@@ -78,16 +86,38 @@ export function AnalyticsPage() {
           ? `${presetLabel === "Custom" ? "" : `${presetLabel} · `}${formatDate(summary.filters.from!)} – ${formatDate(summary.filters.to!)}. Spend includes reimbursed expenses only.`
           : "Analyze spending and approval activity."}
         actions={
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadOutlinedIcon />}
-            disabled={!summary || Boolean(rangeError)}
-            onClick={() => summary && exportAnalyticsCsv(summary, describeFilters(filters, summary))}
-          >
-            Export CSV
-          </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadOutlinedIcon />}
+              disabled={!summary || Boolean(rangeError)}
+              onClick={() => summary && exportAnalyticsCsv(summary, describeFilters(filters, summary))}
+            >
+              Export CSV
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<PictureAsPdfOutlinedIcon />}
+              disabled={!summary || Boolean(rangeError)}
+              loading={pdf.isCreating}
+              onClick={() => summary && pdf.download(
+                () => buildAnalyticsReport({
+                  summary,
+                  scopeLabel: scopeLabel(scope, summary),
+                  filterDescription: describeFilters(filters, summary),
+                  organizationName: user?.organizationName,
+                  generatedBy: user?.name ?? "Ledgerly",
+                }),
+                `ledgerly-analytics-${summary.filters.from}-to-${summary.filters.to}.pdf`,
+              )}
+            >
+              Export PDF
+            </Button>
+          </Stack>
         }
       />
+
+      <ExportError error={pdf.error} onClose={pdf.clearError} />
 
       <AnalyticsFilterBar
         filters={filters}

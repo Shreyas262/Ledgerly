@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { ExpensePolicyPreview } from "../../policies/components/ExpensePolicyPreview";
 import { useGetActiveBudgetPeriodQuery } from "../../budgets/api/budgetsApi";
+import { useRupeeEstimate } from "../../currency/hooks/useRupeeEstimate";
 import { useUploadDocumentMutation } from "../../documents/api/documentApi";
 import { ReceiptAttachmentField } from "../../documents/components/ReceiptAttachmentField";
 import type { ReceiptDetails } from "../../documents/utils/parseReceiptText";
@@ -16,11 +17,12 @@ import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { BackLink } from "../../../components/navigation/BackLink";
 import { getApiErrorDetails } from "../../../services/api/apiErrors";
-import { formatCurrency } from "../../../utils/currency";
+import { formatMoney } from "../../../utils/currency";
 import { formatDate } from "../../../utils/format";
 
 const RECEIPT_FIELDS: ReceiptFieldMap<ExpenseFormData> = {
   amount: { field: "amount", label: "amount" },
+  currency: { field: "currency", label: "currency" },
   date: { field: "expenseDate", label: "expense date" },
   merchant: { field: "title", label: "title" },
 };
@@ -41,6 +43,8 @@ export function CreateExpensePage() {
   const creationBlocked = eligibility ? !eligibility.canCreateExpense : false;
   const details = getApiErrorDetails(error);
   const isSaving = isCreating || isUploading;
+  // Policies apply to the rupee amount.
+  const estimate = useRupeeEstimate(formData.amount, formData.currency, formData.expenseDate);
 
   const handleChange = (next: ExpenseFormData) => {
     for (const field of Object.keys(next) as (keyof ExpenseFormData)[]) {
@@ -64,7 +68,8 @@ export function CreateExpensePage() {
 
     const request = toExpenseRequest(formData);
     const withReceipts = receipts.length ? ` with ${receipts.length} ${receipts.length === 1 ? "receipt" : "receipts"}` : "";
-    if (!(await confirm({ title: "Create Expense", message: `Create "${request.title}" for ${formatCurrency(request.amount)}${withReceipts} as a draft?`, confirmLabel: "Create" }))) return;
+    const inRupees = estimate.foreign && estimate.rupees !== undefined ? ` (about ${formatMoney(estimate.rupees)})` : "";
+    if (!(await confirm({ title: "Create Expense", message: `Create "${request.title}" for ${formatMoney(request.amount, request.currency)}${inRupees}${withReceipts} as a draft?`, confirmLabel: "Create" }))) return;
 
     let createdId: string;
     try {
@@ -133,7 +138,7 @@ export function CreateExpensePage() {
 
           <ExpensePolicyPreview
             type={formData.type}
-            amount={formData.amount}
+            amount={estimate.rupees === undefined ? "" : String(estimate.rupees)}
             expenseDate={formData.expenseDate}
             description={formData.description}
           />

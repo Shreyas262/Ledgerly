@@ -1,5 +1,7 @@
 import { apiError } from "../services/apiError";
 import { formatDate } from "../../utils/format";
+import { BASE_CURRENCY, formatMoney, isCurrencyCode } from "../../utils/currency";
+import type { CurrencyCode } from "../../types/common";
 import { applyCollectionQueryResult, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
 import {
@@ -30,6 +32,8 @@ import { evaluateExpensePolicy } from "../services/policyService";
 import { getRecord } from "../services/mockDataService";
 import { findActiveBudgetForDate, getExpenseCreationEligibility, todayDate } from "../services/budgetService";
 import { submitDraftExpense } from "../services/submissionService";
+import { conversionAuditDetails, toRupees } from "../services/exchangeRateService";
+import { describePaidAmount } from "../../features/currency/utils/rateText";
 
 /**
  * Expenses may be created only while an active budget covers today, and must
@@ -65,12 +69,17 @@ function isValidDateOnly(value: string): boolean {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
+/** The amount as paid, e.g. "USD 60.00" or "₹1,200". */
+const paidAs = (expense: Expense) =>
+  expense.conversion ? describePaidAmount(expense.conversion) : formatMoney(expense.amount);
+
 function validateExpenseBody(body: unknown): {
   type: ExpenseType;
   title: string;
   description: string;
+  /** As paid, in `currency`. */
   amount: number;
-  currency: "INR";
+  currency: CurrencyCode;
   expenseDate: string;
 } | { fieldErrors: Record<string, string> } {
   const value = body && typeof body === "object" ? body as Record<string, unknown> : {};
@@ -87,7 +96,7 @@ function validateExpenseBody(body: unknown): {
   if (!title) fieldErrors.title = "Title is required.";
   if (!description) fieldErrors.description = "Description is required.";
   if (!Number.isFinite(amount) || amount <= 0) fieldErrors.amount = "Amount must be greater than zero.";
-  if (currency !== "INR") fieldErrors.currency = "Only INR is supported.";
+  if (!isCurrencyCode(currency)) fieldErrors.currency = "Choose a supported currency.";
   if (!isValidDateOnly(expenseDate)) {
     fieldErrors.expenseDate = "A valid expense date is required.";
   }
@@ -99,7 +108,7 @@ function validateExpenseBody(body: unknown): {
     title,
     description,
     amount,
-    currency: "INR",
+    currency: currency as CurrencyCode,
     expenseDate,
   };
 }
@@ -247,6 +256,8 @@ export const expensesHandlers = [
     const periodError = await checkBudgetPeriod(authorization.principal, body.expenseDate, true);
     if (periodError) return periodError;
 
+    // Expenses are kept in rupees, with the rate of the expense date for other currencies.
+    const { amount, conversion } = await toRupees(body.amount, body.currency, body.expenseDate);
     const now = new Date().toISOString();
 
     const newExpense: Expense = {
@@ -258,8 +269,9 @@ export const expensesHandlers = [
       type: body.type,
       title: body.title,
       description: body.description,
-      amount: body.amount,
-      currency: body.currency,
+      amount,
+      currency: BASE_CURRENCY,
+      ...(conversion ? { conversion } : {}),
       expenseDate: body.expenseDate,
       status: "draft",
       documentIds: [],
@@ -282,7 +294,7 @@ export const expensesHandlers = [
         entityType: "EXPENSE",
         entityId: newExpense.id,
         newState: newExpense.status,
-        metadata: { amount: newExpense.amount, currency: newExpense.currency },
+        metadata: { amount: newExpense.amount, currency: newExpense.currency, ...conversionAuditDetails(conversion) },
         description: `Created expense ${newExpense.title}.`,
       },
       (transaction) => {
@@ -323,14 +335,20 @@ export const expensesHandlers = [
     const periodError = await checkBudgetPeriod(existingExpense, body.expenseDate, false);
     if (periodError) return periodError;
 
+    // Converted again on every save, so a changed amount, currency or date
+    // takes its own rate and an approximate rate is replaced when possible.
+    const { amount, conversion } = await toRupees(body.amount, body.currency, body.expenseDate);
+    const { conversion: _previousConversion, ...existingFields } = existingExpense;
+
     const updatedExpense: Expense = {
-      ...existingExpense,
-      ...body,
-      organizationId: existingExpense.organizationId,
-      departmentId: existingExpense.departmentId,
-      teamId: existingExpense.teamId,
-      employeeId: existingExpense.employeeId,
-      currency: body.currency,
+      ...existingFields,
+      type: body.type,
+      title: body.title,
+      description: body.description,
+      expenseDate: body.expenseDate,
+      amount,
+      currency: BASE_CURRENCY,
+      ...(conversion ? { conversion } : {}),
       updatedAt: new Date().toISOString(),
     };
 
@@ -352,13 +370,20 @@ export const expensesHandlers = [
         metadata: {
           amount: updatedExpense.amount,
           currency: updatedExpense.currency,
-          changes: (["type", "title", "description", "amount", "expenseDate"] as const)
-            .filter((field) => existingExpense[field] !== updatedExpense[field])
-            .map((field) => ({
-              field,
-              previousValue: existingExpense[field],
-              newValue: updatedExpense[field],
-            })),
+          ...conversionAuditDetails(conversion),
+          changes: [
+            ...(["type", "title", "description", "amount", "expenseDate"] as const)
+              .filter((field) => existingExpense[field] !== updatedExpense[field])
+              .map((field) => ({
+                field,
+                previousValue: existingExpense[field],
+                newValue: updatedExpense[field],
+              })),
+            // What was paid, when another currency is involved.
+            ...((existingExpense.conversion || conversion) && paidAs(existingExpense) !== paidAs(updatedExpense)
+              ? [{ field: "paidAs", previousValue: paidAs(existingExpense), newValue: paidAs(updatedExpense) }]
+              : []),
+          ],
         },
         description: `Updated expense ${updatedExpense.title}.`,
       },

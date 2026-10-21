@@ -94,3 +94,13 @@ export async function renderPage(
 
   return { user, router };
 }
+
+/** Picks an option of a select field, as a user would with the pointer. */
+export async function selectOption(
+  user: ReturnType<typeof userEvent.setup>,
+  field: RegExp,
+  option: RegExp,
+): Promise<void> {
+  await user.click(screen.getByRole("combobox", { name: field }));
+  await user.click(await screen.findByRole("option", { name: option }));
+}

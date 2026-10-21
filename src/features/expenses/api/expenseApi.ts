@@ -189,6 +189,7 @@ export const expensesApi = baseApi.injectEndpoints({
 
 export const {
   useGetExpensesQuery,
+  useLazyGetExpensesQuery,
   useGetExpenseByIdQuery,
   useCreateExpenseMutation,
   useUpdateExpenseMutation,

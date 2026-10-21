@@ -6,9 +6,9 @@ import { extractReceiptText } from "../../documents/utils/extractReceiptText";
 import type { Expense } from "../types/expense";
 import { apiError } from "../../../mocks/services/apiError";
 import { listRecords } from "../../../mocks/services/mockDataService";
-import { server } from "../../../test/apiServer";
-import { givenBudget, withFixedToday } from "../../../test/fixtures";
-import { navigatedTo, renderPage, setupPageTests } from "../../../test/renderPage";
+import { server, serveExchangeRates } from "../../../test/apiServer";
+import { givenBudget, givenPolicy, withFixedToday } from "../../../test/fixtures";
+import { navigatedTo, renderPage, selectOption, setupPageTests } from "../../../test/renderPage";
 import { CreateExpensePage } from "./CreateExpensePage";
 
 // Reading receipts runs PDF.js and Tesseract in browser workers; the tests supply the text they would read.
@@ -175,6 +175,18 @@ describe("CreateExpensePage receipts", () => {
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("");
   });
 
+  it("fills the currency from a receipt in another currency", async () => {
+    vi.mocked(extractReceiptText).mockResolvedValue(["CITY DINER", "Date: 10/10/2026", "Total $45.00"].join("\n"));
+    serveExchangeRates({ USD: 94.96 });
+    const { user } = await renderReady();
+
+    await user.upload(fileInput(), pdf());
+
+    expect(await screen.findByText("Filled from bill.pdf: amount, currency, expense date and title. Check them before saving.")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /^Currency/ })).toHaveTextContent("USD");
+    expect(await screen.findByText(/^About ₹4,273.20 at 1 USD = ₹94.96/)).toBeInTheDocument();
+  });
+
   it("keeps a receipt that cannot be read attached and leaves the form usable", async () => {
     vi.mocked(extractReceiptText).mockRejectedValue(new Error("OCR failed"));
     const { user } = await renderReady();
@@ -221,5 +233,67 @@ describe("CreateExpensePage receipts", () => {
     expect(router.state.location.state).toEqual({
       receiptError: "The expense was created, but bill.pdf could not be attached. You can add it below.",
     });
+  });
+});
+
+describe("CreateExpensePage currencies", () => {
+  async function renderReady() {
+    const page = await renderCreatePage();
+    await screen.findByText(/must fall within the active budget period/);
+    return page;
+  }
+
+  async function enterDollars(user: Awaited<ReturnType<typeof renderCreatePage>>["user"]) {
+    await user.type(screen.getByRole("textbox", { name: "Title" }), "Team dinner");
+    await user.type(screen.getByRole("textbox", { name: "Description" }), "Dinner with the New York team");
+    await user.type(screen.getByRole("spinbutton", { name: "Amount" }), "60");
+    await selectOption(user, /^Currency/, /^USD /);
+    // A Saturday: the rate is Friday's.
+    fireEvent.change(screen.getByLabelText(/Expense date/), { target: { value: "2026-10-10" } });
+  }
+
+  it("previews the rupee amount, confirms both amounts and keeps the expense in rupees", async () => {
+    await givenBudget();
+    serveExchangeRates({ USD: 94.96 });
+    const { user } = await renderReady();
+
+    await enterDollars(user);
+    expect(await screen.findByText(
+      "About ₹5,697.60 at 1 USD = ₹94.96, the European Central Bank rate for 9 Oct 2026. The rate is fixed when the expense is saved.",
+    )).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Create Expense" }));
+    expect(await screen.findByRole("dialog", { name: "Create Expense" })).toHaveTextContent(
+      'Create "Team dinner" for USD 60.00 (about ₹5,697.60) as a draft?',
+    );
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await navigatedTo();
+    const [expense] = await listRecords<Expense>("expenses");
+    expect(expense).toMatchObject({
+      amount: 5_697.6,
+      currency: "INR",
+      conversion: { originalAmount: 60, originalCurrency: "USD", rate: 94.96, rateDate: "2026-10-09", source: "ECB" },
+    });
+  });
+
+  it("checks the policy against the rupee amount", async () => {
+    await givenBudget();
+    await givenPolicy({ rules: { maximumAmount: { amount: 5_000, enforcement: "BLOCK" } } });
+    serveExchangeRates({ USD: 94.96 });
+    const { user } = await renderReady();
+
+    await enterDollars(user);
+
+    expect(await screen.findByText(/Above the ₹5,000 maximum per expense\./)).toBeInTheDocument();
+  });
+
+  it("asks for the expense date before converting", async () => {
+    await givenBudget();
+    const { user } = await renderReady();
+
+    await selectOption(user, /^Currency/, /^EUR /);
+
+    expect(screen.getByText("Choose the expense date to see the amount in rupees.")).toBeInTheDocument();
   });
 });

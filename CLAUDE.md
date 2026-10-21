@@ -84,7 +84,8 @@ Production on Netlify sets `VITE_ENABLE_MOCKS=true`, so the mock backend also ru
 - Title Case for page titles, buttons, tabs and dialog titles; sentence case for card titles, labels, helper text and
   messages. Formal tone, no contractions, no internal terms (API, IDs, status codes) in user-facing text.
 - Dates: "27 Sep 2026" / "27 Sep 2026, 1:21 pm" via the shared `formatDate` / `formatDateTime`.
-- Currency: ₹ with Indian digit grouping via the shared `Amount` component (until multi-currency lands).
+- Currency: amounts are kept and shown in rupees (₹, Indian digit grouping) via the shared `Amount` / `formatMoney`; an
+  amount paid in another currency is shown by code ("USD 60.00") next to the rupee amount.
 - Spend metrics count reimbursed expenses only, and pages say so.
 - Accessibility: never rely on color alone; fields have associated errors; controls are keyboard accessible.
 

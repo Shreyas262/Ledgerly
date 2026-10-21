@@ -21,7 +21,10 @@ interface PolicyExpense {
   employeeId?: string;
   departmentId?: string;
   type?: ExpenseType;
+  /** In rupees. */
   amount: number;
+  /** The amount as paid, when that was in another currency. */
+  conversion?: { originalAmount: number; originalCurrency: string };
   expenseDate?: string;
   description?: string;
   documentIds?: string[];
@@ -95,6 +98,18 @@ export async function getMonthlySpend(
     .reduce((total, expense) => total + expense.amount, 0);
 }
 
+/**
+ * Two expenses paid in other currencies are compared as paid: their rupee
+ * amounts can differ when one was converted with an approximate rate.
+ */
+function isSameAmount(first: PolicyExpense, second: PolicyExpense): boolean {
+  if (first.conversion && second.conversion) {
+    return first.conversion.originalCurrency === second.conversion.originalCurrency &&
+      first.conversion.originalAmount === second.conversion.originalAmount;
+  }
+  return first.amount === second.amount;
+}
+
 async function hasDuplicate(expense: PolicyExpense): Promise<boolean> {
   if (!expense.employeeId) return false;
   const expenses = await listRecordsByIndex<PolicyExpense & { status: string }>("expenses", "employeeId", expense.employeeId);
@@ -103,7 +118,7 @@ async function hasDuplicate(expense: PolicyExpense): Promise<boolean> {
     other.status !== "cancelled" &&
     other.status !== "rejected" &&
     resolveExpenseType(other) === resolveExpenseType(expense) &&
-    other.amount === expense.amount &&
+    isSameAmount(other, expense) &&
     String(other.expenseDate ?? "").slice(0, 10) === String(expense.expenseDate ?? "").slice(0, 10));
 }
 

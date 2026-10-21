@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Box,
+  Button,
   Card,
   CardContent,
   Grid,
@@ -12,6 +13,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { BarChart } from "@mui/x-charts/BarChart";
+import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 
 import { PageHeader } from "../../../components/common/PageHeader";
 import { LoadingState } from "../../../components/common/LoadingState";
@@ -28,6 +30,10 @@ import { useGetPersonalAnalyticsQuery } from "../api/personalApi";
 import { PAYMENT_METHOD_LABELS, PERSONAL_EXPENSE_TYPE_LABELS } from "../types/personal";
 import { PersonalTypeBreakdownChart } from "../components/PersonalTypeBreakdownChart";
 import { currentMonth, formatMonth, shiftMonth } from "../utils/personalFormat";
+import { buildPersonalAnalyticsReport } from "../utils/personalAnalyticsPdf";
+import { ExportError } from "../../../components/common/ExportError";
+import { usePdfDownload } from "../../../services/pdf/usePdfDownload";
+import { useAuth } from "../../auth/context/AuthContext";
 
 type RangePreset = "3" | "6" | "12" | "custom";
 const DEFAULT_PRESET: RangePreset = "6";
@@ -54,10 +60,31 @@ export function PersonalAnalyticsPage() {
 
   const hasBudgets = data?.monthly.some((point) => point.budget !== null) ?? false;
   const methodTotal = data?.byPaymentMethod.reduce((sum, item) => sum + item.amount, 0) ?? 0;
+  const { user } = useAuth();
+  const pdf = usePdfDownload();
 
   return (
     <Stack spacing={3}>
-      <PageHeader title="Spending Analytics" description="How your spending changes over time and where it goes." />
+      <PageHeader
+        title="Spending Analytics"
+        description="How your spending changes over time and where it goes."
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<PictureAsPdfOutlinedIcon />}
+            disabled={!data || Boolean(rangeError)}
+            loading={pdf.isCreating}
+            onClick={() => data && pdf.download(
+              () => buildPersonalAnalyticsReport({ analytics: data, generatedBy: user?.name ?? "Ledgerly" }),
+              `ledgerly-personal-analytics-${data.from}-to-${data.to}.pdf`,
+            )}
+          >
+            Export PDF
+          </Button>
+        }
+      />
+
+      <ExportError error={pdf.error} onClose={pdf.clearError} />
 
       <FilterBar
         label="Analytics range"

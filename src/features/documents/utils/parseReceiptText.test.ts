@@ -20,7 +20,7 @@ describe("parseReceiptText", () => {
       "Thank you, visit again",
     );
 
-    expect(parseReceiptText(text)).toEqual({ amount: 609, date: "2026-09-27", merchant: "Cafe Coffee Day" });
+    expect(parseReceiptText(text)).toEqual({ amount: 609, currency: "INR", date: "2026-09-27", merchant: "Cafe Coffee Day" });
   });
 
   it("prefers a labelled total over a larger amount elsewhere", () => {
@@ -74,6 +74,37 @@ describe("parseReceiptText", () => {
     const text = receipt("Telecom Ltd", "Due Date: 20/10/2026", "Period 01/09/2026", "Bill Date: 05/10/2026");
 
     expect(parseReceiptText(text).date).toBe("2026-10-05");
+  });
+
+  it("does not take a due date for the expense date when no date is labelled", () => {
+    const text = receipt("Telecom Ltd", "Payment due 20/10/2026", "Period 01/09/2026 to 30/09/2026");
+
+    expect(parseReceiptText(text).date).toBe("2026-09-01");
+  });
+
+  it("reads the currency printed with the total", () => {
+    expect(parseReceiptText(receipt("City Diner", "Total $45.00")).currency).toBe("USD");
+    expect(parseReceiptText("Total € 12.50").currency).toBe("EUR");
+    expect(parseReceiptText("Grand Total £8.20").currency).toBe("GBP");
+    expect(parseReceiptText("TOTAL S$ 15.40").currency).toBe("SGD");
+    expect(parseReceiptText("Amount Payable USD 120.00").currency).toBe("USD");
+    expect(parseReceiptText("Total 3,500 JPY")).toMatchObject({ amount: 3_500, currency: "JPY" });
+    expect(parseReceiptText("Net Amount Rs. 860.00").currency).toBe("INR");
+  });
+
+  it("reads the currency the receipt names most when the total does not name one", () => {
+    const text = receipt("Corner Shop", "Coffee $3.50", "Muffin $2.75", "TOTAL 6.25");
+
+    expect(parseReceiptText(text)).toMatchObject({ amount: 6.25, currency: "USD" });
+  });
+
+  it("names no currency for receipts without one, or for words that look like codes", () => {
+    expect(parseReceiptText("Grand Total 609.00").currency).toBeUndefined();
+    expect(parseReceiptText(receipt("TRY OUR NEW MENU", "TRY 2 FOR 1", "Total 450.00")).currency).toBeUndefined();
+  });
+
+  it("counts whole amounts next to a currency symbol as money", () => {
+    expect(parseReceiptText(receipt("Market stall", "Apples $4", "Bread $3")).amount).toBe(4);
   });
 
   it("rejects impossible dates", () => {

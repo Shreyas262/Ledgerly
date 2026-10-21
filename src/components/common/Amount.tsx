@@ -1,18 +1,19 @@
 import { Typography } from "@mui/material";
 
-import { formatAmount, formatCurrency } from "../../utils/currency";
+import type { CurrencyCode } from "../../types/common";
+import { formatMoney } from "../../utils/currency";
 
 interface AmountProps {
   value: number;
-  /** Currency code shown before the value; defaults to the rupee symbol. */
-  currency?: string;
+  /** Defaults to rupees, shown with the rupee symbol; other currencies by code. */
+  currency?: CurrencyCode;
 }
 
 /** Inline monetary value with tabular numerals; inherits size and colour. */
 export function Amount({ value, currency }: AmountProps) {
   return (
     <Typography variant="numeric">
-      {currency ? `${currency} ${formatAmount(value)}` : formatCurrency(value)}
+      {formatMoney(value, currency)}
     </Typography>
   );
 }

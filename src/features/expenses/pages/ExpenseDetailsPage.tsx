@@ -1,5 +1,5 @@
 import { PolicyEvaluationPanel } from "../../policies/components/PolicyEvaluationPanel";
-import { formatCurrency } from "../../../utils/currency";
+import { formatMoney } from "../../../utils/currency";
 import { formatDate } from "../../../utils/format";
 import { EXPENSE_STATUS_LABELS, EXPENSE_TYPE_LABELS } from "../types/expense";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
@@ -47,6 +47,7 @@ import { isStatus } from "../../../services/api/apiErrors";
 import { DocumentPanel } from "../../documents/components/DocumentPanel";
 import { ExpenseComments } from "../components/ExpenseComments";
 import { Amount } from "../../../components/common/Amount";
+import { ConversionNote } from "../../currency/components/ConversionNote";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { BackLink } from "../../../components/navigation/BackLink";
 
@@ -184,7 +185,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleApproveExpense = async () => {
-    if (!(await confirm({ title: "Approve Expense", message: `Approve "${expense.title}" for ${formatCurrency(expense.amount)}? It moves to Finance for reimbursement.`, confirmLabel: "Approve" }))) return;
+    if (!(await confirm({ title: "Approve Expense", message: `Approve "${expense.title}" for ${formatMoney(expense.amount)}? It moves to Finance for reimbursement.`, confirmLabel: "Approve" }))) return;
     try {
       await approveExpense(expense.id).unwrap();
     } catch {
@@ -231,7 +232,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleReimburseExpense = async () => {
-    if (!(await confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatCurrency(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark Reimbursed" }))) return;
+    if (!(await confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatMoney(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark Reimbursed" }))) return;
     try {
       await reimburseExpense(expense.id).unwrap();
     } catch {
@@ -545,6 +546,8 @@ export function ExpenseDetailsPage({
               <Typography variant="h6">
                 <Amount value={expense.amount} currency={expense.currency} />
               </Typography>
+
+              <ConversionNote conversion={expense.conversion} showRate />
             </Stack>
 
             <Stack spacing={0.5}>
