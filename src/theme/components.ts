@@ -3,6 +3,9 @@ import type { Components, Theme } from "@mui/material/styles";
 
 type SemanticColor = "success" | "warning" | "error" | "info";
 
+/** About eight options; longer select menus scroll. */
+export const SELECT_MENU_MAX_HEIGHT = 320;
+
 // Soft, readable tones for status-bearing components (chips, alerts).
 const statusTone = (theme: Theme, color: string | undefined) => {
   const { status } = theme.palette;
@@ -184,6 +187,21 @@ export const components: Components<Omit<Theme, "components">> = {
             borderColor: theme.palette.divider,
           },
         };
+      },
+    },
+  },
+
+  MuiSelect: {
+    defaultProps: {
+      // Long option lists scroll. Without a cap the menu is shifted up to fit
+      // the window, lands over the trigger and the opening click selects the
+      // option under the pointer.
+      MenuProps: {
+        slotProps: {
+          paper: {
+            sx: { maxHeight: SELECT_MENU_MAX_HEIGHT },
+          },
+        },
       },
     },
   },
