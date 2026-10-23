@@ -39,6 +39,7 @@ const EMPTY_OPTIONS = { departments: [], teams: [] };
 function scopeLabel(scope: AnalyticsScope, summary?: AnalyticsSummary): string {
   if (scope === "ORGANIZATION") return "Organization-wide";
   if (scope === "TEAM") return "Your team";
+  if (scope === "OWN") return "Your expenses";
   const names = summary?.filterOptions.departments.map((department) => department.name) ?? [];
   return names.length ? `Departments: ${names.join(", ")}` : "Your departments";
 }
@@ -199,7 +200,7 @@ export function AnalyticsPage() {
             </Grid>
 
             {/* Department and team comparisons are for Finance and Admin only. */}
-            {scope !== "TEAM" && (
+            {(scope === "ORGANIZATION" || scope === "DEPARTMENT") && (
               <>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <DimensionBarChart

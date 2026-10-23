@@ -24,11 +24,13 @@ interface StructureRecord {
   departmentId?: string;
 }
 
+/** Matches the expense scope (§9): custom roles see their own expenses only. */
 function resolveAnalyticsScope(role: string): AnalyticsScope {
   switch (role) {
     case "admin": return "ORGANIZATION";
     case "finance": return "DEPARTMENT";
-    default: return "TEAM";
+    case "manager": return "TEAM";
+    default: return "OWN";
   }
 }
 
@@ -39,7 +41,7 @@ function buildFilterOptions(
   departments: StructureRecord[],
   teams: StructureRecord[],
 ): AnalyticsFilterOptions {
-  if (scope === "TEAM") return { departments: [], teams: [] };
+  if (scope === "TEAM" || scope === "OWN") return { departments: [], teams: [] };
   const allowedDepartments = departments.filter((department) =>
     department.status !== "inactive" &&
     (scope === "ORGANIZATION" || principal.authorizedDepartmentIds.includes(department.id)));
@@ -64,6 +66,8 @@ async function buildBudgetComparison(
   principal: AuthenticatedPrincipal,
   query: AnalyticsQuery,
 ): Promise<AnalyticsBudgetComparison | null> {
+  // Budgets are not visible at the own-expenses scope (§28.5).
+  if (scope === "OWN") return null;
   const budget = await findActiveBudgetForDate(principal.organizationId, todayDate());
   if (!budget) return null;
   const view = await buildBudgetView(budget, principal);
@@ -152,6 +156,9 @@ export const analyticsHandlers = [
     const teams = allTeams.filter((item) => item.organizationId === organizationId);
 
     // Filters may narrow the authorized scope but never expand it.
+    if (scope === "OWN" && (query.departmentId || query.teamId)) {
+      return apiError(400, "You can view analytics for your own expenses only.", "INVALID_FILTER");
+    }
     if (scope === "TEAM" && (query.departmentId || (query.teamId && query.teamId !== principal.teamId))) {
       return apiError(400, "Managers can view analytics for their own team only.", "INVALID_FILTER");
     }
@@ -183,7 +190,8 @@ export const analyticsHandlers = [
     const inScope = (expense: Expense) =>
       scope === "ORGANIZATION" ||
       (scope === "DEPARTMENT" && principal.authorizedDepartmentIds.includes(expense.departmentId)) ||
-      (scope === "TEAM" && expense.teamId === principal.teamId);
+      (scope === "TEAM" && expense.teamId === principal.teamId) ||
+      (scope === "OWN" && expense.employeeId === principal.userId);
     const policySnapshots: AnalyticsPolicySnapshot[] = storedChecks.flatMap((check) => {
       const expense = expenseById.get(check.expenseId);
       if (check.organizationId !== organizationId || !expense || !inScope(expense)) return [];

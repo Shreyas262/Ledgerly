@@ -304,7 +304,7 @@ export function buildAnalyticsSummary(
   const rejectedCount = expenses.filter((expense) => expense.status === "rejected").length;
   const pendingReview = expenses.filter((expense) => pendingStatuses.has(expense.status)).length;
   const totalReviewed = approvedCount + rejectedCount;
-  const hasDimensions = scope !== "TEAM";
+  const hasDimensions = scope === "ORGANIZATION" || scope === "DEPARTMENT";
 
   return {
     scope,

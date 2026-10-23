@@ -20,6 +20,7 @@ import type {
 } from "../types/role";
 
 import { PermissionChecklist } from "./PermissionChecklist";
+import { CUSTOM_ROLE_SCOPE_NOTE } from "../constants/permissions";
 
 import { useUpdateRoleMutation } from "../api/rolesApi";
 
@@ -84,6 +85,12 @@ export function EditRoleForm({
             <Typography variant="subtitle1">
               Permissions
             </Typography>
+
+            {!role.isSystemRole && (
+              <Typography variant="body2" color="text.secondary">
+                {CUSTOM_ROLE_SCOPE_NOTE}
+              </Typography>
+            )}
 
             <PermissionChecklist value={selectedPermissions} onChange={setSelectedPermissions} />
           </Stack>

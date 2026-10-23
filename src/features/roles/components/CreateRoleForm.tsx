@@ -9,6 +9,7 @@ import {
 } from "@mui/material";
 
 import { PermissionChecklist } from "./PermissionChecklist";
+import { CUSTOM_ROLE_SCOPE_NOTE } from "../constants/permissions";
 
 import type { Permission, RoleName } from "../types/role";
 import { useCreateRoleMutation } from "../../roles/api/rolesApi";
@@ -56,6 +57,9 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
       <Stack spacing={1}>
         <Typography variant="subtitle1">
           Permissions
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {CUSTOM_ROLE_SCOPE_NOTE}
         </Typography>
         <PermissionChecklist value={permissions} onChange={setPermissions} />
       </Stack>
