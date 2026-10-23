@@ -68,6 +68,8 @@ export async function getAuthorizedExpenseRecords(
 
 interface NamedExpenseFields {
   employeeId: string;
+  organizationId?: string;
+  expenseDate?: string;
   status?: string;
   teamId?: string;
   departmentId?: string;
@@ -83,7 +85,7 @@ interface NamedExpenseFields {
  */
 export async function withEmployeeNames<T extends NamedExpenseFields>(
   expenses: T[],
-): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; reviewStartedByName?: string; teamName?: string; departmentName?: string; approverMayReimburse?: boolean }>> {
+): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; reviewStartedByName?: string; teamName?: string; departmentName?: string; approverMayReimburse?: boolean; closedBudgetName?: string }>> {
   if (expenses.length === 0) return [];
 
   // The only administrator's approved expenses may be reimbursed by the
@@ -94,6 +96,22 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
   for (const ownerId of new Set(expenses.filter(awaitingPayment).map((expense) => expense.employeeId))) {
     if (await isOnlyAdministrator(ownerId)) onlyAdministratorIds.add(ownerId);
   }
+
+  // Reimbursements still count against a closed budget covering the expense
+  // date when no active budget covers it (§28.7).
+  const budgets = expenses.some(awaitingPayment)
+    ? await listRecords<{ organizationId: string; name: string; status: string; startDate: string; endDate: string }>("budgets")
+    : [];
+  const closedBudgetNameOf = (expense: T) => {
+    if (!awaitingPayment(expense) || !expense.expenseDate) return undefined;
+    const date = expense.expenseDate.slice(0, 10);
+    const covering = budgets.filter(
+      (budget) => budget.organizationId === expense.organizationId && budget.startDate <= date && date <= budget.endDate,
+    );
+    return covering.some((budget) => budget.status === "active")
+      ? undefined
+      : covering.find((budget) => budget.status === "closed")?.name;
+  };
 
   const [teams, departments] = await Promise.all([
     listRecords<{ id: string; name: string }>("teams"),
@@ -138,6 +156,7 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
       ...(cancelledByName ? { cancelledByName } : {}),
       ...(reviewStartedByName ? { reviewStartedByName } : {}),
       ...(awaitingPayment(expense) && onlyAdministratorIds.has(expense.employeeId) ? { approverMayReimburse: true } : {}),
+      ...(closedBudgetNameOf(expense) ? { closedBudgetName: closedBudgetNameOf(expense) } : {}),
       ...(expense.reimbursement && processedByName
         ? { reimbursement: { ...expense.reimbursement, processedByName } }
         : {}),

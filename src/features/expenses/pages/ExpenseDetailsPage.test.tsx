@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { auditEventsFor, givenExpense, givenPolicy, readExpense } from "../../../test/fixtures";
+import { auditEventsFor, givenBudget, givenExpense, givenPolicy, readExpense } from "../../../test/fixtures";
 import { renderPage, setupPageTests } from "../../../test/renderPage";
 import { ExpenseDetailsPage } from "./ExpenseDetailsPage";
 
@@ -117,6 +117,18 @@ describe("ExpenseDetailsPage reimbursement actions", () => {
     expect(await screen.findByRole("heading", { name: "Board dinner" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Start Reimbursement" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cancel Expense" })).not.toBeInTheDocument();
+  });
+
+  it("warns that a reimbursement still counts against a closed budget", async () => {
+    await givenBudget({ status: "closed", startDate: "2026-01-01", endDate: "2026-12-31" });
+    const expense = await givenExpense({ status: "approved", approvedBy: "user-2", title: "Hotel Mumbai 2 nights" });
+    const { user } = await renderAs(expense.id, "finance");
+
+    await user.click(await screen.findByRole("button", { name: "Start Reimbursement" }));
+
+    expect(await screen.findByRole("dialog", { name: "Start Reimbursement" })).toHaveTextContent(
+      'The budget "Test budget" is closed; this reimbursement still counts against it.',
+    );
   });
 
   it("lets Finance reimburse the only administrator's expense it approved", async () => {

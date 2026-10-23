@@ -198,6 +198,11 @@ export function BudgetDetailsPage() {
       {budget.status === "draft" && isAdmin && (
         <Alert severity="info">This budget is a draft. Allocate it, then activate it to start tracking spend.</Alert>
       )}
+      {budget.status === "closed" && (
+        <Alert severity="info">
+          This budget is closed. No new expenses can be created in its period, but expenses already submitted are still reviewed, and their reimbursements count against this budget.
+        </Alert>
+      )}
 
       {budget.viewScope === "ORGANIZATION" && (
         <Card>

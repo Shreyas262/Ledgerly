@@ -223,7 +223,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleStartReimbursement = async () => {
-    if (!(await confirm({ title: "Start Reimbursement", message: `Start reimbursing "${expense.title}"?`, confirmLabel: "Start" }))) return;
+    if (!(await confirm({ title: "Start Reimbursement", message: `Start reimbursing "${expense.title}"?${closedBudgetNotice}`, confirmLabel: "Start" }))) return;
     try {
       await startReimbursement(expense.id).unwrap();
     } catch {
@@ -232,7 +232,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleReimburseExpense = async () => {
-    if (!(await confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatMoney(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark Reimbursed" }))) return;
+    if (!(await confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatMoney(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.${closedBudgetNotice}`, confirmLabel: "Mark Reimbursed" }))) return;
     try {
       await reimburseExpense(expense.id).unwrap();
     } catch {
@@ -267,6 +267,11 @@ export function ExpenseDetailsPage({
 
   // A receipt or supporting document is required before submission.
   const needsReceipt = canSubmit && (expense.documentIds?.length ?? 0) === 0;
+
+  // Reimbursements still count against a closed budget (§28.7).
+  const closedBudgetNotice = expense.closedBudgetName
+    ? ` The budget "${expense.closedBudgetName}" is closed; this reimbursement still counts against it.`
+    : "";
 
   // Nobody reviews their own expense.
   const canReviewThis = !isOwner;

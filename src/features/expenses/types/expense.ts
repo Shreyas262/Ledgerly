@@ -121,6 +121,12 @@ export interface Expense extends ResourceTimestamps {
    * it, because it belongs to the only administrator. Resolved by the API.
    */
   approverMayReimburse?: boolean;
+  /**
+   * For an expense awaiting reimbursement whose date only a closed budget
+   * covers: that budget's name, as the reimbursement still counts against it.
+   * Resolved by the API.
+   */
+  closedBudgetName?: string;
   rejectionReason?: string;
   reimbursement?: ReimbursementInfo;
   cancelledAt?: ISODateString;

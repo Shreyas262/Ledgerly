@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Expense } from "../../features/expenses/types/expense";
 import { apiFetch, demoAccounts, setupApiServer, signIn } from "../../test/apiServer";
-import { auditEventsFor, givenExpense, givenSecondAdmin, readExpense, type DemoRole } from "../../test/fixtures";
+import { auditEventsFor, givenBudget, givenExpense, givenSecondAdmin, readExpense, type DemoRole } from "../../test/fixtures";
 
 setupApiServer();
 
@@ -275,6 +275,22 @@ describe("reimbursement", () => {
     expect((await post(`/api/expenses/${expense.id}/start-reimbursement`, finance)).status).toBe(200);
     expect((await post(`/api/expenses/${expense.id}/reimburse`, finance)).status).toBe(200);
     expect(await readExpense(expense.id)).toMatchObject({ status: "reimbursed" });
+  });
+
+  it("names a closed budget the reimbursement still counts against, and completes it", async () => {
+    await givenBudget({ status: "closed", startDate: "2026-01-01", endDate: "2026-09-30" });
+    await givenBudget({ startDate: "2026-10-01", endDate: "2026-12-31" });
+    const inClosedPeriod = await givenExpense({ owner: "employee", status: "approved", approvedBy: "user-2", expenseDate: "2026-09-20" });
+    const inActivePeriod = await givenExpense({ owner: "employee", status: "approved", approvedBy: "user-2", expenseDate: "2026-10-05" });
+    const finance = await signInAs("finance");
+
+    const queue = (await (await apiFetch("/api/reimbursements", {}, finance)).json()) as Expense[];
+    expect(queue.find((item) => item.id === inClosedPeriod.id)).toMatchObject({ closedBudgetName: "Test budget" });
+    expect(queue.find((item) => item.id === inActivePeriod.id)?.closedBudgetName).toBeUndefined();
+
+    // Winding down a closed period stays possible.
+    expect((await post(`/api/expenses/${inClosedPeriod.id}/start-reimbursement`, finance)).status).toBe(200);
+    expect((await post(`/api/expenses/${inClosedPeriod.id}/reimburse`, finance)).status).toBe(200);
   });
 
   it("refuses managers", async () => {
