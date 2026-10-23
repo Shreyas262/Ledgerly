@@ -50,6 +50,20 @@ function sumWhere(expenses: Expense[], predicate: (expense: Expense) => boolean)
   return expenses.reduce((total, expense) => (predicate(expense) ? total + expense.amount : total), 0);
 }
 
+/**
+ * Reimbursed spend already counted against an allocation (§28.8): a team's,
+ * or a department's when no team is given, optionally for one expense type.
+ * An allocation cannot be lowered below it.
+ */
+export async function getAllocationSpend(
+  budget: OrganizationBudget,
+  scope: { departmentId: string; teamId?: string; expenseType?: ExpenseType },
+): Promise<number> {
+  return sumWhere(await reimbursedExpensesInPeriod(budget), (expense) =>
+    (scope.teamId ? expense.teamId === scope.teamId : expense.departmentId === scope.departmentId) &&
+    (!scope.expenseType || expense.type === scope.expenseType));
+}
+
 /** Which slice of a budget a principal may see. */
 export function resolveBudgetScope(principal: AuthenticatedPrincipal): BudgetViewScope | null {
   switch (principal.role) {

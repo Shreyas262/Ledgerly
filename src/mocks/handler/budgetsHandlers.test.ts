@@ -90,6 +90,51 @@ describe("allocation integrity", () => {
     );
   });
 
+  it("does not lower an allocation below what has already been reimbursed against it", async () => {
+    const { budget, departmentAllocations, teamAllocations } = await givenBudget({
+      amount: 100_000,
+      departments: { "dept-engineering": 50_000 },
+      teams: { "team-engineering": 40_000 },
+      expenseTypes: [{ teamId: "team-engineering", expenseType: "MEALS", amount: 1_000 }],
+    });
+    await givenExpense({ status: "reimbursed", type: "TRAVEL", amount: 30_419, expenseDate: "2026-10-01" });
+    await givenExpense({ status: "reimbursed", type: "MEALS", amount: 800, expenseDate: "2026-10-02" });
+    // Not reimbursed yet, so not counted.
+    await givenExpense({ status: "approved", type: "TRAVEL", amount: 9_000, expenseDate: "2026-10-03" });
+
+    const department = await send("POST", `/api/budgets/${budget.id}/departments`, admin, { departmentId: "dept-engineering", amount: 31_000 });
+    expect(department.status).toBe(422);
+    const team = await send("POST", `/api/budgets/${budget.id}/teams`, admin, {
+      departmentAllocationId: departmentAllocations[0].id,
+      teamId: "team-engineering",
+      amount: 10_000,
+    });
+    expect(team.status).toBe(422);
+    expect(await team.json()).toMatchObject({
+      code: "BUDGET_EXCEEDED",
+      message: "The team allocation cannot be lower than the ₹31,219 already reimbursed against it.",
+    });
+    await expectBudgetExceeded(
+      await send("POST", `/api/budgets/${budget.id}/expense-types`, admin, {
+        teamAllocationId: teamAllocations[0].id,
+        expenseType: "MEALS",
+        amount: 500,
+      }),
+    );
+
+    // Amounts that still cover the spend are accepted.
+    expect((await send("POST", `/api/budgets/${budget.id}/teams`, admin, {
+      departmentAllocationId: departmentAllocations[0].id,
+      teamId: "team-engineering",
+      amount: 31_219,
+    })).status).toBe(200);
+    expect((await send("POST", `/api/budgets/${budget.id}/expense-types`, admin, {
+      teamAllocationId: teamAllocations[0].id,
+      expenseType: "MEALS",
+      amount: 800,
+    })).status).toBe(200);
+  });
+
   it("audits allocation changes with previous and new amounts", async () => {
     const { budget, departmentAllocations } = await givenBudget({ departments: { "dept-engineering": 50_000 }, teams: {} });
 

@@ -20,6 +20,7 @@ import {
   buildBudgetView,
   getExpenseCreationEligibility,
   findOverlappingActiveBudget,
+  getAllocationSpend,
   getPeriodChangeDenial,
   isBudgetVisibleTo,
   loadBudgetHierarchy,
@@ -380,6 +381,11 @@ export const budgetsHandlers = [
       }
     }
 
+    const departmentSpend = await getAllocationSpend(budget, { departmentId: body.departmentId });
+    if (departmentSpend > body.amount) {
+      return budgetExceeded(`The department allocation cannot be lower than the ${formatCurrency(departmentSpend)} already reimbursed against it.`);
+    }
+
     const now = new Date().toISOString();
     const allocation: DepartmentBudgetAllocation = {
       id: existing?.id ?? crypto.randomUUID(),
@@ -448,6 +454,11 @@ export const budgetsHandlers = [
       }
     }
 
+    const teamSpend = await getAllocationSpend(budget, { departmentId: team.departmentId, teamId: team.id });
+    if (teamSpend > body.amount) {
+      return budgetExceeded(`The team allocation cannot be lower than the ${formatCurrency(teamSpend)} already reimbursed against it.`);
+    }
+
     const now = new Date().toISOString();
     const allocation: TeamBudgetAllocation = {
       id: existing?.id ?? crypto.randomUUID(),
@@ -500,6 +511,15 @@ export const budgetsHandlers = [
       .reduce((sum, item) => sum + item.amount, 0);
     if (allocatedElsewhere + body.amount > teamAllocation.amount) {
       return budgetExceeded(`Expense-type budgets cannot exceed the team allocation. ${formatCurrency(teamAllocation.amount - allocatedElsewhere)} is still available.`);
+    }
+
+    const typeSpend = await getAllocationSpend(budget, {
+      departmentId: teamAllocation.departmentId,
+      teamId: teamAllocation.teamId,
+      expenseType: body.expenseType,
+    });
+    if (typeSpend > body.amount) {
+      return budgetExceeded(`The expense-type budget cannot be lower than the ${formatCurrency(typeSpend)} already reimbursed against it.`);
     }
 
     const now = new Date().toISOString();
