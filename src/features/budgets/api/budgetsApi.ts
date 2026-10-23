@@ -73,6 +73,11 @@ export const budgetsApi = baseApi.injectEndpoints({
         { type: "Budgets", id: "ACTIVE_PERIOD" },
       ],
     }),
+    /** Drafts only (§28.14). */
+    deleteBudget: builder.mutation<void, string>({
+      query: (id) => ({ url: `/budgets/${id}`, method: "DELETE" }),
+      invalidatesTags: [{ type: "Budgets", id: "LIST" }],
+    }),
     rolloverBudget: builder.mutation<OrganizationBudgetView, { id: string; name: string; startDate: string; endDate: string }>({
       query: ({ id, ...body }) => ({ url: `/budgets/${id}/rollover`, method: "POST", body }),
       invalidatesTags: [{ type: "Budgets", id: "LIST" }],
@@ -146,5 +151,6 @@ export const {
   useUpsertTeamAllocationMutation,
   useReopenBudgetMutation,
   useRolloverBudgetMutation,
+  useDeleteBudgetMutation,
   useGetActiveBudgetPeriodQuery,
 } = budgetsApi;

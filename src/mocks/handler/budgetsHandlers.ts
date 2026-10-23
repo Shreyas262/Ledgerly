@@ -350,6 +350,48 @@ export const budgetsHandlers = [
     return HttpResponse.json(await buildBudgetView(budget, authorization.principal), { status: 201 });
   }),
 
+  // §28.14: only a draft, which has never tracked spend, is deleted; a budget
+  // that has been active is closed instead. Its allocations go with it.
+  http.delete("/api/budgets/:id", async ({ params, request }) => {
+    const budget = await getRecord<OrganizationBudget>("budgets", String(params.id));
+    if (!budget) return apiError(404, "Budget not found.");
+    const authorization = await authorizeRequest(request, {
+      permission: "budgets.delete",
+      scope: "ORGANIZATION",
+      resource: { organizationId: budget.organizationId },
+    });
+    if (authorization.allowed === false) return authorizationError(authorization);
+    if (budget.status !== "draft") {
+      return conflict("Only draft budgets can be deleted. Close a budget that has been active instead.", "BUDGET_NOT_DRAFT");
+    }
+
+    const { departmentAllocations, teamAllocations, expenseTypeBudgets } = await loadBudgetHierarchy();
+    const ofBudget = <T extends { id: string; organizationBudgetId: string }>(items: T[]) =>
+      items.filter((item) => item.organizationBudgetId === budget.id).map((item) => item.id);
+
+    await runAuditedTransaction(
+      ["budgets", "departmentBudgetAllocations", "teamBudgetAllocations", "expenseTypeBudgets"],
+      {
+        organizationId: budget.organizationId,
+        actorId: authorization.principal.userId,
+        action: "BUDGET_DELETED",
+        entityType: "BUDGET",
+        entityId: budget.id,
+        previousState: budget.status,
+        newState: "deleted",
+        description: `Deleted draft budget ${budget.name}.`,
+      },
+      (transaction) => {
+        transaction.objectStore("budgets").delete(budget.id);
+        for (const id of ofBudget(departmentAllocations)) transaction.objectStore("departmentBudgetAllocations").delete(id);
+        for (const id of ofBudget(teamAllocations)) transaction.objectStore("teamBudgetAllocations").delete(id);
+        for (const id of ofBudget(expenseTypeBudgets)) transaction.objectStore("expenseTypeBudgets").delete(id);
+      },
+    );
+
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // Admin: organization budget → department allocation.
   http.post("/api/budgets/:id/departments", async ({ params, request }) => {
     const budget = await getRecord<OrganizationBudget>("budgets", String(params.id));

@@ -422,3 +422,43 @@ describe("expense creation requires an active, allocated budget", () => {
     expect(await listRecords("expenses")).toHaveLength(1);
   });
 });
+
+// §28.14: only drafts are deleted; budgets that have been active are closed.
+describe("deleting a budget", () => {
+  it("deletes a draft with its allocations, audited", async () => {
+    const { budget, departmentAllocations, teamAllocations, expenseTypeBudgets } = await givenBudget({
+      status: "draft",
+      expenseTypes: [{ teamId: "team-engineering", expenseType: "MEALS", amount: 1_000 }],
+    });
+
+    const response = await apiFetch(`/api/budgets/${budget.id}`, { method: "DELETE" }, await signInAs("admin"));
+
+    expect(response.status).toBe(204);
+    expect(await getRecord("budgets", budget.id)).toBeUndefined();
+    expect(await getRecord("departmentBudgetAllocations", departmentAllocations[0].id)).toBeUndefined();
+    expect(await getRecord("teamBudgetAllocations", teamAllocations[0].id)).toBeUndefined();
+    expect(await getRecord("expenseTypeBudgets", expenseTypeBudgets[0].id)).toBeUndefined();
+    expect(await auditEventsFor(budget.id)).toEqual([expect.objectContaining({ action: "BUDGET_DELETED" })]);
+  });
+
+  it("refuses active and closed budgets", async () => {
+    const admin = await signInAs("admin");
+    const { budget: active } = await givenBudget();
+    const { budget: closed } = await givenBudget({ status: "closed", startDate: "2025-01-01", endDate: "2025-12-31" });
+
+    for (const budget of [active, closed]) {
+      const response = await apiFetch(`/api/budgets/${budget.id}`, { method: "DELETE" }, admin);
+      expect(response.status).toBe(409);
+      expect(await getRecord("budgets", budget.id)).toBeDefined();
+    }
+  });
+
+  it("is refused to Finance", async () => {
+    const { budget } = await givenBudget({ status: "draft" });
+
+    const response = await apiFetch(`/api/budgets/${budget.id}`, { method: "DELETE" }, await signInAs("finance"));
+
+    expect(response.status).toBe(403);
+    expect(await getRecord("budgets", budget.id)).toBeDefined();
+  });
+});

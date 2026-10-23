@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { Policy } from "../../features/policies/types/policy";
-import { listRecords } from "../services/mockDataService";
+import { listRecords, saveRecord } from "../services/mockDataService";
 import { apiFetch, demoAccounts, setupApiServer, signIn } from "../../test/apiServer";
 import { givenPolicy } from "../../test/fixtures";
 
@@ -113,5 +113,44 @@ describe("inherited rules", () => {
         inheritedRules: { maximumAmount: { policyName: "Standard" } },
       },
     });
+  });
+});
+
+// §21.9: only drafts that never checked an expense are deleted.
+describe("deleting a policy", () => {
+  const remove = (id: string, cookie: string) => apiFetch(`/api/policies/${id}`, { method: "DELETE" }, cookie);
+
+  it("deletes a draft", async () => {
+    const draft = await givenPolicy({ status: "draft" });
+    const admin = await signIn(demoAccounts.admin.email, demoAccounts.admin.password);
+
+    expect((await remove(draft.id, admin)).status).toBe(204);
+    expect((await listRecords<Policy>("policies")).some((policy) => policy.id === draft.id)).toBe(false);
+  });
+
+  it("keeps active and inactive policies, and drafts that already checked expenses", async () => {
+    const active = await givenPolicy();
+    const inactive = await givenPolicy({ status: "inactive", expenseType: "TRAVEL" });
+    const used = await givenPolicy({ status: "draft", expenseType: "MEALS" });
+    await saveRecord("policyEvaluations", {
+      id: "evaluation-1",
+      expenseId: "expense-1",
+      organizationId: "org-1",
+      policyId: used.id,
+      result: "COMPLIANT",
+      evaluatedAt: "2026-10-01T10:00:00.000Z",
+      details: {},
+    });
+    const admin = await signIn(demoAccounts.admin.email, demoAccounts.admin.password);
+
+    for (const policy of [active, inactive, used]) expect((await remove(policy.id, admin)).status).toBe(409);
+    expect(await listRecords<Policy>("policies")).toHaveLength(3);
+  });
+
+  it("is refused to employees", async () => {
+    const draft = await givenPolicy({ status: "draft" });
+    const employee = await signIn(demoAccounts.employee.email, demoAccounts.employee.password);
+
+    expect((await remove(draft.id, employee)).status).toBe(403);
   });
 });

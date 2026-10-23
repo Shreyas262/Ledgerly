@@ -26,6 +26,7 @@ import type {
 import {
   getRecord,
   listRecords,
+  listRecordsByIndex,
 } from "../services/mockDataService";
 
 type MockPolicy = ExpensePolicy & { [key: string]: unknown };
@@ -436,4 +437,36 @@ export const policiesHandlers = [
       return HttpResponse.json(updatedPolicy);
     },
   ),
+
+  // §21.9: only a draft that has never checked an expense is deleted; other
+  // policies are deactivated, keeping their record.
+  http.delete("/api/policies/:id", async ({ params, request }) => {
+    const policy = await getRecord<MockPolicy>("policies", String(params.id));
+    if (!policy) return apiError(404, "Policy not found.");
+    const authorization = await authorizeRequest(request, {
+      permission: "policies.delete",
+      scope: "ORGANIZATION",
+      resource: { organizationId: policy.organizationId },
+    });
+    if (!authorization.allowed) return authorizationError(authorization);
+    if (policy.status !== "draft") {
+      return apiError(409, "Only draft policies can be deleted. Deactivate a policy that has been active instead.", "POLICY_NOT_DRAFT");
+    }
+    if ((await listRecordsByIndex("policyEvaluations", "policyId", policy.id)).length > 0) {
+      return apiError(409, "This policy has already checked expenses, so it is kept. Deactivate it instead.", "POLICY_IN_USE");
+    }
+
+    await runAuditedTransaction(["policies"], {
+      organizationId: policy.organizationId,
+      actorId: authorization.principal.userId,
+      action: "POLICY_DELETED",
+      entityType: "POLICY",
+      entityId: policy.id,
+      previousState: policy.status,
+      newState: "deleted",
+      description: `Deleted draft policy ${policy.name}.`,
+    }, (transaction) => transaction.objectStore("policies").delete(policy.id));
+
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];

@@ -19,6 +19,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import {
   useActivateBudgetMutation,
+  useDeleteBudgetMutation,
   useCloseBudgetMutation,
   useGetBudgetByIdQuery,
   useReopenBudgetMutation,
@@ -29,6 +30,7 @@ import {
 } from "../api/budgetsApi";
 import { useGetDepartmentsQuery } from "../../organizations/api/organizationApi";
 import { useAuth } from "../../auth/context/AuthContext";
+import { usePermissions } from "../../auth/hooks/usePermissions";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { BackLink } from "../../../components/navigation/BackLink";
@@ -77,6 +79,8 @@ export function BudgetDetailsPage() {
   const [closeBudget, { isLoading: closing }] = useCloseBudgetMutation();
   const [reopenBudget, { isLoading: reopening }] = useReopenBudgetMutation();
   const [rolloverBudget, { isLoading: rollingOver }] = useRolloverBudgetMutation();
+  const [deleteBudget, { isLoading: deleting }] = useDeleteBudgetMutation();
+  const { can } = usePermissions();
   const confirm = useConfirm();
   const [rollover, setRollover] = useState<{ name: string; startDate: string; endDate: string } | null>(null);
   const [saveDepartment, { isLoading: savingDepartment }] = useUpsertDepartmentAllocationMutation();
@@ -158,6 +162,23 @@ export function BudgetDetailsPage() {
                 )}
                 <Button onClick={() => navigate(`/budgets/${budget.id}/edit`)}>Edit</Button>
                 <Button onClick={openRollover}>Start Next Period</Button>
+                {budget.status === "draft" && can("budgets.delete") && (
+                  <Button
+                    color="error"
+                    disabled={deleting}
+                    onClick={async () => {
+                      const deleted = await run(() => deleteBudget(budget.id).unwrap(), "Budget deleted.", "Unable to delete the budget.", {
+                        title: "Delete Budget",
+                        message: `Delete the draft "${budget.name}" and its allocations? This cannot be undone.`,
+                        confirmLabel: "Delete",
+                        destructive: true,
+                      });
+                      if (deleted) navigate("/budgets");
+                    }}
+                  >
+                    Delete
+                  </Button>
+                )}
               </Stack>
             )}
             {budget.status === "closed" && (
