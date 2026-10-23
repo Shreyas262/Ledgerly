@@ -78,7 +78,7 @@ export function ExpensePolicyPreview({ type, amount, expenseDate, description, e
     <Alert severity={severity} variant="outlined">
       <AlertTitle>Policy: {data.policy.name}</AlertTitle>
       <Stack spacing={1.5}>
-        <PolicyRuleList rules={rules} dense />
+        <PolicyRuleList rules={rules} inheritedRules={data.policy.inheritedRules} dense />
         {monthlyLimit !== undefined && (
           <Stack spacing={0.5}>
             <Typography variant="body2">

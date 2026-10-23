@@ -12,6 +12,7 @@ import { runAuditedTransaction } from "../services/auditService";
 import {
   evaluatePolicyRules,
   getMonthlySpend,
+  monthlyLimitExpenseType,
   selectApplicablePolicy,
 } from "../services/policyService";
 import { todayDate } from "../services/budgetService";
@@ -208,10 +209,10 @@ export const policiesHandlers = [
     const policy = await selectApplicablePolicy(principal.organizationId, type as ExpenseType, principal.departmentId);
     return HttpResponse.json({
       policy: policy
-        ? { id: policy.id, name: policy.name, description: policy.description, expenseType: policy.expenseType, departmentIds: policy.departmentIds, rules: policy.rules }
+        ? { id: policy.id, name: policy.name, description: policy.description, expenseType: policy.expenseType, departmentIds: policy.departmentIds, rules: policy.rules, inheritedRules: policy.inheritedRules }
         : null,
       monthlyUsage: policy?.rules.monthlyLimit
-        ? await getMonthlySpend(principal.userId, month, policy.expenseType, excludeExpenseId)
+        ? await getMonthlySpend(principal.userId, month, monthlyLimitExpenseType(policy), excludeExpenseId)
         : 0,
       month,
     });

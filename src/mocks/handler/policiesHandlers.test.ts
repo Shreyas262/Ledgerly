@@ -83,3 +83,35 @@ describe("policy conflicts", () => {
     expect((await createPolicy(employee)).status).toBe(403);
   });
 });
+
+// §21.3: rules a specific policy does not set come from less specific ones.
+describe("inherited rules", () => {
+  it("applies them in the simulator and shows them in the applicable policy", async () => {
+    await givenPolicy({ name: "Standard", rules: { maximumAmount: { amount: 50_000, enforcement: "BLOCK" } } });
+    await givenPolicy({ name: "Meals policy", expenseType: "MEALS", rules: { approvalThreshold: 2_000 } });
+    const admin = await signIn(demoAccounts.admin.email, demoAccounts.admin.password);
+
+    const preview = await apiFetch(
+      "/api/policies/preview",
+      {
+        method: "POST",
+        body: JSON.stringify({ expenseType: "MEALS", amount: 460_000, expenseDate: "2026-10-10", departmentId: "dept-engineering" }),
+      },
+      admin,
+    );
+    expect(preview.status).toBe(200);
+    expect(await preview.json()).toMatchObject({
+      evaluation: { policyName: "Meals policy", result: "VIOLATES_POLICY", details: { inheritedRules: { maximumAmount: "Standard" } } },
+    });
+
+    const employee = await signIn(demoAccounts.employee.email, demoAccounts.employee.password);
+    const applicable = await apiFetch("/api/policies/applicable?type=MEALS", {}, employee);
+    expect(await applicable.json()).toMatchObject({
+      policy: {
+        name: "Meals policy",
+        rules: { approvalThreshold: 2_000, maximumAmount: { amount: 50_000, enforcement: "BLOCK" } },
+        inheritedRules: { maximumAmount: { policyName: "Standard" } },
+      },
+    });
+  });
+});

@@ -1,10 +1,13 @@
 import type {
   ExpensePolicy,
+  InheritedPolicyRules,
   PolicyEvaluation,
   PolicyEvaluationResult,
   PolicyEvaluationSnapshot,
   PolicyFinding,
   PolicyFindingRule,
+  PolicyRuleKey,
+  PolicyRules,
   RuleEnforcement,
 } from "../../features/policies/types/policy";
 import type { ExpenseType } from "../../features/expenses/types/expense";
@@ -53,9 +56,12 @@ const appliesToDepartment = (policy: ExpensePolicy, departmentId: string | undef
   !policy.departmentIds?.length || (departmentId !== undefined && policy.departmentIds.includes(departmentId));
 
 /**
- * §21.3: the most specific active policy wins — a type-specific policy over
- * an all-types one, then a department-specific policy over an
- * organization-wide one; the most recently updated breaks ties.
+ * §21.3: the most specific active policy applies — a type-specific policy
+ * over an all-types one, then a department-specific policy over an
+ * organization-wide one; the most recently updated breaks ties. Each rule it
+ * does not set is inherited from the next most specific policy that sets it,
+ * so an organization-wide limit still applies under a type policy. Inherited
+ * rules name their policy in `inheritedRules`.
  */
 export async function selectApplicablePolicy(
   organizationId: string,
@@ -66,7 +72,7 @@ export async function selectApplicablePolicy(
   const specificity = (policy: ExpensePolicy) =>
     (policy.expenseType ? 2 : 0) + (policy.departmentIds?.length ? 1 : 0);
 
-  return policies
+  const [primary, ...fallbacks] = policies
     .filter(
       (policy) =>
         policy.organizationId === organizationId &&
@@ -78,7 +84,26 @@ export async function selectApplicablePolicy(
       specificity(right) - specificity(left) ||
       new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime() ||
       String(left.id).localeCompare(String(right.id)),
-    )[0];
+    );
+  if (!primary) return undefined;
+
+  const rules: PolicyRules = { ...primary.rules };
+  const inheritedRules: InheritedPolicyRules = {};
+  for (const fallback of fallbacks) {
+    for (const key of Object.keys(fallback.rules) as PolicyRuleKey[]) {
+      if (rules[key] !== undefined || fallback.rules[key] === undefined) continue;
+      Object.assign(rules, { [key]: fallback.rules[key] });
+      inheritedRules[key] = { policyId: fallback.id, policyName: fallback.name, expenseType: fallback.expenseType };
+    }
+  }
+
+  return Object.keys(inheritedRules).length ? { ...primary, rules, inheritedRules } : primary;
+}
+
+/** The expense type whose spend counts towards the policy's monthly limit; absent for all types. */
+export function monthlyLimitExpenseType(policy: ExpensePolicy): ExpenseType | undefined {
+  const inherited = policy.inheritedRules?.monthlyLimit;
+  return inherited ? inherited.expenseType : policy.expenseType;
 }
 
 /** An employee's counted spend in a calendar month (YYYY-MM), optionally for one expense type. */
@@ -214,6 +239,11 @@ export function evaluatePolicyRules(
       applicableLimit: rules.maximumAmount?.amount,
       approvalThreshold: rules.approvalThreshold,
       escalated: escalated || undefined,
+      inheritedRules: policy?.inheritedRules
+        ? Object.fromEntries(
+            Object.entries(policy.inheritedRules).map(([key, source]) => [key, source.policyName]),
+          )
+        : undefined,
     },
   };
 }
@@ -236,7 +266,7 @@ export async function evaluateExpensePolicy(
     },
     {
       monthlySpent: rules.monthlyLimit && expense.employeeId
-        ? await getMonthlySpend(expense.employeeId, expenseDate.slice(0, 7), policy?.expenseType, expense.id)
+        ? await getMonthlySpend(expense.employeeId, expenseDate.slice(0, 7), policy && monthlyLimitExpenseType(policy), expense.id)
         : 0,
       hasDuplicate: rules.duplicateCheck ? await hasDuplicate(expense) : false,
       today: todayDate(),

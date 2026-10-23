@@ -1,14 +1,16 @@
 import { Chip, Stack, Typography } from "@mui/material";
-import type { PolicyRules } from "../types/policy";
+import type { InheritedPolicyRules, PolicyRules } from "../types/policy";
 import { describeRules, ENFORCEMENT_LABELS } from "../utils/policyText";
 
 interface PolicyRuleListProps {
   rules: PolicyRules;
+  /** Rules inherited from less specific policies, named after their policy. */
+  inheritedRules?: InheritedPolicyRules;
   dense?: boolean;
 }
 
 /** The policy's rules in plain language, each tagged Blocks, Warns or Routes up. */
-export function PolicyRuleList({ rules, dense }: PolicyRuleListProps) {
+export function PolicyRuleList({ rules, inheritedRules, dense }: PolicyRuleListProps) {
   const summary = describeRules(rules);
   if (!summary.length) {
     return <Typography variant="body2" color="text.secondary">No rules configured.</Typography>;
@@ -24,7 +26,10 @@ export function PolicyRuleList({ rules, dense }: PolicyRuleListProps) {
             variant="outlined"
             sx={{ minWidth: 84 }}
           />
-          <Typography variant="body2">{rule.text}</Typography>
+          <Typography variant="body2">
+            {rule.text}
+            {inheritedRules?.[rule.key] && ` (from ${inheritedRules[rule.key]!.policyName})`}
+          </Typography>
         </Stack>
       ))}
     </Stack>
