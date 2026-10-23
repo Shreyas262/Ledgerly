@@ -34,6 +34,12 @@ interface CreateRoleBody {
   isSystemRole?: boolean;
 }
 
+/** A role grants at least one permission. */
+function noPermissionsSelected() {
+  const message = "Select at least one permission.";
+  return apiError(422, message, "VALIDATION_ERROR", { fieldErrors: { permissions: message } });
+}
+
 export const roleHandlers = [
   http.get(`${API_BASE_URL}/roles`, async ({ request }) => {
     const result = await authorizeCollection(
@@ -75,6 +81,7 @@ export const roleHandlers = [
     if (!body.name.trim() || body.permissions.some((permission) => !allPermissions.includes(permission as (typeof allPermissions)[number]))) {
       return apiError(400, "The role name or one of the selected permissions is not valid.");
     }
+    if (body.permissions.length === 0) return noPermissionsSelected();
 
     const existingRoles = await listRecords<MockRole>("roles");
     if (existingRoles.some((role) => role.organizationId === authorization.principal.organizationId && role.name.toLowerCase() === body.name.trim().toLowerCase())) {
@@ -142,6 +149,7 @@ export const roleHandlers = [
       if (!name || permissions.some((permission) => !allPermissions.includes(permission as (typeof allPermissions)[number]))) {
         return apiError(400, "The role name or one of the selected permissions is not valid.");
       }
+      if (permissions.length === 0) return noPermissionsSelected();
 
       const roles = await listRecords<MockRole>("roles");
       if (roles.some((role) => role.id !== existingRole.id && role.organizationId === existingRole.organizationId && role.name.toLowerCase() === name.toLowerCase())) {

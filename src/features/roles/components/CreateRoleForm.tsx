@@ -2,6 +2,7 @@ import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState, type SyntheticEvent } from "react";
 import {
+  Alert,
   Button,
   Stack,
   TextField,
@@ -19,12 +20,18 @@ interface CreateRoleFormProps { onSuccess?: () => void; }
 export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
   const [name, setName] = useState<RoleName>("employee");
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [permissionsError, setPermissionsError] = useState("");
 
   const [createRole, { isLoading, isError, error }] = useCreateRoleMutation();
   const confirm = useConfirm();
 
   async function handleSubmit(event: SyntheticEvent) {
     event.preventDefault();
+    if (permissions.length === 0) {
+      setPermissionsError("Select at least one permission.");
+      return;
+    }
+    setPermissionsError("");
     if (!(await confirm({ title: "Create Role", message: `Create the role "${name}" with ${permissions.length} permission(s)?`, confirmLabel: "Create" }))) return;
 
     try {
@@ -62,6 +69,7 @@ export function CreateRoleForm({ onSuccess }: CreateRoleFormProps) {
           {CUSTOM_ROLE_SCOPE_NOTE}
         </Typography>
         <PermissionChecklist value={permissions} onChange={setPermissions} />
+        {permissionsError && <Alert severity="error">{permissionsError}</Alert>}
       </Stack>
 
       {isError && <ApiFeedback error={error} />}

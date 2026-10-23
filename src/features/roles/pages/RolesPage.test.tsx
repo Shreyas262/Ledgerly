@@ -28,6 +28,18 @@ describe("RolesPage create role", () => {
       expect(roles.find((role) => role.name === "auditor")?.permissions.sort()).toEqual(["audit.read", "expenses.read"]);
     });
   });
+  it("asks for at least one permission before creating a role", async () => {
+    const { user } = await renderPage(<RolesPage />, { path: "/roles", as: "admin" });
+
+    await user.click(await screen.findByRole("button", { name: "Create Role" }));
+    const dialog = await screen.findByRole("dialog", { name: "Create Role" });
+    await user.type(within(dialog).getByRole("textbox", { name: "Role name" }), "observer");
+    await user.click(within(dialog).getByRole("button", { name: "Create Role" }));
+
+    expect(await within(dialog).findByText("Select at least one permission.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create" })).not.toBeInTheDocument();
+  });
+
   it("says that a custom role sees its holders' own expenses only", async () => {
     const { user } = await renderPage(<RolesPage />, { path: "/roles", as: "admin" });
 

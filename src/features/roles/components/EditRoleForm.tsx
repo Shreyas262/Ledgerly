@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { SyntheticEvent } from "react";
 
 import {
+  Alert,
   Button,
   DialogActions,
   DialogContent,
@@ -39,6 +40,7 @@ export function EditRoleForm({
 
   const [selectedPermissions, setSelectedPermissions] =
     useState<Permission[]>(role.permissions);
+  const [permissionsError, setPermissionsError] = useState("");
 
   const [
     updateRole,
@@ -50,6 +52,11 @@ export function EditRoleForm({
     event: SyntheticEvent,
   ) {
     event.preventDefault();
+    if (selectedPermissions.length === 0) {
+      setPermissionsError("Select at least one permission.");
+      return;
+    }
+    setPermissionsError("");
     if (!(await confirm({ title: "Save Role", message: `Save changes to the role "${name}"? Users with this role get the updated permissions immediately.`, confirmLabel: "Save" }))) return;
 
     try {
@@ -93,6 +100,7 @@ export function EditRoleForm({
             )}
 
             <PermissionChecklist value={selectedPermissions} onChange={setSelectedPermissions} />
+            {permissionsError && <Alert severity="error">{permissionsError}</Alert>}
           </Stack>
 
           {isError && <ApiFeedback error={error} />}
