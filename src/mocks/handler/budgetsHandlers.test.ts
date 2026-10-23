@@ -197,6 +197,42 @@ describe("budget lifecycle", () => {
     expect(response.status).toBe(409);
   });
 
+  it("refuses a period change that would exclude expenses recorded against the budget", async () => {
+    const { budget } = await givenBudget({ startDate: "2026-01-01", endDate: "2026-12-31" });
+    await givenExpense({ status: "reimbursed", expenseDate: "2026-09-15" });
+    await givenExpense({ status: "approved", expenseDate: "2026-10-22" });
+    const edit = (startDate: string, endDate: string) =>
+      send("PUT", `/api/budgets/${budget.id}`, admin, { name: budget.name, amount: budget.amount, startDate, endDate });
+
+    const laterStart = await edit("2026-10-15", "2026-12-31");
+    expect(laterStart.status).toBe(422);
+    expect(await laterStart.json()).toMatchObject({
+      code: "BUDGET_PERIOD_IN_USE",
+      message: "The period must still cover the 2 expenses recorded against this budget, dated 15 Sep 2026 to 22 Oct 2026.",
+    });
+    expect((await edit("2026-01-01", "2026-10-10")).status).toBe(422);
+    expect(await getRecord<OrganizationBudget>("budgets", budget.id)).toMatchObject({ startDate: "2026-01-01", endDate: "2026-12-31" });
+
+    // A change that keeps every recorded expense is allowed.
+    expect((await edit("2026-09-01", "2026-11-30")).status).toBe(200);
+  });
+
+  it("ignores drafts, rejected and cancelled expenses when the period changes", async () => {
+    const { budget } = await givenBudget({ startDate: "2026-01-01", endDate: "2026-12-31" });
+    await givenExpense({ status: "draft", expenseDate: "2026-02-01" });
+    await givenExpense({ status: "rejected", expenseDate: "2026-02-01" });
+    await givenExpense({ status: "cancelled", expenseDate: "2026-02-01" });
+
+    const response = await send("PUT", `/api/budgets/${budget.id}`, admin, {
+      name: budget.name,
+      amount: budget.amount,
+      startDate: "2026-06-01",
+      endDate: "2026-12-31",
+    });
+
+    expect(response.status).toBe(200);
+  });
+
   it("closes and reopens a budget, unless reopening would overlap", async () => {
     const { budget } = await givenBudget({ startDate: "2026-01-01", endDate: "2026-12-31" });
 

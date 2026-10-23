@@ -20,6 +20,7 @@ import {
   buildBudgetView,
   getExpenseCreationEligibility,
   findOverlappingActiveBudget,
+  getPeriodChangeDenial,
   isBudgetVisibleTo,
   loadBudgetHierarchy,
 } from "../services/budgetService";
@@ -227,6 +228,11 @@ export const budgetsHandlers = [
       .reduce((sum, item) => sum + item.amount, 0);
     if (allocated > body.amount) {
       return budgetExceeded(`The organization budget cannot be lower than its department allocations (${formatCurrency(allocated)}).`);
+    }
+
+    const periodDenial = await getPeriodChangeDenial(existing, body.startDate!, body.endDate!);
+    if (periodDenial) {
+      return apiError(422, periodDenial, "BUDGET_PERIOD_IN_USE", { businessRule: periodDenial });
     }
 
     if (existing.status === "active") {

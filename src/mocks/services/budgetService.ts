@@ -12,7 +12,7 @@ import type {
 import { EXPENSE_TYPE_LABELS } from "../../features/expenses/types/expense";
 import { listRecords, listRecordsByIndex } from "./mockDataService";
 import { formatCurrency } from "../../utils/currency";
-import { toDateOnly } from "../../utils/format";
+import { formatDate, toDateOnly } from "../../utils/format";
 
 /**
  * Budget hierarchy (§28): organization budget → department allocations
@@ -249,6 +249,40 @@ export async function findOverlappingActiveBudget(
       budget.startDate <= endDate &&
       startDate <= budget.endDate,
   );
+}
+
+/** Expense states that count, or will count once reimbursed, against a budget. */
+const RECORDED_STATUSES = new Set<Expense["status"]>([
+  "submitted",
+  "under_review",
+  "approved",
+  "reimbursement_pending",
+  "reimbursed",
+]);
+
+/**
+ * §28.13: a budget that has been active keeps every expense recorded in its
+ * period. Returns the reason a new period would exclude some of them, or
+ * null when the period may change.
+ */
+export async function getPeriodChangeDenial(
+  budget: OrganizationBudget,
+  startDate: string,
+  endDate: string,
+): Promise<string | null> {
+  if (budget.status === "draft") return null;
+
+  const expenses = await listRecordsByIndex<Expense>("expenses", "organizationId", budget.organizationId);
+  const recordedDates = expenses
+    .filter((expense) => RECORDED_STATUSES.has(expense.status))
+    .map((expense) => expense.expenseDate.slice(0, 10))
+    .filter((date) => date >= budget.startDate && date <= budget.endDate);
+  const excluded = recordedDates.filter((date) => date < startDate || date > endDate);
+  if (excluded.length === 0) return null;
+
+  const earliest = recordedDates.reduce((first, date) => (date < first ? date : first));
+  const latest = recordedDates.reduce((last, date) => (date > last ? date : last));
+  return `The period must still cover the ${recordedDates.length} expense${recordedDates.length === 1 ? "" : "s"} recorded against this budget, dated ${formatDate(earliest)} to ${formatDate(latest)}.`;
 }
 
 
