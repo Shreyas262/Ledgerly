@@ -185,7 +185,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleApproveExpense = async () => {
-    if (!(await confirm({ title: "Approve Expense", message: `Approve "${expense.title}" for ${formatMoney(expense.amount)}? It moves to Finance for reimbursement.`, confirmLabel: "Approve" }))) return;
+    if (!(await confirm({ title: "Approve Expense", message: `Approve "${expense.title}" for ${formatMoney(expense.amount)}? It moves to Finance for reimbursement.${takeoverNotice ? ` ${takeoverNotice}` : ""}`, confirmLabel: "Approve" }))) return;
     try {
       await approveExpense(expense.id).unwrap();
     } catch {
@@ -271,6 +271,13 @@ export function ExpenseDetailsPage({
   // Nobody reviews their own expense.
   const canReviewThis = !isOwner;
 
+  // Whoever started the review completes it; an administrator may take it over.
+  const reviewStartedByOther = Boolean(expense.reviewStartedBy) && expense.reviewStartedBy !== user?.id;
+  const canCompleteReview = !reviewStartedByOther || user?.role === "admin";
+  const takeoverNotice = reviewStartedByOther
+    ? `${expense.reviewStartedByName ?? "Another reviewer"} started this review. Completing it overrides their review, which is recorded in the audit log.`
+    : "";
+
   const canStartReview =
     isReviewMode &&
     canReviewThis &&
@@ -280,12 +287,14 @@ export function ExpenseDetailsPage({
   const canApprove =
     isReviewMode &&
     canReviewThis &&
+    canCompleteReview &&
     expense.status === "under_review" &&
     can("expenses.approve");
 
   const canReject =
     isReviewMode &&
     canReviewThis &&
+    canCompleteReview &&
     expense.status === "under_review" &&
     can("expenses.reject");
 
@@ -410,6 +419,12 @@ export function ExpenseDetailsPage({
               <Typography variant="body2" color="text.secondary">
                 {EXPENSE_TYPE_LABELS[expense.type] ?? expense.type}
               </Typography>
+
+              {expense.status === "under_review" && expense.reviewStartedByName && (
+                <Typography variant="body2" color="text.secondary">
+                  In review by {expense.reviewStartedBy === user?.id ? "you" : expense.reviewStartedByName}
+                </Typography>
+              )}
             </Stack>
 
             <Chip label={EXPENSE_STATUS_LABELS[expense.status]} size="small" />
@@ -699,6 +714,8 @@ export function ExpenseDetailsPage({
             <Typography variant="body2" color="text.secondary">
               Please provide a reason for rejecting this expense.
             </Typography>
+
+            {takeoverNotice && <Alert severity="warning">{takeoverNotice}</Alert>}
 
             <TextField
               label="Rejection reason"

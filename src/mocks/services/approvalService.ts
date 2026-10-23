@@ -1,6 +1,6 @@
 import type { Expense } from "../../features/expenses/types/expense";
 import { transitionOrConflict, workflowForbidden, workflowReasonRequired } from "./workflowErrors";
-import { listRecords, listRecordsByIndex } from "./mockDataService";
+import { getRecord, listRecords, listRecordsByIndex } from "./mockDataService";
 import {
   authorizeExpenseManager,
   getReviewDenialReason,
@@ -75,6 +75,26 @@ export async function getApprovalQueue(
   });
 }
 
+/**
+ * An expense in review is approved or rejected by whoever started the review.
+ * An administrator may take the review over; the reviewer they replace is
+ * returned so the audit event can record it. Others are refused.
+ */
+async function resolveReviewTakeover(
+  principal: AuthenticatedPrincipal,
+  expense: Expense,
+): Promise<{ id: string; name: string } | undefined> {
+  const reviewerId = expense.reviewStartedBy;
+  if (expense.status !== "under_review" || !reviewerId || reviewerId === principal.userId) return undefined;
+
+  const reviewer = await getRecord<{ id: string; name: string }>("users", reviewerId);
+  const name = reviewer?.name ?? "Another reviewer";
+  if (principal.role !== "admin") {
+    throw workflowForbidden(`${name} started this review, so only they or an administrator can approve or reject it.`);
+  }
+  return { id: reviewerId, name };
+}
+
 export async function startExpenseReview(
   principal: AuthenticatedPrincipal,
   expense: Expense,
@@ -95,6 +115,8 @@ export async function startExpenseReview(
   const updatedExpense: Expense = {
     ...expense,
     status,
+    reviewStartedBy: principal.userId,
+    reviewStartedAt: now,
     updatedAt: now,
   };
 
@@ -131,6 +153,7 @@ export async function approveExpense(
     throw workflowForbidden(authorization.error.message);
   }
 
+  const takenOverFrom = await resolveReviewTakeover(principal, expense);
   const status = transitionOrConflict("APPROVE", expense.status);
   const now = new Date().toISOString();
 
@@ -153,7 +176,10 @@ export async function approveExpense(
       entityId: updatedExpense.id,
       previousState: expense.status,
       newState: updatedExpense.status,
-      description: `Approved expense ${updatedExpense.title}.`,
+      ...(takenOverFrom ? { metadata: { overriddenReviewerId: takenOverFrom.id } } : {}),
+      description: takenOverFrom
+        ? `Approved expense ${updatedExpense.title}, overriding the review started by ${takenOverFrom.name}.`
+        : `Approved expense ${updatedExpense.title}.`,
     },
     (transaction) => {
       transaction.objectStore("expenses").put(updatedExpense);
@@ -183,6 +209,7 @@ export async function rejectExpense(
     throw workflowReasonRequired("A rejection reason is required.");
   }
 
+  const takenOverFrom = await resolveReviewTakeover(principal, expense);
   const status = transitionOrConflict("REJECT", expense.status);
   const now = new Date().toISOString();
 
@@ -205,8 +232,13 @@ export async function rejectExpense(
       entityId: updatedExpense.id,
       previousState: expense.status,
       newState: updatedExpense.status,
-      metadata: { reason: normalizedReason },
-      description: `Rejected expense ${updatedExpense.title}.`,
+      metadata: {
+        reason: normalizedReason,
+        ...(takenOverFrom ? { overriddenReviewerId: takenOverFrom.id } : {}),
+      },
+      description: takenOverFrom
+        ? `Rejected expense ${updatedExpense.title}, overriding the review started by ${takenOverFrom.name}.`
+        : `Rejected expense ${updatedExpense.title}.`,
     },
     (transaction) => {
       transaction.objectStore("expenses").put(updatedExpense);

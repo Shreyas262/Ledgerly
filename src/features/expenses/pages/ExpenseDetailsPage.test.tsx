@@ -77,6 +77,33 @@ describe("ExpenseDetailsPage review", () => {
   });
 });
 
+describe("ExpenseDetailsPage review ownership", () => {
+  function renderReview(id: string, as: "manager" | "admin") {
+    return renderPage(<ExpenseDetailsPage mode="review" />, { path: "/approvals/:id", route: `/approvals/${id}`, as });
+  }
+
+  it("shows who is reviewing and offers others no approval", async () => {
+    const expense = await givenExpense({ status: "under_review", reviewStartedBy: "user-3", title: "Hotel in Pune" });
+
+    await renderReview(expense.id, "manager");
+
+    expect(await screen.findByText("In review by Mike Finance")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
+  });
+
+  it("warns an administrator that approving overrides the review in progress", async () => {
+    const expense = await givenExpense({ status: "under_review", reviewStartedBy: "user-2", title: "Hotel in Pune" });
+    const { user } = await renderReview(expense.id, "admin");
+
+    await user.click(await screen.findByRole("button", { name: "Approve" }));
+
+    expect(await screen.findByRole("dialog", { name: "Approve Expense" })).toHaveTextContent(
+      "Sarah Manager started this review. Completing it overrides their review, which is recorded in the audit log.",
+    );
+  });
+});
+
 describe("ExpenseDetailsPage reimbursement actions", () => {
   function renderAs(id: string, as: "admin" | "finance") {
     return renderPage(<ExpenseDetailsPage mode="default" />, { path: "/expenses/:id", route: `/expenses/${id}`, as });

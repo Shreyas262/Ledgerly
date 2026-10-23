@@ -113,7 +113,7 @@ export function ExpenseCard({
 
   const canStartReview =
     variant === "approval" &&
-    (expense.employeeId !== user?.id || user?.role === "admin") &&
+    expense.employeeId !== user?.id &&
     expense.status === "submitted" &&
     can("expenses.approve");
 
@@ -160,6 +160,15 @@ export function ExpenseCard({
               >
                 Submitted by {expense.employeeName}
                 {expense.employeeRemoved ? " (removed)" : ""}
+              </Typography>
+            )}
+
+            {expense.status === "under_review" && expense.reviewStartedByName && (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                In review by {expense.reviewStartedBy === user?.id ? "you" : expense.reviewStartedByName}
               </Typography>
             )}
 

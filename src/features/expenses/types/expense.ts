@@ -108,6 +108,11 @@ export interface Expense extends ResourceTimestamps {
   policyId?: EntityId;
   policyEvaluation?: PolicyEvaluation;
   submittedAt?: ISODateString;
+  /** Who started the review in progress; only they or an administrator complete it. */
+  reviewStartedBy?: EntityId;
+  reviewStartedAt?: ISODateString;
+  /** Display name of reviewStartedBy, resolved by the API. */
+  reviewStartedByName?: string;
   reviewedAt?: ISODateString;
   reviewedBy?: EntityId;
   approvedBy?: EntityId;

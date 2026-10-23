@@ -50,6 +50,56 @@ describe("approval queue", () => {
   });
 });
 
+describe("review ownership", () => {
+  it("records who started the review", async () => {
+    const expense = await givenExpense({ owner: "employee" });
+
+    expect((await post(`/api/expenses/${expense.id}/review`, await signInAs("manager"))).status).toBe(200);
+
+    expect(await readExpense(expense.id)).toMatchObject({ status: "under_review", reviewStartedBy: "user-2" });
+    const queue = (await (await apiFetch("/api/approvals", {}, await signInAs("admin"))).json()) as Expense[];
+    expect(queue.find((item) => item.id === expense.id)).toMatchObject({ reviewStartedByName: "Sarah Manager" });
+  });
+
+  it("refuses another reviewer who is not an administrator", async () => {
+    const expense = await givenExpense({ owner: "employee", status: "under_review", reviewStartedBy: "user-3" });
+    const manager = await signInAs("manager");
+
+    const approve = await post(`/api/expenses/${expense.id}/approve`, manager);
+    expect(approve.status).toBe(403);
+    expect(await approve.json()).toMatchObject({
+      message: "Mike Finance started this review, so only they or an administrator can approve or reject it.",
+    });
+    expect((await post(`/api/expenses/${expense.id}/reject`, manager, { reason: "Missing bill" })).status).toBe(403);
+    expect(await readExpense(expense.id)).toMatchObject({ status: "under_review", reviewStartedBy: "user-3" });
+  });
+
+  it("lets an administrator take a review over and records whose review was overridden", async () => {
+    const expense = await givenExpense({ owner: "employee", status: "under_review", reviewStartedBy: "user-2" });
+
+    expect((await post(`/api/expenses/${expense.id}/approve`, await signInAs("admin"))).status).toBe(200);
+
+    expect(await readExpense(expense.id)).toMatchObject({ status: "approved", reviewedBy: "user-4" });
+    expect(await auditEventsFor(expense.id)).toEqual([
+      expect.objectContaining({
+        action: "EXPENSE_APPROVED",
+        metadata: { overriddenReviewerId: "user-2" },
+        description: "Approved expense Client lunch, overriding the review started by Sarah Manager.",
+      }),
+    ]);
+  });
+
+  it("records an administrator's takeover when rejecting too", async () => {
+    const expense = await givenExpense({ owner: "employee", status: "under_review", reviewStartedBy: "user-2" });
+
+    expect((await post(`/api/expenses/${expense.id}/reject`, await signInAs("admin"), { reason: "Missing bill" })).status).toBe(200);
+
+    expect(await auditEventsFor(expense.id)).toEqual([
+      expect.objectContaining({ action: "EXPENSE_REJECTED", metadata: { reason: "Missing bill", overriddenReviewerId: "user-2" } }),
+    ]);
+  });
+});
+
 describe("administrators' own expenses", () => {
   it("refuses an administrator their own expense and leaves it out of their queue", async () => {
     const expense = await givenExpense({ owner: "admin" });
