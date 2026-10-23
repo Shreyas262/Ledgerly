@@ -12,7 +12,7 @@ import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 /**
  * Submitted expenses the principal may review, per the approval matrix in
  * getReviewDenialReason (manager: team members; finance: managers within
- * authorized departments; admin: everyone).
+ * authorized departments; admin: everyone else).
  */
 export async function getApprovalQueue(
   principal: AuthenticatedPrincipal,
@@ -38,7 +38,7 @@ export async function getApprovalQueue(
         : await listRecordsByIndex<Expense>("expenses", "teamId", principal.teamId);
 
   const [users, roles] = await Promise.all([
-    listRecords<{ id: string; organizationId: string; teamId: string; departmentId: string; roleId: string; role?: string }>("users"),
+    listRecords<{ id: string; organizationId: string; teamId: string; departmentId: string; roleId: string; role?: string; status?: string }>("users"),
     listRecords<{ id: string; name: string }>("roles"),
   ]);
   const roleNameById = new Map(roles.map((role) => [role.id, String(role.name).toLowerCase()]));
@@ -54,13 +54,23 @@ export async function getApprovalQueue(
       },
     ]),
   );
+  const activeAdminIds = users
+    .filter(
+      (user) =>
+        user.organizationId === principal.organizationId &&
+        user.status === "active" &&
+        ownerById.get(user.id)?.roleName === "admin",
+    )
+    .map((user) => user.id);
 
   return expenses.filter((expense) => {
     const owner = ownerById.get(String(expense.employeeId));
     return (
       Boolean(owner) &&
       (expense.status === "submitted" || expense.status === "under_review") &&
-      getReviewDenialReason(principal, expense, owner!) === null
+      getReviewDenialReason(principal, expense, owner!, {
+        otherAdminAvailable: activeAdminIds.some((id) => id !== owner!.id),
+      }) === null
     );
   });
 }

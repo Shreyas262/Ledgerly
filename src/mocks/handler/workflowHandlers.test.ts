@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Expense } from "../../features/expenses/types/expense";
 import { apiFetch, demoAccounts, setupApiServer, signIn } from "../../test/apiServer";
-import { auditEventsFor, givenExpense, readExpense, type DemoRole } from "../../test/fixtures";
+import { auditEventsFor, givenExpense, givenSecondAdmin, readExpense, type DemoRole } from "../../test/fixtures";
 
 setupApiServer();
 
@@ -47,6 +47,40 @@ describe("approval queue", () => {
   it("is refused to employees", async () => {
     const response = await apiFetch("/api/approvals", {}, await signInAs("employee"));
     expect(response.status).toBe(403);
+  });
+});
+
+describe("administrators' own expenses", () => {
+  it("refuses an administrator their own expense and leaves it out of their queue", async () => {
+    const expense = await givenExpense({ owner: "admin" });
+    const admin = await signInAs("admin");
+
+    expect(await queueIds("/api/approvals", admin)).not.toContain(expense.id);
+    const response = await post(`/api/expenses/${expense.id}/review`, admin);
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ message: "You cannot review your own expense." });
+    expect(await readExpense(expense.id)).toMatchObject({ status: "submitted" });
+  });
+
+  it("routes the only administrator's expense to Finance for their department", async () => {
+    const expense = await givenExpense({ owner: "admin" });
+    const finance = await signInAs("finance");
+
+    expect(await queueIds("/api/approvals", finance)).toContain(expense.id);
+    expect((await post(`/api/expenses/${expense.id}/review`, finance)).status).toBe(200);
+    expect((await post(`/api/expenses/${expense.id}/approve`, finance)).status).toBe(200);
+    expect(await readExpense(expense.id)).toMatchObject({ status: "approved", approvedBy: "user-3" });
+  });
+
+  it("leaves an administrator's expense to another administrator when there is one", async () => {
+    await givenSecondAdmin();
+    const expense = await givenExpense({ owner: "admin" });
+    const finance = await signInAs("finance");
+
+    expect(await queueIds("/api/approvals", finance)).not.toContain(expense.id);
+    expect((await post(`/api/expenses/${expense.id}/review`, finance)).status).toBe(403);
+    expect(await readExpense(expense.id)).toMatchObject({ status: "submitted" });
   });
 });
 

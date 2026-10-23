@@ -268,8 +268,8 @@ export function ExpenseDetailsPage({
   // A receipt or supporting document is required before submission.
   const needsReceipt = canSubmit && (expense.documentIds?.length ?? 0) === 0;
 
-  // Only administrators may review their own expenses.
-  const canReviewThis = !isOwner || user?.role === "admin";
+  // Nobody reviews their own expense.
+  const canReviewThis = !isOwner;
 
   const canStartReview =
     isReviewMode &&

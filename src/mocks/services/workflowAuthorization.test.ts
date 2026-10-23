@@ -40,6 +40,8 @@ interface ReviewCase {
   /** The owner's current team differs from the team on the expense. */
   movedTeams?: boolean;
   organizationId?: string;
+  /** Another active administrator exists besides an administrator owner (default true). */
+  otherAdminAvailable?: boolean;
 }
 
 function reviewSubject({ owner, otherUser, escalated, movedTeams, organizationId = "org-1" }: ReviewCase) {
@@ -92,7 +94,33 @@ const REVIEW_MATRIX: Array<[string, AuthenticatedPrincipal, ReviewCase, boolean]
   ["Admin reviews a Finance user", principalFor("admin"), { owner: "finance" }, true],
   ["Admin reviews an escalated manager", principalFor("admin"), { owner: "manager", escalated: true }, true],
   ["Admin reviews a member who moved teams", principalFor("admin"), { owner: "employee", movedTeams: true }, true],
-  ["Admin reviews their own expense", principalFor("admin"), { owner: "admin" }, true],
+  ["Admin reviews their own expense", principalFor("admin"), { owner: "admin" }, false],
+  [
+    "Admin reviews their own expense as the only administrator",
+    principalFor("admin"),
+    { owner: "admin", otherAdminAvailable: false },
+    false,
+  ],
+  ["Admin reviews another administrator", principalFor("admin"), { owner: "admin", otherUser: true }, true],
+  ["Finance reviews an administrator while another administrator exists", principalFor("finance"), { owner: "admin" }, false],
+  [
+    "Finance reviews the only administrator",
+    principalFor("finance"),
+    { owner: "admin", otherAdminAvailable: false },
+    true,
+  ],
+  [
+    "Finance reviews the only administrator outside its departments",
+    principalFor("finance", { authorizedDepartmentIds: ["dept-finance"] }),
+    { owner: "admin", otherAdminAvailable: false },
+    false,
+  ],
+  [
+    "manager reviews the only administrator",
+    principalFor("manager", { teamId: "team-operations" }),
+    { owner: "admin", otherAdminAvailable: false },
+    false,
+  ],
   ["Admin reviews another organization's expense", principalFor("admin"), { owner: "employee", organizationId: "org-2" }, false],
   ["employee reviews a colleague", principalFor("employee"), { owner: "employee", otherUser: true }, false],
 ];
@@ -101,7 +129,9 @@ describe("getReviewDenialReason", () => {
   it.each(REVIEW_MATRIX)("%s → allowed: %s", (_name, principal, reviewCase, allowed) => {
     const { expense, owner } = reviewSubject(reviewCase);
 
-    const denial = getReviewDenialReason(principal, expense, owner);
+    const denial = getReviewDenialReason(principal, expense, owner, {
+      otherAdminAvailable: reviewCase.otherAdminAvailable ?? true,
+    });
 
     if (allowed) expect(denial).toBeNull();
     else expect(denial).toEqual(expect.any(String));
