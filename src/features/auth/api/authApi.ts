@@ -44,7 +44,9 @@ export const authApi = baseApi.injectEndpoints({
           clearSessionCookie();
         }
       },
-      invalidatesTags: ["User"],
+      // No invalidation: refetching the user would fail before the caller
+      // resets the API state, and the protected page would record itself as
+      // the page to return to after the next sign-in.
     }),
 
     getCurrentUser: builder.query<ApiResponse<AuthUser>, void>({

@@ -92,7 +92,7 @@ export async function renderPage(
     </Provider>,
   );
 
-  return { user, router };
+  return { user, router, store };
 }
 
 /** Picks an option of a select field, as a user would with the pointer. */

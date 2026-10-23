@@ -16,7 +16,7 @@ import {
   VisibilityOffOutlined,
   VisibilityOutlined,
 } from "@mui/icons-material";
-import { useState, type SyntheticEvent } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 import {
   Link as RouterLink,
   useLocation,
@@ -29,6 +29,8 @@ import { useLoginMutation } from "../api/authApi";
 import type { AccountType } from "../types/auth";
 import AuthLayout from "../../../layouts/AuthLayout/AuthLayout";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
+import { baseApi } from "../../../services/api/baseApi";
+import { useAppDispatch } from "../../../store/hooks";
 
 const COPY: Record<AccountType, { title: string; subtitle: string }> = {
   organization: {
@@ -50,15 +52,30 @@ function parseAccountType(value: string | null): AccountType {
   return value === "personal" || value === "platform" ? value : "organization";
 }
 
+/** Whether a page belongs to the area of the account type signing in. */
+function isInAccountArea(pathname: string, accountType: AccountType): boolean {
+  const area = pathname.startsWith("/personal") ? "personal" : pathname.startsWith("/platform") ? "platform" : "organization";
+  return area === accountType;
+}
+
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const accountType = parseAccountType(searchParams.get("type"));
-  const redirectTo =
-    // Without a page to return to, the user's chosen start page opens.
-    (location.state as { from?: Location } | null)?.from?.pathname ??
-    "/start";
+  const navigationState = location.state as { from?: Location; signedOut?: boolean } | null;
+  const from = navigationState?.from?.pathname;
+  // Without a page to return to in this account type's area, the user's
+  // chosen start page opens.
+  const redirectTo = from && isInAccountArea(from, accountType) ? from : "/start";
+  const signedOut = navigationState?.signedOut === true;
+  const dispatch = useAppDispatch();
+
+  // After signing out, the previous user's data is cleared once their pages
+  // have closed (see Topbar).
+  useEffect(() => {
+    if (signedOut) dispatch(baseApi.util.resetApiState());
+  }, [signedOut, dispatch]);
 
   const [login, { isLoading, isError, error, reset }] = useLoginMutation();
   const { refetchUser } = useAuth();
