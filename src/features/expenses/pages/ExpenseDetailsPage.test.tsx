@@ -77,6 +77,30 @@ describe("ExpenseDetailsPage review", () => {
   });
 });
 
+describe("ExpenseDetailsPage reimbursement actions", () => {
+  function renderAs(id: string, as: "admin" | "finance") {
+    return renderPage(<ExpenseDetailsPage mode="default" />, { path: "/expenses/:id", route: `/expenses/${id}`, as });
+  }
+
+  it("offers an administrator no reimbursement or cancellation of their own expense", async () => {
+    const expense = await givenExpense({ owner: "admin", status: "approved", approvedBy: "user-3", title: "Board dinner" });
+
+    await renderAs(expense.id, "admin");
+
+    expect(await screen.findByRole("heading", { name: "Board dinner" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start Reimbursement" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel Expense" })).not.toBeInTheDocument();
+  });
+
+  it("lets Finance reimburse the only administrator's expense it approved", async () => {
+    const expense = await givenExpense({ owner: "admin", status: "approved", approvedBy: "user-3", title: "Board dinner" });
+
+    await renderAs(expense.id, "finance");
+
+    expect(await screen.findByRole("button", { name: "Start Reimbursement" })).toBeInTheDocument();
+  });
+});
+
 describe("ExpenseDetailsPage amounts in other currencies", () => {
   const conversion = { originalAmount: 60, originalCurrency: "USD", rate: 94.96, rateDate: "2026-10-16" } as const;
 

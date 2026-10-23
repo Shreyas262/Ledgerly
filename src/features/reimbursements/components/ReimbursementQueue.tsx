@@ -141,8 +141,10 @@ export function ReimbursementQueue() {
         <Stack spacing={2}>
           {expenses.map((expense) => {
             const isProcessing = processingId === expense.id;
-            // Separation of duties: Finance cannot reimburse what it approved.
-            const approvedBySelf = user?.role === "finance" && expense.approvedBy === user.id;
+            // Separation of duties: Finance cannot reimburse what it approved,
+            // except the only administrator's expense.
+            const approvedBySelf =
+              user?.role === "finance" && expense.approvedBy === user.id && !expense.approverMayReimburse;
             const canCancel =
               expense.status === "approved" ||
               expense.status === "reimbursement_pending";

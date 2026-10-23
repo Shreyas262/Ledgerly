@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import type { Expense } from "../../features/expenses/types/expense";
 import type { Permission } from "../../features/roles/types/role";
-import { demoUsers, type DemoRole } from "../../test/fixtures";
+import { demoUsers, givenSecondAdmin, type DemoRole } from "../../test/fixtures";
 import {
   authorizeExpenseFinance,
   getReviewDenialReason,
@@ -204,6 +204,42 @@ describe("authorizeExpenseFinance", () => {
       approvedExpense({ approvedBy: demoUsers.admin.id }),
     );
     expect(result.allowed).toBe(true);
+  });
+
+  it("refuses anyone their own expense, including an administrator", async () => {
+    const adminOwned = approvedExpense({
+      employeeId: demoUsers.admin.id,
+      departmentId: demoUsers.admin.departmentId,
+      teamId: demoUsers.admin.teamId,
+      approvedBy: demoUsers.finance.id,
+    });
+
+    const result = await authorizeExpenseFinance(principalFor("admin"), adminOwned);
+
+    expect(result).toMatchObject({ allowed: false });
+  });
+
+  it("lets Finance reimburse the only administrator's expense it approved", async () => {
+    const adminOwned = approvedExpense({
+      employeeId: demoUsers.admin.id,
+      departmentId: demoUsers.admin.departmentId,
+      teamId: demoUsers.admin.teamId,
+      approvedBy: demoUsers.finance.id,
+    });
+
+    expect((await authorizeExpenseFinance(principalFor("finance"), adminOwned)).allowed).toBe(true);
+  });
+
+  it("refuses Finance an administrator's expense it approved when another administrator exists", async () => {
+    await givenSecondAdmin();
+    const adminOwned = approvedExpense({
+      employeeId: demoUsers.admin.id,
+      departmentId: demoUsers.admin.departmentId,
+      teamId: demoUsers.admin.teamId,
+      approvedBy: demoUsers.finance.id,
+    });
+
+    expect((await authorizeExpenseFinance(principalFor("finance"), adminOwned)).allowed).toBe(false);
   });
 
   it("refuses managers and employees", async () => {

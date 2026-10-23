@@ -6,6 +6,7 @@ import {
   resolveExpenseScope,
   type AuthorizationScope,
 } from "./authorizationService";
+import { isOnlyAdministrator } from "./workflowAuthorization";
 
 /**
  * A principal may always request their own expenses, or their full
@@ -67,6 +68,7 @@ export async function getAuthorizedExpenseRecords(
 
 interface NamedExpenseFields {
   employeeId: string;
+  status?: string;
   teamId?: string;
   departmentId?: string;
   cancelledBy?: string;
@@ -80,8 +82,17 @@ interface NamedExpenseFields {
  */
 export async function withEmployeeNames<T extends NamedExpenseFields>(
   expenses: T[],
-): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; teamName?: string; departmentName?: string }>> {
+): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; teamName?: string; departmentName?: string; approverMayReimburse?: boolean }>> {
   if (expenses.length === 0) return [];
+
+  // The only administrator's approved expenses may be reimbursed by the
+  // Finance user who approved them (§22.5).
+  const awaitingPayment = (expense: T) =>
+    expense.status === "approved" || expense.status === "reimbursement_pending";
+  const onlyAdministratorIds = new Set<string>();
+  for (const ownerId of new Set(expenses.filter(awaitingPayment).map((expense) => expense.employeeId))) {
+    if (await isOnlyAdministrator(ownerId)) onlyAdministratorIds.add(ownerId);
+  }
 
   const [teams, departments] = await Promise.all([
     listRecords<{ id: string; name: string }>("teams"),
@@ -123,6 +134,7 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
       ...(teamName ? { teamName } : {}),
       ...(departmentName ? { departmentName } : {}),
       ...(cancelledByName ? { cancelledByName } : {}),
+      ...(awaitingPayment(expense) && onlyAdministratorIds.has(expense.employeeId) ? { approverMayReimburse: true } : {}),
       ...(expense.reimbursement && processedByName
         ? { reimbursement: { ...expense.reimbursement, processedByName } }
         : {}),

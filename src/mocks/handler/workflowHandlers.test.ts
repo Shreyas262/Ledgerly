@@ -206,6 +206,27 @@ describe("reimbursement", () => {
     expect((await post(`/api/expenses/${expense.id}/start-reimbursement`, await signInAs("admin"))).status).toBe(200);
   });
 
+  it("refuses an administrator their own expense and leaves it out of their queue", async () => {
+    await givenSecondAdmin();
+    const expense = await givenExpense({ owner: "admin", status: "approved", approvedBy: "user-admin-2" });
+    const admin = await signInAs("admin");
+
+    expect(await queueIds("/api/reimbursements", admin)).not.toContain(expense.id);
+    expect((await post(`/api/expenses/${expense.id}/start-reimbursement`, admin)).status).toBe(403);
+    expect(await readExpense(expense.id)).toMatchObject({ status: "approved" });
+  });
+
+  it("lets Finance reimburse the only administrator's expense it approved", async () => {
+    const expense = await givenExpense({ owner: "admin", status: "approved", approvedBy: "user-3" });
+    const finance = await signInAs("finance");
+
+    const queue = (await (await apiFetch("/api/reimbursements", {}, finance)).json()) as Expense[];
+    expect(queue.find((item) => item.id === expense.id)).toMatchObject({ approverMayReimburse: true });
+    expect((await post(`/api/expenses/${expense.id}/start-reimbursement`, finance)).status).toBe(200);
+    expect((await post(`/api/expenses/${expense.id}/reimburse`, finance)).status).toBe(200);
+    expect(await readExpense(expense.id)).toMatchObject({ status: "reimbursed" });
+  });
+
   it("refuses managers", async () => {
     const expense = await givenExpense({ owner: "employee", status: "approved", approvedBy: "user-4" });
     const response = await post(`/api/expenses/${expense.id}/start-reimbursement`, await signInAs("manager"));

@@ -111,6 +111,11 @@ export interface Expense extends ResourceTimestamps {
   reviewedAt?: ISODateString;
   reviewedBy?: EntityId;
   approvedBy?: EntityId;
+  /**
+   * True when the Finance user who approved the expense may also reimburse
+   * it, because it belongs to the only administrator. Resolved by the API.
+   */
+  approverMayReimburse?: boolean;
   rejectionReason?: string;
   reimbursement?: ReimbursementInfo;
   cancelledAt?: ISODateString;

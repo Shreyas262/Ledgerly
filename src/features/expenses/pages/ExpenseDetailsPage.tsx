@@ -295,17 +295,22 @@ export function ExpenseDetailsPage({
     expense.status === "rejected" &&
     can("expenses.update");
 
-  // Separation of duties: Finance cannot reimburse an expense it approved.
-  const approvedBySelf = user?.role === "finance" && expense.approvedBy === user.id;
+  // Separation of duties: Finance cannot reimburse an expense it approved,
+  // except the only administrator's expense.
+  const approvedBySelf =
+    user?.role === "finance" && expense.approvedBy === user.id && !expense.approverMayReimburse;
 
+  // Nobody processes their own expense.
   const canStartReimbursement =
     !isReviewMode &&
+    !isOwner &&
     !approvedBySelf &&
     expense.status === "approved" &&
     can("reimbursements.manage");
 
   const canReimburse =
     !isReviewMode &&
+    !isOwner &&
     !approvedBySelf &&
     expense.status === "reimbursement_pending" &&
     can("reimbursements.manage");
@@ -315,6 +320,7 @@ export function ExpenseDetailsPage({
     ((expense.status === "draft" && isOwner && can("expenses.update")) ||
       ((expense.status === "approved" ||
         expense.status === "reimbursement_pending") &&
+        !isOwner &&
         can("reimbursements.manage")));
 
   const canManageDocuments =

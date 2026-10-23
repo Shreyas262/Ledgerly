@@ -85,6 +85,12 @@ export async function hasOtherActiveAdmin(organizationId: string, userId: string
   );
 }
 
+/** Whether the user is an administrator and no other active administrator exists. */
+export async function isOnlyAdministrator(userId: string): Promise<boolean> {
+  const owner = await resolveExpenseOwner(userId);
+  return owner?.roleName === "admin" && !(await hasOtherActiveAdmin(owner.organizationId, owner.id));
+}
+
 /**
  * Approval matrix:
  * - Manager: expenses of members of their own team, except managers and Finance.
@@ -213,9 +219,19 @@ export async function authorizeExpenseFinance(
     return forbidden("You are not authorized to process reimbursements.");
   }
 
+  // Nobody processes the reimbursement of their own expense.
+  if (expense.employeeId === principal.userId) {
+    return forbidden("You cannot process your own expense, so another authorized user must handle it.");
+  }
+
   // Separation of duties: a Finance user who approved an expense cannot
-  // also process its reimbursement.
-  if (principal.role === "finance" && expense.approvedBy === principal.userId) {
+  // also process its reimbursement, except an expense of the only
+  // administrator, which Finance approves in place of another administrator.
+  if (
+    principal.role === "finance" &&
+    expense.approvedBy === principal.userId &&
+    !(await isOnlyAdministrator(String(expense.employeeId)))
+  ) {
     return forbidden("You approved this expense, so another authorized user must process its reimbursement.");
   }
 
