@@ -281,6 +281,6 @@ describe("amounts paid in other currencies", () => {
     const response = await apiFetch(`/api/expenses/${expense.id}/submit`, { method: "POST" }, cookie);
 
     expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({ message: "You have another expense with the same type, amount and date." });
+    expect(await response.json()).toMatchObject({ message: "Another expense by the same person has the same type, amount and date." });
   });
 });

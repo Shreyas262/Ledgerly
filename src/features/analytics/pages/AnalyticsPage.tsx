@@ -181,6 +181,7 @@ export function AnalyticsPage() {
                 value={summary.kpis.averageDaysToReimburse === null ? "—" : `${summary.kpis.averageDaysToReimburse.toFixed(1)} days`}
                 current={summary.kpis.averageDaysToReimburse}
                 previous={summary.previousKpis.averageDaysToReimburse}
+                precision={1}
                 lowerIsBetter
               />
             </Grid>

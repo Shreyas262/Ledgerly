@@ -9,6 +9,11 @@ export interface ReceiptDetails {
   /** Calendar date as YYYY-MM-DD. */
   date?: string;
   merchant?: string;
+  /**
+   * The amount was read without a decimal point but ends in "00", as when a
+   * blurred "850.00" reads as 85000; the user is asked to check it.
+   */
+  amountUncertain?: boolean;
 }
 
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
@@ -76,6 +81,7 @@ export function parseReceiptText(text: string): ReceiptDetails {
   const details: ReceiptDetails = {};
   const total = findAmount(lines);
   if (total) details.amount = total.amount;
+  if (total?.uncertain) details.amountUncertain = true;
   // The currency printed with the total, otherwise the one the receipt names most.
   const currency = (total && currencyIn(total.text)) ?? mostNamedCurrency(lines);
   if (currency) details.currency = currency;
@@ -103,7 +109,7 @@ function amountsIn(line: string): { value: number; hasCurrency: boolean; hasDeci
 }
 
 /** The amount paid, and the receipt text it was read from. */
-function findAmount(lines: string[]): { amount: number; text: string } | undefined {
+function findAmount(lines: string[]): { amount: number; text: string; uncertain: boolean } | undefined {
   for (const label of TOTAL_LABELS) {
     for (let index = lines.length - 1; index >= 0; index -= 1) {
       const line = lines[index];
@@ -112,8 +118,8 @@ function findAmount(lines: string[]): { amount: number; text: string } | undefin
       const onLine = amountsIn(line.replace(label, " "));
       const next = lines[index + 1] ?? "";
       const candidates = onLine.length ? onLine : amountsIn(next);
-      const amount = candidates.at(-1)?.value;
-      if (amount !== undefined) return { amount: round(amount), text: onLine.length ? line : `${line} ${next}` };
+      const candidate = candidates.at(-1);
+      if (candidate) return { amount: round(candidate.value), text: onLine.length ? line : `${line} ${next}`, uncertain: mayHaveLostDecimals(candidate) };
     }
   }
 
@@ -124,8 +130,12 @@ function findAmount(lines: string[]): { amount: number; text: string } | undefin
     .filter((amount) => amount.hasCurrency || amount.hasDecimals);
   if (!money.length) return undefined;
   const largest = money.reduce((best, amount) => (amount.value > best.value ? amount : best));
-  return { amount: round(largest.value), text: largest.line };
+  return { amount: round(largest.value), text: largest.line, uncertain: mayHaveLostDecimals(largest) };
 }
+
+/** A whole amount of 1,000 or more ending in "00" may be a misread "850.00". */
+const mayHaveLostDecimals = ({ value, hasDecimals }: { value: number; hasDecimals: boolean }) =>
+  !hasDecimals && value >= 1_000 && value % 100 === 0;
 
 /** The currency named on the most lines; the first one named breaks a tie. */
 function mostNamedCurrency(lines: string[]): CurrencyCode | undefined {

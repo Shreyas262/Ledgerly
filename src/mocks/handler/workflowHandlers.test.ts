@@ -196,6 +196,7 @@ describe("review, approve and reject", () => {
     expect(rejected.status).toBe(200);
     expect(await readExpense(expense.id)).toMatchObject({
       status: "rejected",
+      rejectedBy: "user-2",
       rejectionReason: "Missing itemised bill",
     });
     expect(await auditEventsFor(expense.id)).toEqual([

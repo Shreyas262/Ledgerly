@@ -179,7 +179,8 @@ export const organizationHandlers = [
     const department = await getRecord<DepartmentRecord>("departments", body.departmentId);
     if (!department || department.organizationId !== authorization.principal.organizationId || department.status !== "active") return apiError(400, "Select an active department from your organization.");
     const teams = await listRecords<TeamRecord>("teams");
-    if (teams.some((item) => item.departmentId === department.id && item.name.toLowerCase() === name.toLowerCase())) return apiError(409, "A team with this name already exists in the department.");
+    // Team names are unique across the organization, so team pickers stay unambiguous.
+    if (teams.some((item) => item.organizationId === department.organizationId && item.name.toLowerCase() === name.toLowerCase())) return apiError(409, "A team with this name already exists in the organization.");
     const now = new Date().toISOString();
     const team: TeamRecord = { id: crypto.randomUUID(), organizationId: authorization.principal.organizationId, departmentId: department.id, name, status: "active", createdAt: now, updatedAt: now };
     await runAuditedTransaction(["teams"], {
@@ -200,7 +201,14 @@ export const organizationHandlers = [
     const department = await getRecord<DepartmentRecord>("departments", body.departmentId);
     if (!department || department.organizationId !== existing.organizationId || department.status !== "active") return apiError(400, "Select an active department from your organization.");
     const teams = await listRecords<TeamRecord>("teams");
-    if (teams.some((item) => item.id !== existing.id && item.departmentId === department.id && item.name.toLowerCase() === name.toLowerCase())) return apiError(409, "A team with this name already exists in the department.");
+    // Renamed teams must be unique in the organization; teams that already
+    // share a name can still be edited, but not moved next to a namesake.
+    const renamed = name.toLowerCase() !== existing.name.toLowerCase();
+    const clash = teams.some((item) =>
+      item.id !== existing.id &&
+      item.name.toLowerCase() === name.toLowerCase() &&
+      (renamed ? item.organizationId === existing.organizationId : item.departmentId === department.id));
+    if (clash) return apiError(409, renamed ? "A team with this name already exists in the organization." : "A team with this name already exists in the department.");
     const members = await listRecordsByIndex<UserReference>("users", "teamId", existing.id);
     if (body.status === "inactive" && existing.status !== "inactive") {
       const activeMembers = members.filter((member) => member.status !== "inactive").length;

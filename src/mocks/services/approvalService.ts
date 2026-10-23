@@ -219,6 +219,8 @@ export async function rejectExpense(
     reviewedBy: principal.userId,
     reviewedAt: now,
     rejectionReason: normalizedReason,
+    rejectedBy: principal.userId,
+    rejectedAt: now,
     updatedAt: now,
   };
 

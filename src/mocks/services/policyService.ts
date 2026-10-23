@@ -195,7 +195,7 @@ export function evaluatePolicyRules(
     );
   }
   if (rules.duplicateCheck && context.hasDuplicate) {
-    add("duplicateCheck", rules.duplicateCheck.enforcement, "You have another expense with the same type, amount and date.");
+    add("duplicateCheck", rules.duplicateCheck.enforcement, "Another expense by the same person has the same type, amount and date.");
   }
   if (
     rules.descriptionRequiredAbove &&

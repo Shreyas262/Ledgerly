@@ -294,6 +294,10 @@ function DepartmentCard({
   const authorizedFinance = financeUsers
     .filter((user) => authorizedDepartments(user).includes(department.id))
     .map((user) => user.id);
+  // §22.5: a Finance user without assigned departments covers their own.
+  const coversByDefault = (user: User) =>
+    !user.financeDepartmentIds?.length && user.departmentId === department.id;
+  const defaultFinance = financeUsers.filter(coversByDefault);
   const [financeSelection, setFinanceSelection] =
     useState<string[]>(authorizedFinance);
   const authorizedKey = authorizedFinance.join(",");
@@ -533,6 +537,7 @@ function DepartmentCard({
                     {financeUsers.map((user) => (
                       <MenuItem key={user.id} value={user.id}>
                         {user.name}
+                        {coversByDefault(user) ? " (own department, no assignment)" : ""}
                       </MenuItem>
                     ))}
                   </Select>
@@ -562,6 +567,13 @@ function DepartmentCard({
                   Save
                 </Button>
               </Stack>
+            )}
+            {defaultFinance.length > 0 && (
+              <Typography variant="body2" color="text.secondary">
+                {defaultFinance.map((user) => user.name).join(", ")}{" "}
+                {defaultFinance.length === 1 ? "covers" : "cover"} this department by default: a Finance user without
+                assigned departments covers their own department.
+              </Typography>
             )}
           </Stack>
         </Stack>

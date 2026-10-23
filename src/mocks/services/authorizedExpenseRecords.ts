@@ -75,6 +75,7 @@ interface NamedExpenseFields {
   departmentId?: string;
   cancelledBy?: string;
   reviewStartedBy?: string;
+  rejectedBy?: string;
   reimbursement?: { processedBy?: string };
 }
 
@@ -85,7 +86,7 @@ interface NamedExpenseFields {
  */
 export async function withEmployeeNames<T extends NamedExpenseFields>(
   expenses: T[],
-): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; reviewStartedByName?: string; teamName?: string; departmentName?: string; approverMayReimburse?: boolean; closedBudgetName?: string }>> {
+): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; reviewStartedByName?: string; rejectedByName?: string; teamName?: string; departmentName?: string; approverMayReimburse?: boolean; closedBudgetName?: string }>> {
   if (expenses.length === 0) return [];
 
   // The only administrator's approved expenses may be reimbursed by the
@@ -122,7 +123,7 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
 
   const userIds = new Set(
     expenses.flatMap((expense) =>
-      [expense.employeeId, expense.cancelledBy, expense.reviewStartedBy, expense.reimbursement?.processedBy].filter(
+      [expense.employeeId, expense.cancelledBy, expense.reviewStartedBy, expense.rejectedBy, expense.reimbursement?.processedBy].filter(
         (id): id is string => Boolean(id),
       ),
     ),
@@ -140,6 +141,7 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
     const employeeName = nameById.get(expense.employeeId);
     const cancelledByName = expense.cancelledBy ? nameById.get(expense.cancelledBy) : undefined;
     const reviewStartedByName = expense.reviewStartedBy ? nameById.get(expense.reviewStartedBy) : undefined;
+    const rejectedByName = expense.rejectedBy ? nameById.get(expense.rejectedBy) : undefined;
     const processedByName = expense.reimbursement?.processedBy
       ? nameById.get(expense.reimbursement.processedBy)
       : undefined;
@@ -155,6 +157,7 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
       ...(departmentName ? { departmentName } : {}),
       ...(cancelledByName ? { cancelledByName } : {}),
       ...(reviewStartedByName ? { reviewStartedByName } : {}),
+      ...(rejectedByName ? { rejectedByName } : {}),
       ...(awaitingPayment(expense) && onlyAdministratorIds.has(expense.employeeId) ? { approverMayReimburse: true } : {}),
       ...(closedBudgetNameOf(expense) ? { closedBudgetName: closedBudgetNameOf(expense) } : {}),
       ...(expense.reimbursement && processedByName

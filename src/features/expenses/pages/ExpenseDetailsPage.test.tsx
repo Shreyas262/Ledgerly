@@ -140,6 +140,22 @@ describe("ExpenseDetailsPage reimbursement actions", () => {
   });
 });
 
+describe("ExpenseDetailsPage rejection history", () => {
+  it("shows a reviewer the earlier rejection after the expense is resubmitted", async () => {
+    const expense = await givenExpense({
+      status: "submitted",
+      rejectionReason: "Missing itemised bill",
+      rejectedBy: "user-2",
+      rejectedAt: "2026-10-12T09:30:00.000Z",
+    });
+
+    await renderPage(<ExpenseDetailsPage mode="review" />, { path: "/approvals/:id", route: `/approvals/${expense.id}`, as: "admin" });
+
+    expect(await screen.findByText("Previously rejected by Sarah Manager on 12 Oct 2026")).toBeInTheDocument();
+    expect(screen.getByText("Missing itemised bill")).toBeInTheDocument();
+  });
+});
+
 describe("ExpenseDetailsPage amounts in other currencies", () => {
   const conversion = { originalAmount: 60, originalCurrency: "USD", rate: 94.96, rateDate: "2026-10-16" } as const;
 

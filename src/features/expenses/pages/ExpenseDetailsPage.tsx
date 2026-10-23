@@ -375,13 +375,15 @@ export function ExpenseDetailsPage({
         </Alert>
       )}
 
-      {expense.rejectionReason &&
-        (expense.status === "rejected" || expense.status === "draft") && (
+      {/* The last rejection stays visible after resubmission, for the owner and reviewers. */}
+      {expense.rejectionReason && expense.status !== "cancelled" && (
           <Alert severity="warning">
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {expense.status === "rejected"
                 ? "Rejection reason"
                 : "Previously rejected"}
+              {expense.rejectedByName ? ` by ${expense.rejectedByName}` : ""}
+              {expense.rejectedAt ? ` on ${formatDate(expense.rejectedAt)}` : ""}
             </Typography>
             <Typography variant="body2">{expense.rejectionReason}</Typography>
           </Alert>

@@ -128,6 +128,11 @@ export interface Expense extends ResourceTimestamps {
    */
   closedBudgetName?: string;
   rejectionReason?: string;
+  /** Who rejected the expense last, and when; kept after it is resubmitted. */
+  rejectedBy?: EntityId;
+  rejectedAt?: ISODateString;
+  /** Display name of rejectedBy, resolved by the API. */
+  rejectedByName?: string;
   reimbursement?: ReimbursementInfo;
   cancelledAt?: ISODateString;
   cancelledBy?: EntityId;
