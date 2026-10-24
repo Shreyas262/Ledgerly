@@ -38,6 +38,10 @@ describe.each(["light", "dark"] as const)("%s palette", (mode) => {
     }
   });
 
+  it("keeps avatar initials and tile icons readable on the accent tone", () => {
+    expectContrast(palette.accentTone.fg, palette.accentTone.bg, TEXT);
+  });
+
   it("keeps field outlines and single-series chart marks visible", () => {
     for (const surface of surfaces) {
       expectContrast(palette.inputBorder, surface, NON_TEXT);

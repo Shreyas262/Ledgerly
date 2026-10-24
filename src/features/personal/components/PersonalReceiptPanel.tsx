@@ -7,7 +7,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import OpenInNewIcon from "@mui/icons-material/OpenInNewOutlined";
 import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
 
 import { useConfirm } from "../../../components/common/ConfirmProvider";

@@ -142,10 +142,6 @@ export const components: Components<Omit<Theme, "components">> = {
             backgroundColor: sidebar.hover,
             color: sidebar.text,
           },
-          "& .MuiAvatar-colorDefault": {
-            backgroundColor: sidebar.activeBackground,
-            color: sidebar.activeText,
-          },
         };
       },
     },
@@ -449,10 +445,10 @@ export const components: Components<Omit<Theme, "components">> = {
 
   MuiAvatar: {
     styleOverrides: {
+      // Text size follows the avatar size (UserAvatar).
       colorDefault: ({ theme }) => ({
-        backgroundColor: theme.palette.primary.main,
-        color: theme.palette.primary.contrastText,
-        fontSize: "0.875rem",
+        backgroundColor: theme.palette.accentTone.bg,
+        color: theme.palette.accentTone.fg,
         fontWeight: 600,
       }),
     },

@@ -51,6 +51,8 @@ declare module "@mui/material/styles" {
     inputBorder: string;
     sidebar: LedgerlyShellPalette;
     brand: LedgerlyShellPalette;
+    /** Soft brand tone for avatars and icon tiles. */
+    accentTone: LedgerlyStatusTone;
     status: LedgerlyStatusPalette;
     chart: LedgerlyChartPalette;
   }
@@ -59,6 +61,7 @@ declare module "@mui/material/styles" {
     inputBorder?: string;
     sidebar?: LedgerlyShellPalette;
     brand?: LedgerlyShellPalette;
+    accentTone?: LedgerlyStatusTone;
     status?: LedgerlyStatusPalette;
     chart?: LedgerlyChartPalette;
   }

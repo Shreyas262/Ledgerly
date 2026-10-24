@@ -2,7 +2,6 @@ import { MenuOutlined } from "@mui/icons-material";
 import { NotificationBell } from "../../../features/notifications/components/NotificationBell";
 import {
   AppBar,
-  Avatar,
   Box,
   IconButton,
   Toolbar,
@@ -18,6 +17,7 @@ import { useLogoutMutation } from "../../../features/auth/api/authApi";
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { accountTypeOf } from "../../../features/auth/utils/accountType";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { UserAvatar } from "../../../components/common/UserAvatar";
 
 interface TopbarProps {
   isMobile: boolean;
@@ -103,7 +103,7 @@ export function Topbar({
             aria-haspopup="true"
             aria-expanded={menuOpen ? "true" : undefined}
           >
-            <Avatar>{user?.name?.charAt(0).toUpperCase()}</Avatar>
+            <UserAvatar name={user?.name} size="small" />
           </IconButton>
           <Menu
             id="account-menu"

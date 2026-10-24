@@ -15,7 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 import NotificationsNoneOutlined from "@mui/icons-material/NotificationsNoneOutlined";
-import CheckCircleOutlined from "@mui/icons-material/CheckCircleOutlined";
+import CheckCircleOutlineOutlined from "@mui/icons-material/CheckCircleOutlineOutlined";
 import ErrorOutlineOutlined from "@mui/icons-material/ErrorOutlineOutlined";
 import InfoOutlined from "@mui/icons-material/InfoOutlined";
 import WarningAmberOutlined from "@mui/icons-material/WarningAmberOutlined";
@@ -25,7 +25,7 @@ import type { AppNotification } from "../types/notification";
 import { formatDateTime } from "../../../utils/format";
 
 const ICONS: Record<AppNotification["severity"], React.ReactNode> = {
-  success: <CheckCircleOutlined color="success" fontSize="small" />,
+  success: <CheckCircleOutlineOutlined color="success" fontSize="small" />,
   error: <ErrorOutlineOutlined color="error" fontSize="small" />,
   warning: <WarningAmberOutlined color="warning" fontSize="small" />,
   info: <InfoOutlined color="info" fontSize="small" />,

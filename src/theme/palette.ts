@@ -101,6 +101,7 @@ const lightPalette: PaletteOptions = {
     border: "#E0E1E6",
   },
   brand,
+  accentTone: { bg: "#EDF2FE", fg: "#3A5BC7" },
   status: {
     approved: { bg: "#E6F7ED", fg: "#1A7259" },
     pending: { bg: "#FFF7C2", fg: "#9A5800" },
@@ -195,6 +196,7 @@ const darkPalette: PaletteOptions = {
     border: "#363A3F",
   },
   brand,
+  accentTone: { bg: "#182449", fg: "#9EB1FF" },
   status: {
     approved: { bg: "#0F2E22", fg: "#1FD8A4" },
     pending: { bg: "#302008", fg: "#FFCA16" },

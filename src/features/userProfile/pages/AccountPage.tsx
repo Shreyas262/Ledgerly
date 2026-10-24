@@ -1,7 +1,7 @@
 import {
   GroupsOutlined,
   HistoryOutlined,
-  PersonOutlined,
+  PersonOutlineOutlined,
   SettingsOutlined,
 } from "@mui/icons-material";
 
@@ -29,7 +29,7 @@ export function AccountPage() {
           label: "Profile",
           description: "View and update your name and email.",
           path: "/profile",
-          icon: <PersonOutlined />,
+          icon: <PersonOutlineOutlined />,
         },
         // Only organization accounts have a team or department.
         ...(accountType !== "organization" ? [] : [{

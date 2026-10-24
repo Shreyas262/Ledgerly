@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Badge, Button, Card, Stack, Typography } from "@mui/material";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import FilterListIcon from "@mui/icons-material/FilterListOutlined";
+import RestartAltIcon from "@mui/icons-material/RestartAltOutlined";
 
 interface FilterBarProps {
   /** Filter fields; give them `size="small"`. */

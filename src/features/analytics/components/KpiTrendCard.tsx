@@ -1,8 +1,8 @@
 import { Card, CardContent, Stack, Typography } from "@mui/material";
 import { SparkLineChart } from "@mui/x-charts/SparkLineChart";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import TrendingDownIcon from "@mui/icons-material/TrendingDown";
-import TrendingFlatIcon from "@mui/icons-material/TrendingFlat";
+import TrendingUpIcon from "@mui/icons-material/TrendingUpOutlined";
+import TrendingDownIcon from "@mui/icons-material/TrendingDownOutlined";
+import TrendingFlatIcon from "@mui/icons-material/TrendingFlatOutlined";
 import { useChartColors } from "../utils/chartColors";
 
 interface KpiTrendCardProps {

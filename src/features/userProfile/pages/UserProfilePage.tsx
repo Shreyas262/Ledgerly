@@ -2,7 +2,6 @@ import { BackLink } from "../../../components/navigation/BackLink";
 import { useState } from "react";
 import {
   Alert,
-  Avatar,
   Button,
   Card,
   CardContent,
@@ -22,6 +21,7 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { PageHeader } from "../../../components/common/PageHeader";
+import { UserAvatar } from "../../../components/common/UserAvatar";
 import { humanize } from "../../../utils/format";
 import { accountTypeOf } from "../../auth/utils/accountType";
 
@@ -50,12 +50,6 @@ export function UserProfilePage() {
     return <Alert severity="warning">User profile could not be found.</Alert>;
   }
 
-  const initials = user.name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
   const isFinance = user.role === "finance";
 
@@ -106,7 +100,7 @@ export function UserProfilePage() {
               sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}
             >
               <Stack direction="row" spacing={2} sx={{ alignItems: "center", minWidth: 0 }}>
-                <Avatar sx={{ width: 56, height: 56 }}>{initials}</Avatar>
+                <UserAvatar name={user.name} size="large" />
                 <Stack spacing={0.5} sx={{ minWidth: 0 }}>
                   <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
                     <Typography variant="h5">{user.name}</Typography>

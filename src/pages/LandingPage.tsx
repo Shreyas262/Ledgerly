@@ -126,7 +126,7 @@ function EntryCard({ path, delay }: { path: EntryPath; delay: number }) {
     <Card sx={{ height: "100%", ...entrance(delay) }}>
       <CardContent sx={{ p: { xs: 3, md: 4 }, height: "100%", display: "flex", flexDirection: "column", gap: 2.5 }}>
         <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
-          <Box sx={{ display: "flex", p: 1.25, borderRadius: 1.5, bgcolor: "action.hover", color: "primary.main" }}>
+          <Box sx={{ display: "flex", p: 1.25, borderRadius: 1.5, bgcolor: "accentTone.bg", color: "accentTone.fg" }}>
             {path.icon}
           </Box>
           <Box>
@@ -265,7 +265,7 @@ export function LandingPage() {
               {highlights.map((item) => (
                 <Grid key={item.title} size={{ xs: 12, sm: 6, md: 3 }}>
                   <Stack spacing={1.5}>
-                    <Box sx={{ display: "flex", width: "fit-content", p: 1, borderRadius: 1.5, bgcolor: "action.hover", color: "primary.main" }}>
+                    <Box sx={{ display: "flex", width: "fit-content", p: 1, borderRadius: 1.5, bgcolor: "accentTone.bg", color: "accentTone.fg" }}>
                       {item.icon}
                     </Box>
                     <Typography variant="subtitle1" component="h3">{item.title}</Typography>
@@ -297,7 +297,7 @@ export function LandingPage() {
                   { icon: <HistoryEduOutlined />, title: "Audit and reporting", text: "Every action is recorded, and analytics are scoped to each role." },
                 ].map((item) => (
                   <Stack key={item.title} direction="row" spacing={2}>
-                    <Box sx={{ display: "flex", flexShrink: 0, height: "fit-content", p: 1, borderRadius: 1.5, bgcolor: "action.hover", color: "primary.main" }}>
+                    <Box sx={{ display: "flex", flexShrink: 0, height: "fit-content", p: 1, borderRadius: 1.5, bgcolor: "accentTone.bg", color: "accentTone.fg" }}>
                       {item.icon}
                     </Box>
                     <Stack spacing={0.25}>
