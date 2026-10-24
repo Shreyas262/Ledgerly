@@ -76,6 +76,23 @@ export const components: Components<Omit<Theme, "components">> = {
     },
   },
 
+  MuiFab: {
+    styleOverrides: {
+      root: ({ theme, ownerState }) => ({
+        boxShadow: theme.shadows[6],
+        // As with contained buttons, dark mode fills with the solid step and a white icon.
+        ...(theme.palette.mode === "dark" &&
+          ownerState.color === "primary" && {
+            backgroundColor: theme.palette.primary.dark,
+            color: theme.palette.common.white,
+            "&:hover": {
+              backgroundColor: darken(theme.palette.primary.dark, 0.12),
+            },
+          }),
+      }),
+    },
+  },
+
   MuiIconButton: {
     styleOverrides: {
       root: {

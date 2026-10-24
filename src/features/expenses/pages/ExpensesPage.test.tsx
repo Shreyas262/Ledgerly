@@ -225,3 +225,15 @@ describe("ExpensesPage receipt reminder", () => {
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Attach a receipt before submitting.");
   });
 });
+
+describe("ExpensesPage opened from a link", () => {
+  it("starts on the status the link asks for", async () => {
+    await givenExpense({ title: "Unfinished taxi", status: "draft", documentIds: [] });
+    await givenExpense({ title: "Submitted hotel", status: "submitted" });
+
+    await renderPage(<ExpensesPage />, { path: "/expenses", as: "employee", state: { status: "draft" } });
+
+    expect(await screen.findByText("Unfinished taxi")).toBeInTheDocument();
+    expect(screen.queryByText("Submitted hotel")).not.toBeInTheDocument();
+  });
+});

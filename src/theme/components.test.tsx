@@ -1,4 +1,4 @@
-import { Button, Dialog, MenuItem, Select, TextField, ThemeProvider } from "@mui/material";
+import { Button, Dialog, Fab, MenuItem, Select, TextField, ThemeProvider } from "@mui/material";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -63,6 +63,17 @@ describe("themed surfaces and controls", () => {
 
     expect(screen.getByRole("button", { name: "Save Changes" })).toHaveStyle({ backgroundColor: palette.primary.dark, color: "#FFFFFF" });
     expect(screen.getByRole("button", { name: "Delete Budget" })).toHaveStyle({ backgroundColor: palette.error.dark, color: "#FFFFFF" });
+  });
+
+  it("fills the floating action button with a solid colour and a white icon in dark mode", () => {
+    const { palette } = createAppTheme("dark");
+    render(
+      <ThemeProvider theme={createAppTheme("dark")}>
+        <Fab color="primary" aria-label="Add Expense">+</Fab>
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Add Expense" })).toHaveStyle({ backgroundColor: palette.primary.dark, color: "#FFFFFF" });
   });
 
   it.each(["light", "dark"] as const)("outlines text fields with the field border colour in %s mode", (mode) => {

@@ -27,12 +27,14 @@ import { ApiFeedback } from "../../../components/common/ApiFeedback";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { useAuth } from "../../../features/auth/context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
+  EXPENSE_STATUS_LABELS,
   type Expense,
   type ExpenseFilter as ExpenseFiltersState,
   type ExpenseScope,
+  type ExpenseStatus,
   initialExpenseFilters,
 } from "../types/expense";
 import { ExpenseFilters } from "../components/ExpenseFilters";
@@ -88,8 +90,15 @@ export function ExpensesPage() {
   const widerScope = getAuthorizedWiderScope(user?.role);
   const [selectedScope, setSelectedScope] = useState<ExpenseScope>("OWN");
   const scope: ExpenseScope = selectedScope === "OWN" || selectedScope === widerScope ? selectedScope : "OWN";
-  // Each view keeps its own filters and page.
-  const [viewStates, setViewStates] = useState<Partial<Record<ExpenseScope, ScopeViewState>>>({});
+  // Each view keeps its own filters and page. A link (e.g. from the dashboard) may open
+  // the user's own view filtered to one status.
+  const location = useLocation();
+  const [viewStates, setViewStates] = useState<Partial<Record<ExpenseScope, ScopeViewState>>>(() => {
+    const status = (location.state as { status?: string } | null)?.status;
+    return status && status in EXPENSE_STATUS_LABELS
+      ? { OWN: { filters: { ...initialExpenseFilters, status: status as ExpenseStatus }, page: 1 } }
+      : {};
+  });
   const { filters, page } = viewStates[scope] ?? initialViewState;
   // Drafts selected for submitting together. Only what is on screen can be
   // selected, so the selection is cleared whenever the list changes.

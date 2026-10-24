@@ -1,12 +1,36 @@
 import { formatDate } from "../../utils/format";
-import type { DashboardSummary } from "../../features/dashboard/types/dashboard";
-import type { ExpenseStatus, ExpenseType } from "../../features/expenses/types/expense";
+import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
+import type {
+  DashboardBudgetAlert,
+  DashboardSummary,
+  DashboardWorkQueues,
+} from "../../features/dashboard/types/dashboard";
+import type { Expense, ExpenseType } from "../../features/expenses/types/expense";
+import type { OrganizationBudget } from "../../features/budgets/types/budget";
+import { getApprovalQueue } from "./approvalService";
+import { getReimbursementQueue } from "./reimbursementService";
+import {
+  buildBudgetView,
+  getExpenseCreationEligibility,
+  isBudgetVisibleTo,
+  resolveBudgetScope,
+} from "./budgetService";
+import { listRecordsByIndex } from "./mockDataService";
 
-export interface DashboardExpenseRecord {
-  amount: number;
-  type?: ExpenseType;
-  status: ExpenseStatus | string;
-  expenseDate: string;
+export type DashboardExpenseRecord = Pick<
+  Expense,
+  "id" | "title" | "amount" | "conversion" | "status" | "expenseDate" | "documentIds" | "createdAt"
+> & { type?: ExpenseType };
+
+/** Budgets at or above this share used are flagged, matching the amber band on budget cards. */
+export const BUDGET_ALERT_PERCENT = 80;
+const RECENT_COUNT = 5;
+const DAY_MS = 86_400_000;
+
+/** What only the handler can resolve for the principal: creation eligibility and role queues. */
+export interface DashboardContext {
+  creationBlockedReason: string | null;
+  workQueues: DashboardWorkQueues;
 }
 
 const APPROVED_STATUSES = new Set<string>([
@@ -73,6 +97,7 @@ export function buildDashboardSummary(
   authorizedExpenses: DashboardExpenseRecord[],
   range: DashboardDateRange,
   scope: DashboardSummary["scope"],
+  context: DashboardContext,
 ): DashboardSummary {
   const expenses = authorizedExpenses.filter((expense) =>
     isWithinDateRange(expense.expenseDate, range),
@@ -86,22 +111,36 @@ export function buildDashboardSummary(
     0,
   );
 
-  const pendingApproval = expenses.filter(
+  const pending = expenses.filter(
     (expense) =>
       expense.status === "submitted" ||
       expense.status === "under_review",
-  ).length;
+  );
+  const pendingApproval = pending.length;
 
   // Approved includes expenses that have moved on to reimbursement, matching
   // the analytics definition of approved spend.
-  const approvedExpenses = expenses.filter((expense) =>
+  const approved = expenses.filter((expense) =>
     APPROVED_STATUSES.has(expense.status),
-  ).length;
+  );
+  const approvedExpenses = approved.length;
 
-  const rejectedExpenses = expenses.filter(
+  const rejected = expenses.filter(
     (expense) => expense.status === "rejected",
-  ).length;
+  );
+  const rejectedExpenses = rejected.length;
 
+  // Attention, money owed and recent activity describe the present, so they
+  // ignore the date range.
+  const drafts = authorizedExpenses.filter((expense) => expense.status === "draft");
+  const owed = authorizedExpenses.filter(
+    (expense) => expense.status === "approved" || expense.status === "reimbursement_pending",
+  );
+  const recent = [...authorizedExpenses]
+    .sort((first, second) =>
+      second.expenseDate.localeCompare(first.expenseDate) ||
+      String(second.createdAt ?? "").localeCompare(String(first.createdAt ?? "")))
+    .slice(0, RECENT_COUNT);
 
   const monthlyTotals = new Map<string, number>();
   const typeTotals = new Map<ExpenseType, number>();
@@ -135,6 +174,9 @@ export function buildDashboardSummary(
       pendingApproval,
       approvedExpenses,
       rejectedExpenses,
+      pendingAmount: sumAmounts(pending),
+      approvedAmount: sumAmounts(approved),
+      rejectedAmount: sumAmounts(rejected),
     },
     spendingTrend: Array.from(monthlyTotals.entries())
       .sort(([first], [second]) => first.localeCompare(second))
@@ -160,5 +202,109 @@ export function buildDashboardSummary(
       pendingReview: pendingApproval,
       totalReviewed,
     },
+    attention: {
+      drafts: drafts.length,
+      draftsWithoutReceipt: drafts.filter((expense) => !expense.documentIds?.length).length,
+      rejected: authorizedExpenses.filter((expense) => expense.status === "rejected").length,
+      creationBlockedReason: context.creationBlockedReason,
+    },
+    owed: { amount: sumAmounts(owed), count: owed.length },
+    recent: recent.map(({ id, title, type, amount, conversion, status, expenseDate }) => ({
+      id,
+      title,
+      type: type ?? "OTHER",
+      amount,
+      ...(conversion ? { conversion } : {}),
+      status,
+      expenseDate,
+    })),
+    workQueues: context.workQueues,
   };
+}
+
+function sumAmounts(expenses: DashboardExpenseRecord[]): number {
+  return expenses.reduce((total, expense) => total + expense.amount, 0);
+}
+
+/** Why the principal cannot create expenses now (§28.16), or null when they can or may not create at all. */
+export async function getCreationBlockedReason(principal: AuthenticatedPrincipal): Promise<string | null> {
+  if (!principal.effectivePermissions.includes("expenses.create")) return null;
+  const eligibility = await getExpenseCreationEligibility(principal);
+  return eligibility.allowed ? null : eligibility.reason ?? null;
+}
+
+/**
+ * The principal's own work queues (§25.1): approvals waiting on them, expenses
+ * ready to reimburse and budgets near their limit, each only for roles that
+ * hold that responsibility. Counts come from the same authorized queues as the
+ * Approvals, Reimbursements and Budgets pages.
+ */
+export async function buildDashboardWorkQueues(
+  principal: AuthenticatedPrincipal,
+  now: Date = new Date(),
+): Promise<DashboardWorkQueues> {
+  const permissions = principal.effectivePermissions;
+  const reviews = ["manager", "finance", "admin"].includes(principal.role) && permissions.includes("expenses.approve");
+  const reimburses = (principal.role === "finance" || principal.role === "admin") && permissions.includes("reimbursements.manage");
+  const readsBudgets = resolveBudgetScope(principal) !== null && permissions.includes("budgets.read");
+
+  const [approvalQueue, financialWork, budgetAlerts] = await Promise.all([
+    reviews ? getApprovalQueue(principal) : null,
+    reimburses ? getReimbursementQueue(principal) : null,
+    readsBudgets ? getBudgetAlerts(principal) : null,
+  ]);
+  // The reimbursement queue also lists its history; only unpaid expenses are waiting.
+  const reimbursementQueue = financialWork?.filter(
+    (expense) => expense.status === "approved" || expense.status === "reimbursement_pending",
+  ) ?? null;
+
+  const oldestSubmittedAt = approvalQueue
+    ?.map((expense) => expense.submittedAt ?? expense.updatedAt)
+    .filter((date): date is string => Boolean(date))
+    .sort()[0];
+
+  return {
+    approvals: approvalQueue
+      ? {
+          count: approvalQueue.length,
+          oldestWaitingDays: oldestSubmittedAt
+            ? Math.max(0, Math.floor((now.getTime() - new Date(oldestSubmittedAt).getTime()) / DAY_MS))
+            : null,
+        }
+      : null,
+    reimbursements: reimbursementQueue
+      ? { count: reimbursementQueue.length, amount: reimbursementQueue.reduce((total, expense) => total + expense.amount, 0) }
+      : null,
+    budgetAlerts,
+  };
+}
+
+/** Active budgets at the principal's level (§28.5) that are at least BUDGET_ALERT_PERCENT used. */
+async function getBudgetAlerts(principal: AuthenticatedPrincipal): Promise<DashboardBudgetAlert[]> {
+  const scope = resolveBudgetScope(principal);
+  const budgets = (await listRecordsByIndex<OrganizationBudget>("budgets", "organizationId", principal.organizationId))
+    .filter((budget) => budget.status === "active");
+
+  const alerts: DashboardBudgetAlert[] = [];
+  for (const budget of budgets) {
+    if (!(await isBudgetVisibleTo(principal, budget))) continue;
+    const view = await buildBudgetView(budget, principal);
+    const levels =
+      scope === "ORGANIZATION"
+        ? [{ name: budget.name, utilizationPercent: view.utilization.utilizationPercent }]
+        : scope === "DEPARTMENT"
+          ? view.departmentAllocations.map((allocation) => ({
+              name: `${allocation.departmentName} department`,
+              utilizationPercent: allocation.utilization.utilizationPercent,
+            }))
+          : view.departmentAllocations.flatMap((allocation) =>
+              allocation.teamAllocations.map((team) => ({
+                name: `${team.teamName} team`,
+                utilizationPercent: team.utilization.utilizationPercent,
+              })));
+    for (const level of levels) {
+      if (level.utilizationPercent >= BUDGET_ALERT_PERCENT) alerts.push({ budgetId: budget.id, ...level });
+    }
+  }
+  return alerts.sort((first, second) => second.utilizationPercent - first.utilizationPercent);
 }

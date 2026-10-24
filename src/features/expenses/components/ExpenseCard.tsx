@@ -1,5 +1,5 @@
 import { formatDate } from "../../../utils/format";
-import { EXPENSE_STATUS_LABELS, EXPENSE_TYPE_LABELS, type ExpenseStatus } from "../types/expense";
+import { EXPENSE_TYPE_LABELS } from "../types/expense";
 import {
   Box,
   Button,
@@ -11,7 +11,6 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import type { ChipProps } from "@mui/material";
 
 import type { Expense } from "../types/expense";
 
@@ -19,6 +18,7 @@ import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { Amount } from "../../../components/common/Amount";
 import { ConversionNote } from "../../currency/components/ConversionNote";
+import { ExpenseStatusChip } from "./ExpenseStatusChip";
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -32,56 +32,6 @@ interface ExpenseCardProps {
   selected?: boolean;
   onSelectedChange?: (expense: Expense, selected: boolean) => void;
 }
-
-interface StatusConfig {
-  label: string;
-  color: ChipProps["color"];
-}
-
-const statusConfig: Record<
-  ExpenseStatus,
-  StatusConfig
-> = {
-  draft: {
-    label: EXPENSE_STATUS_LABELS.draft,
-    color: "default",
-  },
-
-  submitted: {
-    label: EXPENSE_STATUS_LABELS.submitted,
-    color: "info",
-  },
-
-  under_review: {
-    label: EXPENSE_STATUS_LABELS.under_review,
-    color: "warning",
-  },
-
-  rejected: {
-    label: EXPENSE_STATUS_LABELS.rejected,
-    color: "error",
-  },
-
-  approved: {
-    label: EXPENSE_STATUS_LABELS.approved,
-    color: "success",
-  },
-
-  reimbursement_pending: {
-    label: EXPENSE_STATUS_LABELS.reimbursement_pending,
-    color: "warning",
-  },
-
-  reimbursed: {
-    label: EXPENSE_STATUS_LABELS.reimbursed,
-    color: "success",
-  },
-
-  cancelled: {
-    label: EXPENSE_STATUS_LABELS.cancelled,
-    color: "default",
-  },
-};
 
 export function ExpenseCard({
   expense,
@@ -100,8 +50,6 @@ export function ExpenseCard({
   };
   const { can } = usePermissions();
   const { user } = useAuth();
-
-  const status = statusConfig[expense.status];
 
   const canSubmit =
     variant === "default" &&
@@ -207,11 +155,7 @@ export function ExpenseCard({
               <ConversionNote conversion={expense.conversion} />
             </Box>
 
-            <Chip
-              label={status.label}
-              color={status.color}
-              size="small"
-            />
+            <ExpenseStatusChip status={expense.status} />
 
             {/* Policy flags for reviewers (§21.10, §22.3). */}
             {variant === "approval" && (policyFlags.escalated || policyFlags.warnings > 0) && (

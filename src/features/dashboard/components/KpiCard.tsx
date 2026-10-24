@@ -17,7 +17,8 @@ export function KpiCard({
   description,
 }: KpiCardProps) {
   return (
-    <Card>
+    // Fills its grid cell so a row of cards ends level when one description wraps.
+    <Card sx={{ height: "100%" }}>
       <CardContent>
         <Stack spacing={1}>
           <Typography
