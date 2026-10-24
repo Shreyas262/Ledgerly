@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState, type SyntheticEvent } from "react";
 import {

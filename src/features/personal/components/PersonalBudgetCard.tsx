@@ -3,7 +3,8 @@ import { Box, Card, CardContent, Chip, LinearProgress, Stack, Typography } from 
 
 import { CheckCircleOutlineOutlined, WarningAmberOutlined } from "@mui/icons-material";
 
-import { BudgetProgress, utilizationColor } from "../../budgets/components/BudgetProgress";
+import { BudgetProgress } from "../../budgets/components/BudgetProgress";
+import { utilizationColor } from "../../budgets/utils/utilizationColor";
 import { Amount } from "../../../components/common/Amount";
 import { formatCurrency } from "../../../utils/currency";
 import { PERSONAL_EXPENSE_TYPE_LABELS, type PersonalBudgetWithUsage, type PersonalSpendingPace } from "../types/personal";

@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { useState } from "react";
 import { Button, Stack, TextField } from "@mui/material";
 

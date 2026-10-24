@@ -23,7 +23,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import type { Permission } from "../../../features/roles/types/role";
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { administrationPermissions, approvalPermissions } from "../../../features/roles/constants/permissions";
-import { useAuth } from "../../../features/auth/context/AuthContext";
+import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { accountTypeOf } from "../../../features/auth/utils/accountType";
 import type { AccountType } from "../../../features/auth/types/auth";
 import { BrandMark } from "../../../components/common/BrandMark";

@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { useState } from "react";
 import type { SyntheticEvent } from "react";
 
@@ -35,7 +35,7 @@ import {
 } from "../../organizations/api/organizationApi";
 import type { RoleName } from "../../roles/types/role";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 
 interface EditUserDialogProps {
   user: User | null;

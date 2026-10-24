@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../features/auth/context/AuthContext";
+import { useAuth } from "../features/auth/hooks/useAuth";
 import { usePermissions } from "../features/auth/hooks/usePermissions";
 import { HOME_PATH, isPersonalAccount, isPlatformAccount } from "../features/auth/utils/accountType";
 import { useSettings } from "../features/settings/hooks/useSettings";

@@ -29,7 +29,7 @@ import {
   useUpsertTeamAllocationMutation,
 } from "../api/budgetsApi";
 import { useGetDepartmentsQuery } from "../../organizations/api/organizationApi";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { usePermissions } from "../../auth/hooks/usePermissions";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
@@ -45,7 +45,8 @@ import { formatCurrency } from "../../../utils/currency";
 import { formatDate, humanize, toDateOnly } from "../../../utils/format";
 import { budgetViewTitle } from "../utils/budgetViewTitle";
 import type { DepartmentBudgetView, OrganizationBudgetView } from "../types/budget";
-import { useConfirm, type ConfirmOptions } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
+import type { ConfirmOptions } from "../../../components/common/confirmContext";
 import { PageHeader } from "../../../components/common/PageHeader";
 
 type Runner = (

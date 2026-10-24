@@ -19,7 +19,7 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { useDeletePersonalBudgetMutation, useGetPersonalBudgetsQuery } from "../api/personalApi";
 import type { PersonalBudgetWithUsage } from "../types/personal";
 import { PersonalBudgetCard } from "../components/PersonalBudgetCard";

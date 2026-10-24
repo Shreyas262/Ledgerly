@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 
-import { useAuth } from "../features/auth/context/AuthContext";
+import { useAuth } from "../features/auth/hooks/useAuth";
 import type { AccountType } from "../features/auth/types/auth";
 import { HOME_PATH, accountTypeOf } from "../features/auth/utils/accountType";
 

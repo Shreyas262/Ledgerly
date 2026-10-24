@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { formatMoney } from "../../../utils/currency";
 import { useState } from "react";
 import {
@@ -29,7 +29,7 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { ConfirmDialog } from "../../../components/common/ConfirmDialog";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { Amount } from "../../../components/common/Amount";
 import { ConversionNote } from "../../currency/components/ConversionNote";
 

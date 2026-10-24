@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { BackLink } from "../../../components/navigation/BackLink";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useState } from "react";

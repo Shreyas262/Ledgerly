@@ -16,7 +16,7 @@ import {
   useDeletePolicyMutation,
   useGetPolicyByIdQuery,
 } from "../api/policiesApi";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useGetDepartmentsQuery } from "../../organizations/api/organizationApi";
 import { useGetAuditEventsQuery } from "../../audit/api/auditApi";

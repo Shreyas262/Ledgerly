@@ -2,7 +2,7 @@ import { PolicyEvaluationPanel } from "../../policies/components/PolicyEvaluatio
 import { formatMoney } from "../../../utils/currency";
 import { formatDate } from "../../../utils/format";
 import { EXPENSE_STATUS_LABELS, EXPENSE_TYPE_LABELS } from "../types/expense";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import {
   Alert,
   Button,
@@ -34,7 +34,7 @@ import {
 } from "../../../features/expenses/api/expenseApi";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
-import { useAuth } from "../../../features/auth/context/AuthContext";
+import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { ConfirmDialog } from "../../../components/common/ConfirmDialog";
 import { useState } from "react";

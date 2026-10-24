@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { BackLink } from "../../../components/navigation/BackLink";
 import {
   Box,
@@ -31,7 +31,7 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { CreateUserForm } from "../components/CreateUserForm";
 import { EditUserDialog } from "../components/EditUserDialog";
 import { ConfirmDialog } from "../../../components/common/ConfirmDialog";

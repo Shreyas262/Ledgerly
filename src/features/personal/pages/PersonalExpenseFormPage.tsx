@@ -16,7 +16,7 @@ import { BackLink } from "../../../components/navigation/BackLink";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { getApiErrorDetails } from "../../../services/api/apiErrors";
 import type { CurrencyCode } from "../../../types/common";
 import { BASE_CURRENCY, formatMoney } from "../../../utils/currency";

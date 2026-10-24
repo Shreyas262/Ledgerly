@@ -17,7 +17,7 @@ import { BackLink } from "../../../components/navigation/BackLink";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { formatMoney } from "../../../utils/currency";
 import { formatDate, formatDateTime } from "../../../utils/format";
 import { describePaidAmount, describeRate } from "../../currency/utils/rateText";

@@ -15,7 +15,7 @@ import {
 import type { Expense } from "../types/expense";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
-import { useAuth } from "../../../features/auth/context/AuthContext";
+import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { Amount } from "../../../components/common/Amount";
 import { ConversionNote } from "../../currency/components/ConversionNote";
 import { ExpenseStatusChip } from "./ExpenseStatusChip";

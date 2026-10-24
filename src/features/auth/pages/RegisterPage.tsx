@@ -10,7 +10,7 @@ import { useState, type SyntheticEvent } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 
 import AuthLayout from "../../../layouts/AuthLayout/AuthLayout";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { useLoginMutation, useRegisterPersonalMutation } from "../api/authApi";
 import { getApiErrorDetails, getApiErrorMessage } from "../../../services/api/apiErrors";
 

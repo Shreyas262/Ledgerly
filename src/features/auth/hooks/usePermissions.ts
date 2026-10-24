@@ -1,4 +1,4 @@
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { hasPermission } from "../utils/permissions";
 import type { Permission } from "../../roles/types/role";
 

@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 
-import { useAuth } from "../features/auth/context/AuthContext";
+import { useAuth } from "../features/auth/hooks/useAuth";
 import { usePermissions } from "../features/auth/hooks/usePermissions";
 import type { Permission } from "../features/roles/types/role";
 import { ForbiddenPage } from "../features/auth/pages/ForbiddenPage";

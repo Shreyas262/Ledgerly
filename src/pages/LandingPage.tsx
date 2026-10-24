@@ -29,7 +29,7 @@ import {
 import { Link as RouterLink, Navigate } from "react-router-dom";
 
 import { BrandMark } from "../components/common/BrandMark";
-import { useAuth } from "../features/auth/context/AuthContext";
+import { useAuth } from "../features/auth/hooks/useAuth";
 import { LoadingState } from "../components/common/LoadingState";
 
 const riseIn = keyframes`

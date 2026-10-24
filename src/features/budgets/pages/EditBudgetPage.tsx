@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { Stack } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGetBudgetByIdQuery, useUpdateBudgetMutation } from "../api/budgetsApi";

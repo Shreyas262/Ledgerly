@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { Provider } from "react-redux";
 
-import { AuthProvider, useAuth } from "../../features/auth/context/AuthContext";
+import { AuthProvider } from "../../features/auth/context/AuthContext";
+import { useAuth } from "../../features/auth/hooks/useAuth";
 import { ConfirmProvider } from "../../components/common/ConfirmProvider";
 import { store } from "../../store/store";
 import { createAppTheme } from "../../theme/theme";

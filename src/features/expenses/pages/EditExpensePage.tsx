@@ -9,7 +9,7 @@ import { useGetExpenseByIdQuery, useUpdateExpenseMutation } from "../api/expense
 import { ExpenseFormFields } from "../components/ExpenseFormFields";
 import { isExpenseFormComplete, toExpenseForm, toExpenseRequest, type ExpenseFormData } from "../utils/expenseForm";
 import type { Expense } from "../types/expense";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
