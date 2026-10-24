@@ -1,4 +1,4 @@
-import { Card, CardContent, Stack, Typography } from "@mui/material";
+import { Card, CardContent, Stack, Tooltip, Typography } from "@mui/material";
 import { SparkLineChart } from "@mui/x-charts/SparkLineChart";
 import TrendingUpIcon from "@mui/icons-material/TrendingUpOutlined";
 import TrendingDownIcon from "@mui/icons-material/TrendingDownOutlined";
@@ -26,6 +26,8 @@ export function KpiTrendCard({ label, value, current, previous, lowerIsBetter, p
   const direction = !hasComparison || shownEqual || Math.abs(change) < 0.5 ? "flat" : change > 0 ? "up" : "down";
   const favourable = direction === "flat" ? null : (direction === "down") === Boolean(lowerIsBetter);
   const Icon = direction === "up" ? TrendingUpIcon : direction === "down" ? TrendingDownIcon : TrendingFlatIcon;
+  // The icon's colour shows whether the change is good; say it in words too.
+  const verdict = favourable === null ? null : favourable ? "Better than the previous period" : "Worse than the previous period";
 
   return (
     <Card sx={{ height: "100%" }}>
@@ -36,7 +38,13 @@ export function KpiTrendCard({ label, value, current, previous, lowerIsBetter, p
           <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", minHeight: 20 }}>
             {hasComparison ? (
               <>
-                <Icon fontSize="small" color={favourable === null ? "disabled" : favourable ? "success" : "error"} />
+                {verdict ? (
+                  <Tooltip title={verdict}>
+                    <Icon fontSize="small" color={favourable ? "success" : "error"} titleAccess={verdict} />
+                  </Tooltip>
+                ) : (
+                  <Icon fontSize="small" color="disabled" />
+                )}
                 <Typography variant="caption" color="text.secondary">
                   {direction === "flat" ? "No change from" : `${Math.abs(change).toFixed(0)}% ${direction === "up" ? "higher" : "lower"} than`} the previous period
                 </Typography>

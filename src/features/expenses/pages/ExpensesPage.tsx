@@ -1,5 +1,5 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
-import { Stack, Typography, Button, Alert, Pagination, Tab, Tabs } from "@mui/material";
+import { Stack, Typography, Button, Alert, Pagination, Tab, Tabs, Tooltip } from "@mui/material";
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
@@ -236,14 +236,18 @@ export function ExpensesPage() {
               Export PDF
             </Button>
             {can("expenses.create") && (
-              <Button
-                variant="contained"
-                startIcon={<AddOutlinedIcon />}
-                onClick={() => navigate("/expenses/new")}
-                disabled={creationBlocked}
-              >
-                Create Expense
-              </Button>
+              <Tooltip title={creationBlocked ? eligibility?.reason ?? "" : ""}>
+                <span>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddOutlinedIcon />}
+                    onClick={() => navigate("/expenses/new")}
+                    disabled={creationBlocked}
+                  >
+                    Create Expense
+                  </Button>
+                </span>
+              </Tooltip>
             )}
           </Stack>
         }

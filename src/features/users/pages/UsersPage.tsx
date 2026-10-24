@@ -42,6 +42,7 @@ import { GroupedPermissions } from "../../roles/components/GroupedPermissions";
 import type { User } from "../types/user";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { UserAvatar } from "../../../components/common/UserAvatar";
+import { TruncatedText } from "../../../components/common/TruncatedText";
 import { humanize } from "../../../utils/format";
 
 const ACTION_SX = { minWidth: 132 };
@@ -221,10 +222,10 @@ export function UsersPage() {
                           <UserAvatar name={user.name} />
                           <Box sx={{ minWidth: 0 }}>
                             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                              <Typography variant="subtitle1" noWrap>{user.name}</Typography>
+                              <TruncatedText variant="subtitle1">{user.name}</TruncatedText>
                               {isSelf && <Chip label="You" size="small" color="primary" variant="outlined" />}
                             </Stack>
-                            <Typography variant="body2" color="text.secondary" noWrap>{user.email}</Typography>
+                            <TruncatedText variant="body2" color="text.secondary">{user.email}</TruncatedText>
                           </Box>
                         </Stack>
                         <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>

@@ -45,3 +45,16 @@ describe("signing out", () => {
     expect(await screen.findByText("Start page")).toBeInTheDocument();
   });
 });
+
+describe("top bar tooltips", () => {
+  it("names the account and notification buttons on hover", async () => {
+    const { user } = await renderPage(<App />, { path: "/*", route: "/audit", as: "admin" });
+
+    await user.hover(await screen.findByRole("button", { name: "Open account menu" }));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(/^Account: /);
+
+    await user.unhover(screen.getByRole("button", { name: "Open account menu" }));
+    await user.hover(screen.getByRole("button", { name: /^Notifications/ }));
+    expect(await screen.findByRole("tooltip", { name: "Notifications" })).toBeInTheDocument();
+  });
+});

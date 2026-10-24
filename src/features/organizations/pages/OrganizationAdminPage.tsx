@@ -16,6 +16,7 @@ import {
   Select,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 
@@ -463,37 +464,41 @@ function DepartmentCard({
                     ))}
                 </Select>
               </FormControl>
-              <Button
-                disabled={!teamToMove || department.status !== "active"}
-                onClick={async () => {
-                  const team = teams.find((item) => item.id === teamToMove);
-                  if (!team) return;
-                  if (
-                    await run(
-                      () =>
-                        updateTeam({
-                          id: team.id,
-                          body: {
-                            name: team.name,
-                            departmentId: department.id,
-                            status: team.status,
+              <Tooltip title={department.status !== "active" ? "Teams can only be moved into an active department." : ""}>
+                <span>
+                  <Button
+                    disabled={!teamToMove || department.status !== "active"}
+                    onClick={async () => {
+                      const team = teams.find((item) => item.id === teamToMove);
+                      if (!team) return;
+                      if (
+                        await run(
+                          () =>
+                            updateTeam({
+                              id: team.id,
+                              body: {
+                                name: team.name,
+                                departmentId: department.id,
+                                status: team.status,
+                              },
+                            }).unwrap(),
+                          "The team could not be moved.",
+                          `${team.name} moved to ${department.name}; its members moved with it.`,
+                          {
+                            title: "Move Team",
+                            message: `Move ${team.name} to ${department.name}? Its members move to the department too.`,
+                            confirmLabel: "Move",
                           },
-                        }).unwrap(),
-                      "The team could not be moved.",
-                      `${team.name} moved to ${department.name}; its members moved with it.`,
-                      {
-                        title: "Move Team",
-                        message: `Move ${team.name} to ${department.name}? Its members move to the department too.`,
-                        confirmLabel: "Move",
-                      },
-                    )
-                  ) {
-                    setTeamToMove("");
-                  }
-                }}
-              >
-                Move
-              </Button>
+                        )
+                      ) {
+                        setTeamToMove("");
+                      }
+                    }}
+                  >
+                    Move
+                  </Button>
+                </span>
+              </Tooltip>
             </Stack>
           </Stack>
 

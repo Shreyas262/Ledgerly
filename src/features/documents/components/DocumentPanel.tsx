@@ -1,4 +1,5 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { TruncatedText } from "../../../components/common/TruncatedText";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
 import { openObjectUrlInNewTab } from "../../../utils/openInNewTab";
 import { useState, type ChangeEvent } from "react";
@@ -180,7 +181,7 @@ export function DocumentPanel({ expenseId, canManage }: DocumentPanelProps) {
               >
                 <AttachFileOutlinedIcon fontSize="small" />
                 <Stack sx={{ minWidth: 0 }}>
-                  <Typography noWrap>{document.fileName}</Typography>
+                  <TruncatedText>{document.fileName}</TruncatedText>
                   <Typography variant="caption" color="text.secondary">
                     {Math.ceil(document.size / 1024)} KB · {document.mimeType}
                   </Typography>

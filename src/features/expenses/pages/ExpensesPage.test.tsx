@@ -211,3 +211,17 @@ describe("ExpensesPage date filter", () => {
     expect(screen.getByText("Taxi")).toBeInTheDocument();
   });
 });
+
+describe("ExpensesPage receipt reminder", () => {
+  it("explains why a draft without a receipt cannot be submitted", async () => {
+    await givenExpense({ title: "No receipt yet", status: "draft", documentIds: [] });
+    const { user } = await renderExpenses();
+
+    const button = await screen.findByRole("button", { name: "Receipt Required" });
+    expect(button).toBeDisabled();
+    // A disabled button receives no pointer events; its wrapper shows the reason.
+    await user.hover(button.parentElement!);
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Attach a receipt before submitting.");
+  });
+});

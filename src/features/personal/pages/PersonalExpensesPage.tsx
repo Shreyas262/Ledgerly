@@ -1,7 +1,6 @@
 import { useDeferredValue, useState } from "react";
 import {
   Alert,
-  Box,
   Button,
   Chip,
   Pagination,
@@ -14,6 +13,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { AddOutlined, AttachFileOutlined } from "@mui/icons-material";
@@ -25,6 +25,7 @@ import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { RefreshingState } from "../../../components/common/RefreshingState";
 import { Amount } from "../../../components/common/Amount";
+import { TruncatedText } from "../../../components/common/TruncatedText";
 import { ConversionNote } from "../../currency/components/ConversionNote";
 import { formatDate } from "../../../utils/format";
 import { useGetPersonalExpensesQuery } from "../api/personalApi";
@@ -139,16 +140,19 @@ export function PersonalExpensesPage() {
                     <TableCell sx={{ whiteSpace: "nowrap" }}>{formatDate(expense.expenseDate)}</TableCell>
                     <TableCell sx={{ maxWidth: 320 }}>
                       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                        <Box
+                        <TruncatedText
                           component={RouterLink}
                           to={`/personal/expenses/${expense.id}`}
-                          onClick={(event) => event.stopPropagation()}
-                          sx={{ color: "text.primary", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                          onClick={(event: React.MouseEvent) => event.stopPropagation()}
+                          variant="inherit"
+                          sx={{ color: "text.primary", textDecoration: "none" }}
                         >
                           {expense.description}
-                        </Box>
+                        </TruncatedText>
                         {expense.documentIds.length > 0 && (
-                          <AttachFileOutlined fontSize="small" color="action" aria-label="Has receipts" />
+                          <Tooltip title="Has receipts">
+                            <AttachFileOutlined fontSize="small" color="action" titleAccess="Has receipts" />
+                          </Tooltip>
                         )}
                       </Stack>
                     </TableCell>

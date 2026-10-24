@@ -2,6 +2,7 @@ import { Box, Grid, Stack, Typography } from "@mui/material";
 import { BarChart } from "@mui/x-charts/BarChart";
 import type { AnalyticsPolicyCompliance } from "../types/analytics";
 import { ChartCard } from "../../../components/common/ChartCard";
+import { TruncatedText } from "../../../components/common/TruncatedText";
 import { useChartColors } from "../utils/chartColors";
 import { RULE_LABELS } from "../../policies/utils/policyText";
 
@@ -77,7 +78,7 @@ export function PolicyComplianceCard({ compliance }: PolicyComplianceCardProps) 
               <Stack spacing={1}>
                 {compliance.blockedByDepartment.map((row) => (
                   <Stack key={row.dimensionId} direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                    <Typography variant="body2" sx={{ width: 120, flexShrink: 0 }} noWrap>{row.dimensionName}</Typography>
+                    <TruncatedText variant="body2" sx={{ width: 120, flexShrink: 0 }}>{row.dimensionName}</TruncatedText>
                     <Box sx={{ flex: 1, height: 8, borderRadius: 4, bgcolor: "action.hover", overflow: "hidden" }}>
                       <Box sx={{ height: "100%", width: `${(row.count / compliance.blockedAttempts) * 100}%`, bgcolor: colors.error }} />
                     </Box>

@@ -12,6 +12,7 @@ import {
   ListItemText,
   Popover,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import NotificationsNoneOutlined from "@mui/icons-material/NotificationsNoneOutlined";
@@ -58,11 +59,13 @@ export function NotificationBell() {
 
   return (
     <>
-      <IconButton aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} onClick={open}>
-        <Badge badgeContent={unread} color="error" max={9}>
-          <NotificationsNoneOutlined />
-        </Badge>
-      </IconButton>
+      <Tooltip title="Notifications">
+        <IconButton aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} onClick={open}>
+          <Badge badgeContent={unread} color="error" max={9}>
+            <NotificationsNoneOutlined />
+          </Badge>
+        </IconButton>
+      </Tooltip>
       <Popover
         open={Boolean(anchorEl)}
         anchorEl={anchorEl}

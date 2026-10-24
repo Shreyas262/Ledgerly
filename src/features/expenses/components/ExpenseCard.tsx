@@ -8,6 +8,7 @@ import {
   Card,
   CardContent,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import type { ChipProps } from "@mui/material";
@@ -242,15 +243,19 @@ export function ExpenseCard({
           </Button>
 
           {canSubmit && (
-            <Button
-              variant="contained"
-              onClick={() => onSubmit?.(expense)}
-              loading={isSubmitting}
-              disabled={!expense.documentIds?.length}
-              title={expense.documentIds?.length ? undefined : "Attach a receipt before submitting"}
-            >
-              {expense.documentIds?.length ? "Submit" : "Receipt Required"}
-            </Button>
+            // A disabled button gets no pointer events; the wrapper shows why it is disabled.
+            <Tooltip title={expense.documentIds?.length ? "" : "Attach a receipt before submitting."}>
+              <span>
+                <Button
+                  variant="contained"
+                  onClick={() => onSubmit?.(expense)}
+                  loading={isSubmitting}
+                  disabled={!expense.documentIds?.length}
+                >
+                  {expense.documentIds?.length ? "Submit" : "Receipt Required"}
+                </Button>
+              </span>
+            </Tooltip>
           )}
 
           {canStartReview && (
