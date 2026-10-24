@@ -28,11 +28,6 @@ export function DashboardPage() {
     endDate: "",
   });
 
-  const isInvalidRange =
-    Boolean(dateRange.startDate) &&
-    Boolean(dateRange.endDate) &&
-    dateRange.startDate > dateRange.endDate;
-
   const query = useMemo(
     () => ({
       from: dateRange.startDate || undefined,
@@ -48,9 +43,7 @@ export function DashboardPage() {
     isError,
     error,
     refetch,
-  } = useGetDashboardSummaryQuery(query, {
-    skip: isInvalidRange,
-  });
+  } = useGetDashboardSummaryQuery(query);
 
   if (isLoading) return <LoadingState />;
   if (isError || !summary) return <ErrorState error={error} onRetry={refetch} />;
@@ -73,13 +66,7 @@ export function DashboardPage() {
         onChange={setDateRange}
       />
 
-      {isInvalidRange && (
-        <Alert severity="warning">
-          The start date cannot be later than the end date.
-        </Alert>
-      )}
-
-      {!isInvalidRange && !hasData && (
+      {!hasData && (
         <Alert severity="info">
           No expenses were found in the selected date range.
         </Alert>

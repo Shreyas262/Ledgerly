@@ -188,3 +188,26 @@ describe("ExpensesPage PDF report", () => {
     expect(downloadPdf).not.toHaveBeenCalled();
   });
 });
+
+describe("ExpensesPage date filter", () => {
+  it("keeps the list and filters on screen while an inverted range is corrected", async () => {
+    await givenExpense({ title: "Taxi", expenseDate: "2026-10-12" });
+    await givenExpense({ title: "Dinner", expenseDate: "2026-09-02" });
+    await renderExpenses();
+
+    expect(await screen.findByText("Taxi")).toBeInTheDocument();
+    const from = screen.getByLabelText("From");
+    const to = screen.getByLabelText("To");
+
+    fireEvent.change(from, { target: { value: "2026-10-10" } });
+    fireEvent.change(to, { target: { value: "2026-10-01" } });
+
+    expect(await screen.findByText("The end date must be on or after the start date.")).toBeInTheDocument();
+    expect(screen.getByText("Taxi")).toBeInTheDocument();
+
+    fireEvent.change(to, { target: { value: "2026-10-31" } });
+
+    await waitFor(() => expect(screen.queryByText("Dinner")).not.toBeInTheDocument());
+    expect(screen.getByText("Taxi")).toBeInTheDocument();
+  });
+});

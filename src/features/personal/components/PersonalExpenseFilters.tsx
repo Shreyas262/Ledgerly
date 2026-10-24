@@ -1,5 +1,6 @@
 import { MenuItem, TextField } from "@mui/material";
 
+import { DateRangeFields } from "../../../components/common/DateRangeFields";
 import { FilterBar } from "../../../components/common/FilterBar";
 import {
   PAYMENT_METHODS,
@@ -28,12 +29,9 @@ export function PersonalExpenseFilters({ filters, onChange, onReset }: PersonalE
     filters.dateFrom !== "",
     filters.dateTo !== "",
   ].filter(Boolean).length;
-  const rangeError = filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo
-    ? "The start date must be on or before the end date."
-    : null;
 
   return (
-    <FilterBar label="Expense filters" activeCount={activeCount} onReset={onReset} error={rangeError}>
+    <FilterBar label="Expense filters" activeCount={activeCount} onReset={onReset}>
       <TextField
         size="small"
         label="Search"
@@ -65,21 +63,9 @@ export function PersonalExpenseFilters({ filters, onChange, onReset }: PersonalE
           <MenuItem key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</MenuItem>
         ))}
       </TextField>
-      <TextField
-        size="small"
-        type="date"
-        label="From"
-        value={filters.dateFrom}
-        onChange={(event) => set("dateFrom", event.target.value)}
-        slotProps={{ inputLabel: { shrink: true } }}
-      />
-      <TextField
-        size="small"
-        type="date"
-        label="To"
-        value={filters.dateTo}
-        onChange={(event) => set("dateTo", event.target.value)}
-        slotProps={{ inputLabel: { shrink: true } }}
+      <DateRangeFields
+        value={{ from: filters.dateFrom, to: filters.dateTo }}
+        onChange={(range) => onChange({ ...filters, dateFrom: range.from, dateTo: range.to })}
       />
     </FilterBar>
   );

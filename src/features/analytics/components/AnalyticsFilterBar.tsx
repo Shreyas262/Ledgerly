@@ -1,6 +1,7 @@
 import { Badge, Box, Button, Card, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import { DateRangeFields } from "../../../components/common/DateRangeFields";
 import type { AnalyticsFilterOptions, AnalyticsScope } from "../types/analytics";
 import { EXPENSE_TYPE_LABELS, EXPENSE_TYPES, type ExpenseType } from "../../expenses/types/expense";
 import {
@@ -65,24 +66,11 @@ export function AnalyticsFilterBar({ filters, onChange, onReset, scope, options,
             </ToggleButtonGroup>
           </Box>
           {filters.preset === "custom" && (
-            <Stack direction="row" spacing={1}>
-              <TextField
-                size="small"
-                type="date"
-                label="From"
-                value={filters.from}
-                onChange={(event) => update({ from: event.target.value })}
-                error={Boolean(rangeError)}
-                slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: filters.to || undefined } }}
-              />
-              <TextField
-                size="small"
-                type="date"
-                label="To"
-                value={filters.to}
-                onChange={(event) => update({ to: event.target.value })}
-                error={Boolean(rangeError)}
-                slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: filters.from || undefined } }}
+            <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
+              <DateRangeFields
+                required
+                value={{ from: filters.from, to: filters.to }}
+                onChange={(range) => update(range)}
               />
             </Stack>
           )}

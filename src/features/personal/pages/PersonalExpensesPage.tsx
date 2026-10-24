@@ -46,7 +46,6 @@ export function PersonalExpensesPage() {
   const [page, setPage] = useState(1);
   // Typing in the search box should not send a request per keystroke.
   const search = useDeferredValue(filters.search.trim());
-  const rangeInvalid = Boolean(filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo);
 
   const { data, isLoading, isFetching, isError, error, refetch } = useGetPersonalExpensesQuery(
     {
@@ -55,8 +54,8 @@ export function PersonalExpensesPage() {
         ...(filters.type !== "all" ? { type: filters.type } : {}),
         ...(filters.paymentMethod !== "all" ? { paymentMethod: filters.paymentMethod } : {}),
       },
-      from: rangeInvalid ? undefined : filters.dateFrom || undefined,
-      to: rangeInvalid ? undefined : filters.dateTo || undefined,
+      from: filters.dateFrom || undefined,
+      to: filters.dateTo || undefined,
       page,
       pageSize: PAGE_SIZE,
     },

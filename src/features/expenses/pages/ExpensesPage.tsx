@@ -104,11 +104,6 @@ export function ExpensesPage() {
   };
   const setPage = (nextPage: number) => updateView({ page: nextPage });
 
-  const hasInvalidDateRange =
-    filters.dateFrom !== "" &&
-    filters.dateTo !== "" &&
-    filters.dateFrom > filters.dateTo;
-
   // The view's filters, shared by the list and the PDF report.
   const viewQuery: CollectionQuery = {
     search: filters.search || undefined,
@@ -128,10 +123,7 @@ export function ExpensesPage() {
     isError,
     error: loadError,
     refetch,
-  } = useGetExpensesQuery(
-    { scope, query: { ...viewQuery, page, pageSize: 25 } },
-    { skip: hasInvalidDateRange },
-  );
+  } = useGetExpensesQuery({ scope, query: { ...viewQuery, page, pageSize: 25 } });
 
   const expenses = expenseResult?.data ?? [];
 
@@ -239,7 +231,7 @@ export function ExpensesPage() {
               startIcon={<PictureAsPdfOutlinedIcon />}
               onClick={exportReport}
               loading={pdf.isCreating}
-              disabled={hasInvalidDateRange || !expenseResult?.total}
+              disabled={!expenseResult?.total}
             >
               Export PDF
             </Button>
@@ -300,12 +292,6 @@ export function ExpensesPage() {
           {budgetWarnings.map((warning) => (
             <Typography key={warning} variant="body2">{warning}</Typography>
           ))}
-        </Alert>
-      )}
-
-      {hasInvalidDateRange && (
-        <Alert severity="warning">
-          The start date cannot be later than the end date.
         </Alert>
       )}
 
