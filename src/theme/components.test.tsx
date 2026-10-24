@@ -1,4 +1,4 @@
-import { MenuItem, Select, ThemeProvider } from "@mui/material";
+import { Button, Dialog, MenuItem, Select, TextField, ThemeProvider } from "@mui/material";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -48,5 +48,44 @@ describe("select menus", () => {
     await user.click(await screen.findByRole("option", { name: "Option 12" }));
 
     expect(screen.getByRole("combobox", { name: "Choice" })).toHaveTextContent("Option 12");
+  });
+});
+
+describe("themed surfaces and controls", () => {
+  it("fills contained primary and error buttons with a solid colour and a white label in dark mode", () => {
+    const { palette } = createAppTheme("dark");
+    render(
+      <ThemeProvider theme={createAppTheme("dark")}>
+        <Button variant="contained">Save Changes</Button>
+        <Button variant="contained" color="error">Delete Budget</Button>
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Save Changes" })).toHaveStyle({ backgroundColor: palette.primary.dark, color: "#FFFFFF" });
+    expect(screen.getByRole("button", { name: "Delete Budget" })).toHaveStyle({ backgroundColor: palette.error.dark, color: "#FFFFFF" });
+  });
+
+  it.each(["light", "dark"] as const)("outlines text fields with the field border colour in %s mode", (mode) => {
+    const theme = createAppTheme(mode);
+    render(
+      <ThemeProvider theme={theme}>
+        <TextField label="Merchant" />
+      </ThemeProvider>,
+    );
+
+    const outline = screen.getByRole("textbox", { name: "Merchant" }).parentElement?.querySelector(".MuiOutlinedInput-notchedOutline");
+    expect(outline).toHaveStyle({ borderColor: theme.palette.inputBorder });
+  });
+
+  it("raises dialogs above cards in dark mode", () => {
+    const theme = createAppTheme("dark");
+    render(
+      <ThemeProvider theme={theme}>
+        <Dialog open aria-label="Confirm">Content</Dialog>
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByRole("dialog").closest(".MuiPaper-root")).toHaveStyle({ backgroundColor: theme.palette.background.raised });
+    expect(theme.palette.background.raised).not.toBe(theme.palette.background.paper);
   });
 });
