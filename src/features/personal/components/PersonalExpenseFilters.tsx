@@ -1,5 +1,6 @@
 import { MenuItem, TextField } from "@mui/material";
 
+import { DateRangeFields } from "../../../components/common/DateRangeFields";
 import { FilterBar } from "../../../components/common/FilterBar";
 import {
   PAYMENT_METHODS,
@@ -9,6 +10,7 @@ import {
   type PaymentMethod,
   type PersonalExpenseFilter,
   type PersonalExpenseType,
+  type PersonalReceiptFilter,
 } from "../types/personal";
 
 interface PersonalExpenseFiltersProps {
@@ -25,15 +27,13 @@ export function PersonalExpenseFilters({ filters, onChange, onReset }: PersonalE
     filters.search.trim() !== "",
     filters.type !== "all",
     filters.paymentMethod !== "all",
+    filters.receipt !== "all",
     filters.dateFrom !== "",
     filters.dateTo !== "",
   ].filter(Boolean).length;
-  const rangeError = filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo
-    ? "The start date must be on or before the end date."
-    : null;
 
   return (
-    <FilterBar label="Expense filters" activeCount={activeCount} onReset={onReset} error={rangeError}>
+    <FilterBar label="Expense filters" activeCount={activeCount} onReset={onReset}>
       <TextField
         size="small"
         label="Search"
@@ -66,20 +66,19 @@ export function PersonalExpenseFilters({ filters, onChange, onReset }: PersonalE
         ))}
       </TextField>
       <TextField
+        select
         size="small"
-        type="date"
-        label="From"
-        value={filters.dateFrom}
-        onChange={(event) => set("dateFrom", event.target.value)}
-        slotProps={{ inputLabel: { shrink: true } }}
-      />
-      <TextField
-        size="small"
-        type="date"
-        label="To"
-        value={filters.dateTo}
-        onChange={(event) => set("dateTo", event.target.value)}
-        slotProps={{ inputLabel: { shrink: true } }}
+        label="Receipt"
+        value={filters.receipt}
+        onChange={(event) => set("receipt", event.target.value as PersonalReceiptFilter)}
+      >
+        <MenuItem value="all">With or without a receipt</MenuItem>
+        <MenuItem value="attached">Receipt attached</MenuItem>
+        <MenuItem value="missing">No receipt</MenuItem>
+      </TextField>
+      <DateRangeFields
+        value={{ from: filters.dateFrom, to: filters.dateTo }}
+        onChange={(range) => onChange({ ...filters, dateFrom: range.from, dateTo: range.to })}
       />
     </FilterBar>
   );

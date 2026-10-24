@@ -188,3 +188,52 @@ describe("ExpensesPage PDF report", () => {
     expect(downloadPdf).not.toHaveBeenCalled();
   });
 });
+
+describe("ExpensesPage date filter", () => {
+  it("keeps the list and filters on screen while an inverted range is corrected", async () => {
+    await givenExpense({ title: "Taxi", expenseDate: "2026-10-12" });
+    await givenExpense({ title: "Dinner", expenseDate: "2026-09-02" });
+    await renderExpenses();
+
+    expect(await screen.findByText("Taxi")).toBeInTheDocument();
+    const from = screen.getByLabelText("From");
+    const to = screen.getByLabelText("To");
+
+    fireEvent.change(from, { target: { value: "2026-10-10" } });
+    fireEvent.change(to, { target: { value: "2026-10-01" } });
+
+    expect(await screen.findByText("The end date must be on or after the start date.")).toBeInTheDocument();
+    expect(screen.getByText("Taxi")).toBeInTheDocument();
+
+    fireEvent.change(to, { target: { value: "2026-10-31" } });
+
+    await waitFor(() => expect(screen.queryByText("Dinner")).not.toBeInTheDocument());
+    expect(screen.getByText("Taxi")).toBeInTheDocument();
+  });
+});
+
+describe("ExpensesPage receipt reminder", () => {
+  it("explains why a draft without a receipt cannot be submitted", async () => {
+    await givenExpense({ title: "No receipt yet", status: "draft", documentIds: [] });
+    const { user } = await renderExpenses();
+
+    const button = await screen.findByRole("button", { name: "Receipt Required" });
+    expect(button).toBeDisabled();
+    // A disabled button receives no pointer events; its wrapper shows the reason.
+    await user.hover(button.parentElement!);
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Attach a receipt before submitting.");
+  });
+});
+
+describe("ExpensesPage opened from a link", () => {
+  it("starts on the status the link asks for", async () => {
+    await givenExpense({ title: "Unfinished taxi", status: "draft", documentIds: [] });
+    await givenExpense({ title: "Submitted hotel", status: "submitted" });
+
+    await renderPage(<ExpensesPage />, { path: "/expenses", as: "employee", state: { status: "draft" } });
+
+    expect(await screen.findByText("Unfinished taxi")).toBeInTheDocument();
+    expect(screen.queryByText("Submitted hotel")).not.toBeInTheDocument();
+  });
+});

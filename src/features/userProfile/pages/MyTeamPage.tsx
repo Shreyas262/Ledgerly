@@ -1,5 +1,4 @@
 import {
-  Avatar,
   Card,
   CardContent,
   Chip,
@@ -17,11 +16,9 @@ import { PageHeader } from "../../../components/common/PageHeader";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
+import { UserAvatar } from "../../../components/common/UserAvatar";
 import { humanize } from "../../../utils/format";
 import { useGetMyTeamQuery } from "../api/myTeamApi";
-
-const initials = (name: string) =>
-  name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
 
 /** The caller's team (Finance: authorized departments) and who reviews their expenses (§9.6). */
 export function MyTeamPage() {
@@ -53,9 +50,7 @@ export function MyTeamPage() {
               <Stack direction="row" spacing={2} useFlexGap sx={{ flexWrap: "wrap" }}>
                 {data.reviewers.map((reviewer) => (
                   <Stack key={reviewer.id} direction="row" spacing={1.5} sx={{ alignItems: "center", minWidth: 200 }}>
-                    <Avatar sx={{ width: 36, height: 36, fontSize: 14, bgcolor: "primary.main", color: "primary.contrastText" }}>
-                      {initials(reviewer.name)}
-                    </Avatar>
+                    <UserAvatar name={reviewer.name} />
                     <Stack>
                       <Typography variant="subtitle2">{reviewer.name}</Typography>
                       <Typography variant="caption" color="text.secondary">{humanize(reviewer.role)}</Typography>
@@ -98,7 +93,7 @@ export function MyTeamPage() {
                       <TableRow key={member.id}>
                         <TableCell>
                           <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-                            <Avatar sx={{ width: 30, height: 30, fontSize: 12 }}>{initials(member.name)}</Avatar>
+                            <UserAvatar name={member.name} size="small" />
                             <Typography variant="body2">{member.name}</Typography>
                             {member.isSelf && <Chip label="You" size="small" color="primary" variant="outlined" />}
                           </Stack>

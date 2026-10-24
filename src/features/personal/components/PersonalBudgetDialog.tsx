@@ -11,6 +11,7 @@ import {
   MenuItem,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { AddOutlined, DeleteOutlineOutlined } from "@mui/icons-material";
@@ -187,23 +188,28 @@ function BudgetForm({ budget, defaultMonth, onClose, onSaved }: PersonalBudgetDi
                     sx={{ width: { xs: 120, sm: 160 } }}
                     slotProps={{ htmlInput: { min: 0, step: "1", inputMode: "decimal" } }}
                   />
-                  <IconButton
-                    aria-label="Remove limit"
-                    onClick={() => setLimits((current) => current.filter((item) => item.key !== limit.key))}
-                  >
-                    <DeleteOutlineOutlined />
-                  </IconButton>
+                  <Tooltip title="Remove limit">
+                    <IconButton
+                      aria-label="Remove limit"
+                      onClick={() => setLimits((current) => current.filter((item) => item.key !== limit.key))}
+                    >
+                      <DeleteOutlineOutlined />
+                    </IconButton>
+                  </Tooltip>
                 </Stack>
               ))}
               {fieldError("typeLimits") && <Alert severity="warning">{fieldError("typeLimits")}</Alert>}
-              <Button
-                startIcon={<AddOutlined />}
-                onClick={() => setLimits((current) => [...current, { key: Date.now(), type: "", amount: "" }])}
-                disabled={limits.length >= PERSONAL_EXPENSE_TYPES.length}
-                sx={{ alignSelf: "flex-start" }}
-              >
-                Add Type Limit
-              </Button>
+              <Tooltip title={limits.length >= PERSONAL_EXPENSE_TYPES.length ? "Every expense type already has a limit." : ""}>
+                <span style={{ alignSelf: "flex-start" }}>
+                  <Button
+                    startIcon={<AddOutlined />}
+                    onClick={() => setLimits((current) => [...current, { key: Date.now(), type: "", amount: "" }])}
+                    disabled={limits.length >= PERSONAL_EXPENSE_TYPES.length}
+                  >
+                    Add Type Limit
+                  </Button>
+                </span>
+              </Tooltip>
             </Stack>
           </Stack>
         </DialogContent>

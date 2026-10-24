@@ -2,10 +2,10 @@ import { MenuOutlined } from "@mui/icons-material";
 import { NotificationBell } from "../../../features/notifications/components/NotificationBell";
 import {
   AppBar,
-  Avatar,
   Box,
   IconButton,
   Toolbar,
+  Tooltip,
   Menu,
   MenuItem,
 } from "@mui/material";
@@ -18,6 +18,7 @@ import { useLogoutMutation } from "../../../features/auth/api/authApi";
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { accountTypeOf } from "../../../features/auth/utils/accountType";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { UserAvatar } from "../../../components/common/UserAvatar";
 
 interface TopbarProps {
   isMobile: boolean;
@@ -81,14 +82,16 @@ export function Topbar({
       <Toolbar sx={{ justifyContent: "space-between" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {isMobile && (
-            <IconButton
-              edge="start"
-              aria-label="Open navigation menu"
-              aria-expanded={mobileSidebarOpen}
-              onClick={onMobileMenuClick}
-            >
-              <MenuOutlined />
-            </IconButton>
+            <Tooltip title="Menu">
+              <IconButton
+                edge="start"
+                aria-label="Open navigation menu"
+                aria-expanded={mobileSidebarOpen}
+                onClick={onMobileMenuClick}
+              >
+                <MenuOutlined />
+              </IconButton>
+            </Tooltip>
           )}
         </Box>
 
@@ -96,15 +99,17 @@ export function Topbar({
           {/* Notifications describe organization workflows only. */}
           {accountTypeOf(user) === "organization" && <NotificationBell />}
 
-          <IconButton
-            onClick={handleAccountClick}
-            aria-label="Open account menu"
-            aria-controls={menuOpen ? "account-menu" : undefined}
-            aria-haspopup="true"
-            aria-expanded={menuOpen ? "true" : undefined}
-          >
-            <Avatar>{user?.name?.charAt(0).toUpperCase()}</Avatar>
-          </IconButton>
+          <Tooltip title={user?.name ? `Account: ${user.name}` : "Account"}>
+            <IconButton
+              onClick={handleAccountClick}
+              aria-label="Open account menu"
+              aria-controls={menuOpen ? "account-menu" : undefined}
+              aria-haspopup="true"
+              aria-expanded={menuOpen ? "true" : undefined}
+            >
+              <UserAvatar name={user?.name} size="small" />
+            </IconButton>
+          </Tooltip>
           <Menu
             id="account-menu"
             anchorEl={anchorEl}

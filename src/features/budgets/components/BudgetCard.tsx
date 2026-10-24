@@ -1,6 +1,7 @@
 import { Card, CardActionArea, CardContent, Chip, Stack, Typography } from "@mui/material";
 import type { ChipProps } from "@mui/material";
 import { formatDate } from "../../../utils/format";
+import { TruncatedText } from "../../../components/common/TruncatedText";
 import { budgetViewTitle } from "../utils/budgetViewTitle";
 
 import type { BudgetStatus, OrganizationBudgetView } from "../types/budget";
@@ -50,9 +51,9 @@ export function BudgetCard({ budget, onView }: BudgetCardProps) {
           <Stack spacing={2}>
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", gap: 2 }}>
               <Stack spacing={0.5} sx={{ minWidth: 0 }}>
-                <Typography variant="subtitle1" noWrap>{viewTitle.title}</Typography>
+                <TruncatedText variant="subtitle1">{viewTitle.title}</TruncatedText>
                 {viewTitle.parentName && (
-                  <Typography variant="caption" color="text.secondary" noWrap>Part of {viewTitle.parentName}</Typography>
+                  <TruncatedText variant="caption" color="text.secondary">{`Part of ${viewTitle.parentName}`}</TruncatedText>
                 )}
                 <Typography variant="body2" color="text.secondary">
                   {formatDate(budget.startDate)} – {formatDate(budget.endDate)}

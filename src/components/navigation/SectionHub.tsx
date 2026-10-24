@@ -51,8 +51,8 @@ export function SectionHub({ title, description, items }: SectionHubProps) {
                         display: "flex",
                         p: 1,
                         borderRadius: 1.5,
-                        bgcolor: "action.hover",
-                        color: "primary.main",
+                        bgcolor: "accentTone.bg",
+                        color: "accentTone.fg",
                       }}
                     >
                       {item.icon}

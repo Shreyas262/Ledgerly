@@ -9,9 +9,8 @@ import {
   SavingsOutlined,
 } from "@mui/icons-material";
 import type { ReactNode } from "react";
-import { Link as RouterLink } from "react-router-dom";
 
-import logoUrl from "../../assets/ledgerly_svg.svg";
+import { BrandMark } from "../../components/common/BrandMark";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -51,24 +50,6 @@ const content = {
   },
 };
 
-function BrandMark({ inverse = false }: { inverse?: boolean }) {
-  return (
-    <Stack
-      component={RouterLink}
-      to="/"
-      aria-label="Ledgerly home"
-      direction="row"
-      spacing={1.5}
-      sx={{ alignItems: "center", textDecoration: "none", width: "fit-content" }}
-    >
-      <Box component="img" src={logoUrl} alt="" sx={{ width: 40, height: 40 }} />
-      <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: inverse ? "sidebar.activeText" : "text.primary" }}>
-        Ledgerly
-      </Typography>
-    </Stack>
-  );
-}
-
 /** Decorative ledger grid with a rising trend line, drawn in theme colours. */
 function LedgerGraphic() {
   const { palette } = useTheme();
@@ -88,15 +69,15 @@ function LedgerGraphic() {
     >
       <svg viewBox="0 0 600 400" width="100%" role="presentation">
         {Array.from({ length: 7 }, (_, row) => (
-          <line key={`h${row}`} x1="0" x2="600" y1={row * 60 + 20} y2={row * 60 + 20} stroke={palette.sidebar.textMuted} strokeOpacity="0.14" />
+          <line key={`h${row}`} x1="0" x2="600" y1={row * 60 + 20} y2={row * 60 + 20} stroke={palette.brand.textMuted} strokeOpacity="0.14" />
         ))}
         {Array.from({ length: 11 }, (_, col) => (
-          <line key={`v${col}`} y1="0" y2="400" x1={col * 60} x2={col * 60} stroke={palette.sidebar.textMuted} strokeOpacity="0.08" />
+          <line key={`v${col}`} y1="0" y2="400" x1={col * 60} x2={col * 60} stroke={palette.brand.textMuted} strokeOpacity="0.08" />
         ))}
         <polyline
           points="0,330 90,300 180,312 270,240 360,256 450,170 540,120 600,96"
           fill="none"
-          stroke={palette.sidebar.activeIcon}
+          stroke={palette.brand.activeIcon}
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -128,23 +109,22 @@ export default function AuthLayout({ children, variant = "organization" }: AuthL
           flexDirection: "column",
           justifyContent: "space-between",
           p: { md: 5, lg: 7 },
-          color: "sidebar.text",
-          bgcolor: "sidebar.background",
-          backgroundImage: (theme) => theme.palette.sidebar.gradient,
+          color: "brand.text",
+          bgcolor: "brand.background",
         }}
       >
         <LedgerGraphic />
 
         <Box sx={{ position: "relative", ...entrance(0) }}>
-          <BrandMark inverse />
+          <BrandMark inverse to="/" />
         </Box>
 
         <Stack spacing={4} sx={{ position: "relative", maxWidth: 440, ...entrance(120) }}>
           <Stack spacing={1.5}>
-            <Typography variant="h3" component="p" sx={{ color: "sidebar.activeText" }}>
+            <Typography variant="h3" component="p" sx={{ color: "brand.activeText" }}>
               {headline}
             </Typography>
-            <Typography sx={{ color: "sidebar.textMuted" }}>
+            <Typography sx={{ color: "brand.textMuted" }}>
               {summary}
             </Typography>
           </Stack>
@@ -159,17 +139,17 @@ export default function AuthLayout({ children, variant = "organization" }: AuthL
                     p: 1,
                     height: "fit-content",
                     borderRadius: 1.5,
-                    bgcolor: "sidebar.activeBackground",
-                    color: "sidebar.activeIcon",
+                    bgcolor: "brand.activeBackground",
+                    color: "brand.activeIcon",
                   }}
                 >
                   {feature.icon}
                 </Box>
                 <Stack spacing={0.25}>
-                  <Typography variant="subtitle2" sx={{ color: "sidebar.activeText" }}>
+                  <Typography variant="subtitle2" sx={{ color: "brand.activeText" }}>
                     {feature.title}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: "sidebar.textMuted" }}>
+                  <Typography variant="body2" sx={{ color: "brand.textMuted" }}>
                     {feature.text}
                   </Typography>
                 </Stack>
@@ -178,7 +158,7 @@ export default function AuthLayout({ children, variant = "organization" }: AuthL
           </Stack>
         </Stack>
 
-        <Typography variant="caption" sx={{ position: "relative", color: "sidebar.textMuted" }}>
+        <Typography variant="caption" sx={{ position: "relative", color: "brand.textMuted" }}>
           © {new Date().getFullYear()} Ledgerly
         </Typography>
       </Box>
@@ -196,7 +176,7 @@ export default function AuthLayout({ children, variant = "organization" }: AuthL
       >
         <Stack spacing={4} sx={{ width: "100%", maxWidth: 400, ...entrance(80) }}>
           <Box sx={{ display: { xs: "block", md: "none" } }}>
-            <BrandMark />
+            <BrandMark to="/" />
           </Box>
           {children}
         </Stack>

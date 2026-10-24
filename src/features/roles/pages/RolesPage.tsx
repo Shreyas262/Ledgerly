@@ -17,7 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
+import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import { GroupedPermissions } from "../components/GroupedPermissions";
 
 import {

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -14,6 +15,7 @@ import {
 } from "@mui/material";
 import {
   AddOutlined,
+  ArrowForwardOutlined,
   AssessmentOutlined,
   ChevronRightOutlined,
   ReceiptLongOutlined,
@@ -25,6 +27,9 @@ import { PageHeader } from "../../../components/common/PageHeader";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { RefreshingState } from "../../../components/common/RefreshingState";
+import { FloatingAction } from "../../../components/common/FloatingAction";
+import { PlusIcon } from "../../../components/common/PlusIcon";
+import { TruncatedText } from "../../../components/common/TruncatedText";
 import { Amount } from "../../../components/common/Amount";
 import { ConversionNote } from "../../currency/components/ConversionNote";
 import { KpiCard } from "../../dashboard/components/KpiCard";
@@ -36,6 +41,13 @@ import { PAYMENT_METHOD_LABELS, PERSONAL_EXPENSE_TYPE_LABELS } from "../types/pe
 import { PersonalBudgetCard } from "../components/PersonalBudgetCard";
 import { PersonalTypeBreakdownChart } from "../components/PersonalTypeBreakdownChart";
 import { formatMonth } from "../utils/personalFormat";
+
+/** First and last calendar dates of a YYYY-MM month. */
+function monthBounds(month: string): { dateFrom: string; dateTo: string } {
+  const [year, monthIndex] = month.split("-").map(Number);
+  const lastDay = new Date(year, monthIndex, 0).getDate();
+  return { dateFrom: `${month}-01`, dateTo: `${month}-${String(lastDay).padStart(2, "0")}` };
+}
 
 function changeDescription(current: number, previous: number): string {
   if (previous === 0) return current === 0 ? "No spending last month either" : "Nothing spent last month";
@@ -70,7 +82,7 @@ export function PersonalDashboardPage() {
   const firstName = user?.name.split(" ")[0];
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} sx={{ pb: 10 }}>
       <PageHeader
         title={firstName ? `Hello, ${firstName}` : "Dashboard"}
         description={summary ? `Your spending for ${formatMonth(summary.month)}.` : "Your spending at a glance."}
@@ -119,6 +131,10 @@ export function PersonalDashboardPage() {
                 label="Spent this month"
                 value={formatCurrency(summary.monthSpent)}
                 description={changeDescription(summary.monthSpent, summary.previousMonthSpent)}
+                sparkline={summary.trend.map((point) => point.amount)}
+                sparklineLabel={`Spending over the last six months: ${summary.trend
+                  .map((point) => `${formatMonth(point.month)} ${formatCurrency(point.amount)}`)
+                  .join(", ")}`}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
@@ -150,10 +166,33 @@ export function PersonalDashboardPage() {
             </Grid>
           </Grid>
 
+          {summary.missingReceipts > 0 && (
+            <Alert
+              severity="info"
+              action={
+                <Button
+                  component={RouterLink}
+                  to="/personal/expenses"
+                  state={{ filters: { receipt: "missing", ...monthBounds(summary.month) } }}
+                  variant="outlined"
+                  color="inherit"
+                  size="small"
+                  endIcon={<ArrowForwardOutlined />}
+                >
+                  Review Expenses
+                </Button>
+              }
+            >
+              {summary.missingReceipts === 1
+                ? "1 expense this month has no receipt."
+                : `${summary.missingReceipts} expenses this month have no receipt.`}
+            </Alert>
+          )}
+
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, md: 6 }}>
               {summary.budget ? (
-                <PersonalBudgetCard budget={summary.budget} />
+                <PersonalBudgetCard budget={summary.budget} pace={summary.pace} />
               ) : (
                 <Card sx={{ height: "100%" }}>
                   <CardContent>
@@ -201,9 +240,8 @@ export function PersonalDashboardPage() {
                       {index > 0 && <Divider />}
                       <ListItemButton component={RouterLink} to={`/personal/expenses/${expense.id}`} sx={{ px: 1, borderRadius: 1 }}>
                         <ListItemText
-                          primary={expense.description}
+                          primary={<TruncatedText component="span" variant="inherit">{expense.description}</TruncatedText>}
                           secondary={`${formatDate(expense.expenseDate)} · ${PERSONAL_EXPENSE_TYPE_LABELS[expense.type]} · ${PAYMENT_METHOD_LABELS[expense.paymentMethod]}`}
-                          slotProps={{ primary: { noWrap: true } }}
                           sx={{ minWidth: 0, mr: 2 }}
                         />
                         <Box sx={{ flexShrink: 0, textAlign: "right" }}>
@@ -221,6 +259,8 @@ export function PersonalDashboardPage() {
           </Card>
         </>
       )}
+
+      <FloatingAction label="Add Expense" to="/personal/expenses/new" icon={<PlusIcon sx={{ fontSize: 28 }} />} />
     </Stack>
   );
 }

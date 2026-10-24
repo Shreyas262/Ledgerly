@@ -3,35 +3,33 @@ import {
   Alert,
   Grid,
   Stack,
+  Typography,
 } from "@mui/material";
 
 import { ErrorState } from "../../../components/common/ErrorState";
+import { FloatingAction } from "../../../components/common/FloatingAction";
 import { LoadingState } from "../../../components/common/LoadingState";
+import { PlusIcon } from "../../../components/common/PlusIcon";
 import { RefreshingState } from "../../../components/common/RefreshingState";
 import { DashboardDateFilter } from "../components/DashboardDateFilter";
+import { DashboardAttention } from "../components/DashboardAttention";
+import { DashboardWorkQueues } from "../components/DashboardWorkQueues";
 import { KpiCard } from "../components/KpiCard";
+import { RecentExpenses } from "../components/RecentExpenses";
 import { SpendingTrend } from "../components/SpendingTrend";
 import { CategoryAnalysis } from "../components/CategoryAnalysis";
 import { ApprovalMetrics } from "../components/ApprovalMetrics";
 import { useGetDashboardSummaryQuery } from "../api/dashboardApi";
+import { DEFAULT_DASHBOARD_RANGE, type DashboardDateRange } from "../utils/dashboardRange";
+import { usePermissions } from "../../auth/hooks/usePermissions";
 import { formatCurrency } from "../../../utils/currency";
 import { PageHeader } from "../../../components/common/PageHeader";
 
-interface DashboardDateRange {
-  startDate: string;
-  endDate: string;
-}
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export function DashboardPage() {
-  const [dateRange, setDateRange] = useState<DashboardDateRange>({
-    startDate: "",
-    endDate: "",
-  });
-
-  const isInvalidRange =
-    Boolean(dateRange.startDate) &&
-    Boolean(dateRange.endDate) &&
-    dateRange.startDate > dateRange.endDate;
+  const { can } = usePermissions();
+  const [dateRange, setDateRange] = useState<DashboardDateRange>(DEFAULT_DASHBOARD_RANGE);
 
   const query = useMemo(
     () => ({
@@ -48,38 +46,58 @@ export function DashboardPage() {
     isError,
     error,
     refetch,
-  } = useGetDashboardSummaryQuery(query, {
-    skip: isInvalidRange,
-  });
+  } = useGetDashboardSummaryQuery(query);
 
   if (isLoading) return <LoadingState />;
   if (isError || !summary) return <ErrorState error={error} onRetry={refetch} />;
 
-  const hasData = summary.kpis.totalSpending > 0 ||
-    summary.kpis.pendingApproval > 0 ||
-    summary.kpis.approvedExpenses > 0 ||
-    summary.kpis.rejectedExpenses > 0;
+  const { kpis, owed } = summary;
+  const hasData = kpis.totalSpending > 0 ||
+    kpis.pendingApproval > 0 ||
+    kpis.approvedExpenses > 0 ||
+    kpis.rejectedExpenses > 0;
+  // Offered only when the form can actually be used (§28.16).
+  const canAddExpense = can("expenses.create") && !summary.attention.creationBlockedReason;
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={{ pb: canAddExpense ? 10 : 0 }}>
       {isFetching && <RefreshingState />}
       <PageHeader
         title="My Expenses Overview"
         description="A summary of the expenses you have created. Spend includes reimbursed expenses only."
       />
 
+      <DashboardWorkQueues queues={summary.workQueues} />
+
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 8 }}>
+          <DashboardAttention attention={summary.attention} />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <KpiCard
+            label="Owed to you"
+            value={formatCurrency(owed.amount)}
+            description={
+              owed.count
+                ? `${plural(owed.count, "approved expense", "approved expenses")} waiting for payment`
+                : "Nothing is waiting for payment"
+            }
+          />
+        </Grid>
+      </Grid>
+
+      <RecentExpenses expenses={summary.recent} />
+
+      <Typography variant="h6" component="h2" sx={{ pt: 1 }}>
+        Your expenses in the selected period
+      </Typography>
+
       <DashboardDateFilter
         value={dateRange}
         onChange={setDateRange}
       />
 
-      {isInvalidRange && (
-        <Alert severity="warning">
-          The start date cannot be later than the end date.
-        </Alert>
-      )}
-
-      {!isInvalidRange && !hasData && (
+      {!hasData && (
         <Alert severity="info">
           No expenses were found in the selected date range.
         </Alert>
@@ -89,7 +107,7 @@ export function DashboardPage() {
         <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
             label="Spend"
-            value={formatCurrency(summary.kpis.totalSpending)}
+            value={formatCurrency(kpis.totalSpending)}
             description="Total amount paid out"
           />
         </Grid>
@@ -97,24 +115,24 @@ export function DashboardPage() {
         <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
             label="Pending approval"
-            value={summary.kpis.pendingApproval}
-            description="Submitted or under review"
+            value={kpis.pendingApproval}
+            description={`${formatCurrency(kpis.pendingAmount)} submitted or under review`}
           />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
             label="Approved expenses"
-            value={summary.kpis.approvedExpenses}
-            description="Including those in or past reimbursement"
+            value={kpis.approvedExpenses}
+            description={`${formatCurrency(kpis.approvedAmount)}, including those in or past reimbursement`}
           />
         </Grid>
 
         <Grid size={{ xs: 12, sm: 6, lg: "grow" }}>
           <KpiCard
             label="Rejected expenses"
-            value={summary.kpis.rejectedExpenses}
-            description="Returned by a reviewer"
+            value={kpis.rejectedExpenses}
+            description={`${formatCurrency(kpis.rejectedAmount)} returned by a reviewer`}
           />
         </Grid>
 
@@ -130,6 +148,8 @@ export function DashboardPage() {
           <ApprovalMetrics metrics={summary.approvalMetrics} />
         </Grid>
       </Grid>
+
+      {canAddExpense && <FloatingAction label="Add Expense" to="/expenses/new" icon={<PlusIcon sx={{ fontSize: 28 }} />} />}
     </Stack>
   );
 }

@@ -1,9 +1,10 @@
 import type { PaletteMode, Shadows } from "@mui/material/styles";
 
 // Restrained elevation scale: borders carry structure, shadows only hint at depth.
+// Dark mode also lifts floating surfaces to `background.raised`, so it needs less shadow.
 export const getShadows = (mode: PaletteMode): Shadows => {
-  const rgb = mode === "light" ? "15, 23, 42" : "0, 0, 0";
-  const k = mode === "light" ? 1 : 3;
+  const rgb = mode === "light" ? "28, 32, 36" : "0, 0, 0";
+  const k = mode === "light" ? 1 : 2;
   const c = (opacity: number) => `rgba(${rgb}, ${Math.min(opacity * k, 0.6)})`;
 
   const levels = {

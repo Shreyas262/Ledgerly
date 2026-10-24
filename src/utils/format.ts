@@ -35,3 +35,7 @@ export const formatDate = (value: string | null | undefined): string => {
   if (Number.isNaN(date.getTime())) return "—";
   return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 };
+
+/** Up to two initials from a person's name: "Asha Kumar" → "AK". */
+export const initialsOf = (name: string | null | undefined): string =>
+  (name ?? "").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join("");

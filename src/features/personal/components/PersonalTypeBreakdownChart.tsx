@@ -3,6 +3,7 @@ import { PieChart } from "@mui/x-charts/PieChart";
 
 import { ChartCard } from "../../../components/common/ChartCard";
 import { Amount } from "../../../components/common/Amount";
+import { TruncatedText } from "../../../components/common/TruncatedText";
 import { formatCurrency } from "../../../utils/currency";
 import { PERSONAL_EXPENSE_TYPE_LABELS, type PersonalTypeBreakdown } from "../types/personal";
 import { usePersonalTypeColor } from "../utils/personalFormat";
@@ -56,10 +57,10 @@ export function PersonalTypeBreakdownChart({
           {data.map((item) => (
             <Stack key={item.type} direction="row" spacing={1} sx={{ alignItems: "center" }}>
               <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: colorOf(item.type), flexShrink: 0 }} />
-              <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
+              <TruncatedText variant="body2" sx={{ flex: 1 }} title={`${PERSONAL_EXPENSE_TYPE_LABELS[item.type]} · ${item.count}`}>
                 {PERSONAL_EXPENSE_TYPE_LABELS[item.type]}
                 <Typography component="span" variant="caption" color="text.secondary"> · {item.count}</Typography>
-              </Typography>
+              </TruncatedText>
               <Typography variant="subtitle2"><Amount value={item.amount} /></Typography>
               <Typography variant="caption" color="text.secondary" sx={{ width: 36, textAlign: "right" }}>
                 {total ? `${((item.amount / total) * 100).toFixed(0)}%` : "0%"}

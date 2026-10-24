@@ -1,7 +1,6 @@
 import { useDeferredValue, useState } from "react";
 import {
   Alert,
-  Box,
   Button,
   Chip,
   Pagination,
@@ -14,6 +13,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { AddOutlined, AttachFileOutlined } from "@mui/icons-material";
@@ -25,6 +25,7 @@ import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { RefreshingState } from "../../../components/common/RefreshingState";
 import { Amount } from "../../../components/common/Amount";
+import { TruncatedText } from "../../../components/common/TruncatedText";
 import { ConversionNote } from "../../currency/components/ConversionNote";
 import { formatDate } from "../../../utils/format";
 import { useGetPersonalExpensesQuery } from "../api/personalApi";
@@ -42,11 +43,14 @@ export function PersonalExpensesPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [notice, setNotice] = useState<string | null>((location.state as { notice?: string } | null)?.notice ?? null);
-  const [filters, setFilters] = useState<PersonalExpenseFilter>(initialPersonalExpenseFilters);
+  // A link (e.g. from the dashboard) may open the list already filtered.
+  const [filters, setFilters] = useState<PersonalExpenseFilter>(() => ({
+    ...initialPersonalExpenseFilters,
+    ...(location.state as { filters?: Partial<PersonalExpenseFilter> } | null)?.filters,
+  }));
   const [page, setPage] = useState(1);
   // Typing in the search box should not send a request per keystroke.
   const search = useDeferredValue(filters.search.trim());
-  const rangeInvalid = Boolean(filters.dateFrom && filters.dateTo && filters.dateFrom > filters.dateTo);
 
   const { data, isLoading, isFetching, isError, error, refetch } = useGetPersonalExpensesQuery(
     {
@@ -54,9 +58,10 @@ export function PersonalExpensesPage() {
       filter: {
         ...(filters.type !== "all" ? { type: filters.type } : {}),
         ...(filters.paymentMethod !== "all" ? { paymentMethod: filters.paymentMethod } : {}),
+        ...(filters.receipt !== "all" ? { receipt: filters.receipt } : {}),
       },
-      from: rangeInvalid ? undefined : filters.dateFrom || undefined,
-      to: rangeInvalid ? undefined : filters.dateTo || undefined,
+      from: filters.dateFrom || undefined,
+      to: filters.dateTo || undefined,
       page,
       pageSize: PAGE_SIZE,
     },
@@ -140,16 +145,19 @@ export function PersonalExpensesPage() {
                     <TableCell sx={{ whiteSpace: "nowrap" }}>{formatDate(expense.expenseDate)}</TableCell>
                     <TableCell sx={{ maxWidth: 320 }}>
                       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                        <Box
+                        <TruncatedText
                           component={RouterLink}
                           to={`/personal/expenses/${expense.id}`}
-                          onClick={(event) => event.stopPropagation()}
-                          sx={{ color: "text.primary", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                          onClick={(event: React.MouseEvent) => event.stopPropagation()}
+                          variant="inherit"
+                          sx={{ color: "text.primary", textDecoration: "none" }}
                         >
                           {expense.description}
-                        </Box>
+                        </TruncatedText>
                         {expense.documentIds.length > 0 && (
-                          <AttachFileOutlined fontSize="small" color="action" aria-label="Has receipts" />
+                          <Tooltip title="Has receipts">
+                            <AttachFileOutlined fontSize="small" color="action" titleAccess="Has receipts" />
+                          </Tooltip>
                         )}
                       </Stack>
                     </TableCell>

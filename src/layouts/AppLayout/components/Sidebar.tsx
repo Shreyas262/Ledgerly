@@ -17,8 +17,6 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Typography,
-  type Theme,
 } from "@mui/material";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -28,13 +26,12 @@ import { administrationPermissions, approvalPermissions } from "../../../feature
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { accountTypeOf } from "../../../features/auth/utils/accountType";
 import type { AccountType } from "../../../features/auth/types/auth";
-import logoUrl from "../../../assets/ledgerly_svg.svg";
+import { BrandMark } from "../../../components/common/BrandMark";
 
 const SIDEBAR_WIDTH = 260;
 
 const sidebarPaperSx = {
   bgcolor: "sidebar.background",
-  backgroundImage: (theme: Theme) => theme.palette.sidebar.gradient,
   color: "sidebar.text",
 };
 
@@ -191,25 +188,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     // maxWidth keeps content inside the permanent drawer's border (no 1px horizontal overflow).
     <Box sx={{ width: SIDEBAR_WIDTH, maxWidth: "100%" }}>
       <Box sx={{ px: 3, py: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          Ledgerly
-          <Box
-            component="img"
-            src={logoUrl}
-            alt=""
-            sx={{
-              width: 40,
-              height: 40,
-              bottom: 0.5,
-              position: "relative",
-              verticalAlign: "middle",
-              ml: 0.5,
-            }}
-          />
-        </Typography>
-        <Typography variant="body2" sx={{ color: "sidebar.textMuted" }}>
-          {subtitles[accountType]}
-        </Typography>
+        <BrandMark subtitle={subtitles[accountType]} />
       </Box>
 
       <Divider sx={{ borderColor: "sidebar.border" }} />

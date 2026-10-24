@@ -59,18 +59,36 @@ export const components: Components<Omit<Theme, "components">> = {
         "&.Mui-disabled": {
           opacity: 0.7,
         },
-        // Deeper red keeps white label text at AA contrast.
-        ...(theme.palette.mode === "light" &&
+        // Dark-mode mains are light text colours; fill with the solid step and a white label.
+        ...(theme.palette.mode === "dark" &&
           ownerState.variant === "contained" &&
-          ownerState.color === "error" && {
-            backgroundColor: theme.palette.error.dark,
+          (ownerState.color === "primary" || ownerState.color === "error") && {
+            backgroundColor: theme.palette[ownerState.color].dark,
+            color: theme.palette.common.white,
             "&:hover": {
-              backgroundColor: darken(theme.palette.error.dark, 0.12),
+              backgroundColor: darken(theme.palette[ownerState.color].dark, 0.12),
             },
           }),
       }),
       sizeSmall: ({ theme }) => ({
         paddingInline: theme.spacing(1.5),
+      }),
+    },
+  },
+
+  MuiFab: {
+    styleOverrides: {
+      root: ({ theme, ownerState }) => ({
+        boxShadow: theme.shadows[6],
+        // As with contained buttons, dark mode fills with the solid step and a white icon.
+        ...(theme.palette.mode === "dark" &&
+          ownerState.color === "primary" && {
+            backgroundColor: theme.palette.primary.dark,
+            color: theme.palette.common.white,
+            "&:hover": {
+              backgroundColor: darken(theme.palette.primary.dark, 0.12),
+            },
+          }),
       }),
     },
   },
@@ -132,7 +150,6 @@ export const components: Components<Omit<Theme, "components">> = {
 
         return {
           backgroundColor: sidebar.background,
-          backgroundImage: sidebar.topbarGradient,
           color: sidebar.text,
           borderBottom: `1px solid ${sidebar.border}`,
           "& .MuiIconButton-root": {
@@ -142,10 +159,6 @@ export const components: Components<Omit<Theme, "components">> = {
             backgroundColor: sidebar.hover,
             color: sidebar.text,
           },
-          "& .MuiAvatar-colorDefault": {
-            backgroundColor: alpha(sidebar.activeIcon, 0.16),
-            color: sidebar.activeIcon,
-          },
         };
       },
     },
@@ -154,17 +167,12 @@ export const components: Components<Omit<Theme, "components">> = {
   MuiOutlinedInput: {
     styleOverrides: {
       root: ({ theme }) => {
-        const idleBorder =
-          theme.palette.mode === "light"
-            ? theme.palette.grey[300]
-            : theme.palette.grey[700];
-
         return {
           borderRadius: 8,
           backgroundColor: theme.palette.background.paper,
           transition: theme.transitions.create(["box-shadow", "border-color"]),
           "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: idleBorder,
+            borderColor: theme.palette.inputBorder,
           },
           "&:hover:not(.Mui-disabled):not(.Mui-error) .MuiOutlinedInput-notchedOutline":
             {
@@ -203,6 +211,23 @@ export const components: Components<Omit<Theme, "components">> = {
           },
         },
       },
+    },
+  },
+
+  // Floating surfaces sit above cards; in dark mode they are lighter to show it.
+  MuiPopover: {
+    styleOverrides: {
+      paper: ({ theme }) => ({
+        backgroundColor: theme.palette.background.raised,
+      }),
+    },
+  },
+
+  MuiAutocomplete: {
+    styleOverrides: {
+      paper: ({ theme }) => ({
+        backgroundColor: theme.palette.background.raised,
+      }),
     },
   },
 
@@ -299,6 +324,7 @@ export const components: Components<Omit<Theme, "components">> = {
       paper: ({ theme }) => ({
         borderRadius: 16,
         border: `1px solid ${theme.palette.divider}`,
+        backgroundColor: theme.palette.background.raised,
       }),
     },
   },
@@ -383,10 +409,7 @@ export const components: Components<Omit<Theme, "components">> = {
         fontWeight: 600,
         letterSpacing: "0.02em",
         color: theme.palette.text.secondary,
-        backgroundColor:
-          theme.palette.mode === "light"
-            ? theme.palette.grey[50]
-            : theme.palette.background.paper,
+        backgroundColor: theme.palette.background.subtle,
         whiteSpace: "nowrap",
       }),
       body: {
@@ -429,10 +452,7 @@ export const components: Components<Omit<Theme, "components">> = {
       root: ({ theme }) => ({
         height: 6,
         borderRadius: 999,
-        backgroundColor:
-          theme.palette.mode === "light"
-            ? theme.palette.grey[200]
-            : theme.palette.grey[800],
+        backgroundColor: theme.palette.chart.track,
       }),
       bar: {
         borderRadius: 999,
@@ -442,10 +462,10 @@ export const components: Components<Omit<Theme, "components">> = {
 
   MuiAvatar: {
     styleOverrides: {
+      // Text size follows the avatar size (UserAvatar).
       colorDefault: ({ theme }) => ({
-        backgroundColor: theme.palette.primary.main,
-        color: theme.palette.primary.contrastText,
-        fontSize: "0.875rem",
+        backgroundColor: theme.palette.accentTone.bg,
+        color: theme.palette.accentTone.fg,
         fontWeight: 600,
       }),
     },

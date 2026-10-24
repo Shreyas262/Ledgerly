@@ -7,10 +7,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import OpenInNewIcon from "@mui/icons-material/OpenInNewOutlined";
 import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
 
 import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { TruncatedText } from "../../../components/common/TruncatedText";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
 import { formatDate } from "../../../utils/format";
 import { openObjectUrlInNewTab } from "../../../utils/openInNewTab";
@@ -122,7 +123,7 @@ export function PersonalReceiptPanel({ expenseId }: PersonalReceiptPanelProps) {
               <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", minWidth: 0 }}>
                 <AttachFileOutlinedIcon fontSize="small" color="action" />
                 <Stack sx={{ minWidth: 0 }}>
-                  <Typography noWrap>{document.fileName}</Typography>
+                  <TruncatedText>{document.fileName}</TruncatedText>
                   <Typography variant="caption" color="text.secondary">
                     {Math.ceil(document.size / 1024)} KB · added {formatDate(document.createdAt)}
                   </Typography>

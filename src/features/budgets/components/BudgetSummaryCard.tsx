@@ -17,7 +17,7 @@ export function BudgetSummaryCard({
   description,
 }: BudgetSummaryCardProps) {
   return (
-    <Card>
+    <Card sx={{ height: "100%" }}>
       <CardContent>
         <Stack spacing={1}>
           <Typography

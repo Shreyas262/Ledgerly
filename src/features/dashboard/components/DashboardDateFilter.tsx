@@ -1,11 +1,15 @@
-import { TextField } from "@mui/material";
+import { Box, ToggleButton, ToggleButtonGroup } from "@mui/material";
 
+import { DateRangeFields } from "../../../components/common/DateRangeFields";
 import { FilterBar } from "../../../components/common/FilterBar";
-
-export interface DashboardDateRange {
-  startDate: string;
-  endDate: string;
-}
+import {
+  DASHBOARD_PRESETS,
+  DEFAULT_DASHBOARD_PRESET,
+  DEFAULT_DASHBOARD_RANGE,
+  dashboardPresetRange,
+  type DashboardDateRange,
+  type DashboardPreset,
+} from "../utils/dashboardRange";
 
 interface DashboardDateFilterProps {
   value: DashboardDateRange;
@@ -16,62 +20,45 @@ export function DashboardDateFilter({
   value,
   onChange,
 }: DashboardDateFilterProps) {
-  const isInvalidRange =
-    Boolean(value.startDate) &&
-    Boolean(value.endDate) &&
-    value.startDate > value.endDate;
+  const activeCount = value.preset === DEFAULT_DASHBOARD_PRESET ? 0 : 1;
 
-  const activeCount = (value.startDate ? 1 : 0) + (value.endDate ? 1 : 0);
+  const handlePreset = (preset: DashboardPreset | null) => {
+    if (!preset) return;
+    // Custom starts from the dates currently shown.
+    onChange(preset === "custom" ? { ...value, preset } : dashboardPresetRange(preset));
+  };
 
   return (
     <FilterBar
       label="Date range"
       activeCount={activeCount}
-      onReset={() =>
-        onChange({
-          startDate: "",
-          endDate: "",
-        })
-      }
-      error={isInvalidRange ? "Start date must be before end date." : null}
+      onReset={() => onChange(DEFAULT_DASHBOARD_RANGE)}
     >
-      <TextField
-        size="small"
-        label="Start date"
-        type="date"
-        value={value.startDate}
-        error={isInvalidRange}
-        onChange={(event) =>
-          onChange({
-            ...value,
-            startDate: event.target.value,
-          })
-        }
-        slotProps={{
-          inputLabel: {
-            shrink: true,
-          },
-        }}
-      />
+      <Box sx={{ overflowX: "auto", maxWidth: "100%" }}>
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          value={value.preset}
+          onChange={(_event, preset: DashboardPreset | null) => handlePreset(preset)}
+          aria-label="Date range"
+          sx={{ flexWrap: "nowrap" }}
+        >
+          {DASHBOARD_PRESETS.map((preset) => (
+            <ToggleButton key={preset.value} value={preset.value} sx={{ whiteSpace: "nowrap", px: 1.5 }}>
+              {preset.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+      </Box>
 
-      <TextField
-        size="small"
-        label="End date"
-        type="date"
-        value={value.endDate}
-        error={isInvalidRange}
-        onChange={(event) =>
-          onChange({
-            ...value,
-            endDate: event.target.value,
-          })
-        }
-        slotProps={{
-          inputLabel: {
-            shrink: true,
-          },
-        }}
-      />
+      {value.preset === "custom" && (
+        <DateRangeFields
+          fromLabel="Start date"
+          toLabel="End date"
+          value={{ from: value.startDate, to: value.endDate }}
+          onChange={(range) => onChange({ preset: "custom", startDate: range.from, endDate: range.to })}
+        />
+      )}
     </FilterBar>
   );
 }

@@ -1,7 +1,6 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { BackLink } from "../../../components/navigation/BackLink";
 import {
-  Avatar,
   Box,
   Button,
   Card,
@@ -21,10 +20,10 @@ import {
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlined";
+import DeleteOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
 import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlined";
-import SearchIcon from "@mui/icons-material/Search";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
+import SearchIcon from "@mui/icons-material/SearchOutlined";
 import { useDeferredValue, useMemo, useState } from "react";
 
 import { useGetUsersQuery, useDeleteUserMutation, useUpdateUserStatusMutation } from "../api/usersApi";
@@ -42,12 +41,11 @@ import { useGetRolesQuery } from "../../roles/api/rolesApi";
 import { GroupedPermissions } from "../../roles/components/GroupedPermissions";
 import type { User } from "../types/user";
 import { PageHeader } from "../../../components/common/PageHeader";
+import { UserAvatar } from "../../../components/common/UserAvatar";
+import { TruncatedText } from "../../../components/common/TruncatedText";
 import { humanize } from "../../../utils/format";
 
 const ACTION_SX = { minWidth: 132 };
-
-const initials = (name: string) =>
-  name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
 
 export function UsersPage() {
   const { can } = usePermissions();
@@ -221,15 +219,13 @@ export function UsersPage() {
                       {/* Identity */}
                       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
                         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", minWidth: 0 }}>
-                          <Avatar sx={{ bgcolor: "primary.main", color: "primary.contrastText", width: 44, height: 44, fontSize: 16 }}>
-                            {initials(user.name)}
-                          </Avatar>
+                          <UserAvatar name={user.name} />
                           <Box sx={{ minWidth: 0 }}>
                             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                              <Typography variant="subtitle1" noWrap>{user.name}</Typography>
+                              <TruncatedText variant="subtitle1">{user.name}</TruncatedText>
                               {isSelf && <Chip label="You" size="small" color="primary" variant="outlined" />}
                             </Stack>
-                            <Typography variant="body2" color="text.secondary" noWrap>{user.email}</Typography>
+                            <TruncatedText variant="body2" color="text.secondary">{user.email}</TruncatedText>
                           </Box>
                         </Stack>
                         <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>

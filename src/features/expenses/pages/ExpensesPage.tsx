@@ -1,5 +1,5 @@
 import { useConfirm } from "../../../components/common/ConfirmProvider";
-import { Stack, Typography, Button, Alert, Pagination, Tab, Tabs } from "@mui/material";
+import { Stack, Typography, Button, Alert, Pagination, Tab, Tabs, Tooltip } from "@mui/material";
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
@@ -27,12 +27,14 @@ import { ApiFeedback } from "../../../components/common/ApiFeedback";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
 import { useAuth } from "../../../features/auth/context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
+  EXPENSE_STATUS_LABELS,
   type Expense,
   type ExpenseFilter as ExpenseFiltersState,
   type ExpenseScope,
+  type ExpenseStatus,
   initialExpenseFilters,
 } from "../types/expense";
 import { ExpenseFilters } from "../components/ExpenseFilters";
@@ -88,8 +90,15 @@ export function ExpensesPage() {
   const widerScope = getAuthorizedWiderScope(user?.role);
   const [selectedScope, setSelectedScope] = useState<ExpenseScope>("OWN");
   const scope: ExpenseScope = selectedScope === "OWN" || selectedScope === widerScope ? selectedScope : "OWN";
-  // Each view keeps its own filters and page.
-  const [viewStates, setViewStates] = useState<Partial<Record<ExpenseScope, ScopeViewState>>>({});
+  // Each view keeps its own filters and page. A link (e.g. from the dashboard) may open
+  // the user's own view filtered to one status.
+  const location = useLocation();
+  const [viewStates, setViewStates] = useState<Partial<Record<ExpenseScope, ScopeViewState>>>(() => {
+    const status = (location.state as { status?: string } | null)?.status;
+    return status && status in EXPENSE_STATUS_LABELS
+      ? { OWN: { filters: { ...initialExpenseFilters, status: status as ExpenseStatus }, page: 1 } }
+      : {};
+  });
   const { filters, page } = viewStates[scope] ?? initialViewState;
   // Drafts selected for submitting together. Only what is on screen can be
   // selected, so the selection is cleared whenever the list changes.
@@ -103,11 +112,6 @@ export function ExpensesPage() {
     }));
   };
   const setPage = (nextPage: number) => updateView({ page: nextPage });
-
-  const hasInvalidDateRange =
-    filters.dateFrom !== "" &&
-    filters.dateTo !== "" &&
-    filters.dateFrom > filters.dateTo;
 
   // The view's filters, shared by the list and the PDF report.
   const viewQuery: CollectionQuery = {
@@ -128,10 +132,7 @@ export function ExpensesPage() {
     isError,
     error: loadError,
     refetch,
-  } = useGetExpensesQuery(
-    { scope, query: { ...viewQuery, page, pageSize: 25 } },
-    { skip: hasInvalidDateRange },
-  );
+  } = useGetExpensesQuery({ scope, query: { ...viewQuery, page, pageSize: 25 } });
 
   const expenses = expenseResult?.data ?? [];
 
@@ -239,19 +240,23 @@ export function ExpensesPage() {
               startIcon={<PictureAsPdfOutlinedIcon />}
               onClick={exportReport}
               loading={pdf.isCreating}
-              disabled={hasInvalidDateRange || !expenseResult?.total}
+              disabled={!expenseResult?.total}
             >
               Export PDF
             </Button>
             {can("expenses.create") && (
-              <Button
-                variant="contained"
-                startIcon={<AddOutlinedIcon />}
-                onClick={() => navigate("/expenses/new")}
-                disabled={creationBlocked}
-              >
-                Create Expense
-              </Button>
+              <Tooltip title={creationBlocked ? eligibility?.reason ?? "" : ""}>
+                <span>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddOutlinedIcon />}
+                    onClick={() => navigate("/expenses/new")}
+                    disabled={creationBlocked}
+                  >
+                    Create Expense
+                  </Button>
+                </span>
+              </Tooltip>
             )}
           </Stack>
         }
@@ -300,12 +305,6 @@ export function ExpensesPage() {
           {budgetWarnings.map((warning) => (
             <Typography key={warning} variant="body2">{warning}</Typography>
           ))}
-        </Alert>
-      )}
-
-      {hasInvalidDateRange && (
-        <Alert severity="warning">
-          The start date cannot be later than the end date.
         </Alert>
       )}
 

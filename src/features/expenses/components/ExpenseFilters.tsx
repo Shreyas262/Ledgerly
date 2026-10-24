@@ -8,6 +8,7 @@ import {
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 
+import { DateRangeFields } from "../../../components/common/DateRangeFields";
 import { FilterBar } from "../../../components/common/FilterBar";
 import type { ExpenseFilter as ExpenseFiltersState } from "../types/expense";
 import {
@@ -108,40 +109,15 @@ export function ExpenseFilters({
         </Select>
       </FormControl>
 
-      <TextField
-        size="small"
-        label="From"
-        type="date"
-        value={filters.dateFrom}
-        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+      <DateRangeFields
+        value={{ from: filters.dateFrom, to: filters.dateTo }}
+        onChange={(range) =>
           onChange({
             ...filters,
-            dateFrom: event.target.value,
+            dateFrom: range.from,
+            dateTo: range.to,
           })
         }
-        slotProps={{
-          inputLabel: {
-            shrink: true,
-          },
-        }}
-      />
-
-      <TextField
-        size="small"
-        label="To"
-        type="date"
-        value={filters.dateTo}
-        onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-          onChange({
-            ...filters,
-            dateTo: event.target.value,
-          })
-        }
-        slotProps={{
-          inputLabel: {
-            shrink: true,
-          },
-        }}
       />
     </FilterBar>
   );
