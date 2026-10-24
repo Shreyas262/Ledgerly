@@ -28,7 +28,7 @@ import {
 } from "@mui/icons-material";
 import { Link as RouterLink, Navigate } from "react-router-dom";
 
-import logoUrl from "../assets/ledgerly_svg.svg";
+import { BrandMark } from "../components/common/BrandMark";
 import { useAuth } from "../features/auth/context/AuthContext";
 import { LoadingState } from "../components/common/LoadingState";
 
@@ -94,17 +94,6 @@ const highlights = [
   { icon: <InsightsOutlined />, title: "Useful analytics", text: "Monthly trends and breakdowns by type, ready when you need them." },
   { icon: <LockOutlined />, title: "Private by design", text: "Personal and organization data are kept completely separate." },
 ];
-
-function BrandMark({ inverse = false }: { inverse?: boolean }) {
-  return (
-    <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-      <Box component="img" src={logoUrl} alt="" sx={{ width: 36, height: 36 }} />
-      <Typography variant="h6" component="span" sx={{ fontWeight: 700, color: inverse ? "brand.activeText" : "text.primary" }}>
-        Ledgerly
-      </Typography>
-    </Stack>
-  );
-}
 
 /** Decorative ledger grid with a rising trend line, drawn in theme colours. */
 function HeroGraphic() {

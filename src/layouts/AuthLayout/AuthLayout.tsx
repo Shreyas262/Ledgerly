@@ -9,9 +9,8 @@ import {
   SavingsOutlined,
 } from "@mui/icons-material";
 import type { ReactNode } from "react";
-import { Link as RouterLink } from "react-router-dom";
 
-import logoUrl from "../../assets/ledgerly_svg.svg";
+import { BrandMark } from "../../components/common/BrandMark";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -50,24 +49,6 @@ const content = {
     ],
   },
 };
-
-function BrandMark({ inverse = false }: { inverse?: boolean }) {
-  return (
-    <Stack
-      component={RouterLink}
-      to="/"
-      aria-label="Ledgerly home"
-      direction="row"
-      spacing={1.5}
-      sx={{ alignItems: "center", textDecoration: "none", width: "fit-content" }}
-    >
-      <Box component="img" src={logoUrl} alt="" sx={{ width: 40, height: 40 }} />
-      <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: inverse ? "brand.activeText" : "text.primary" }}>
-        Ledgerly
-      </Typography>
-    </Stack>
-  );
-}
 
 /** Decorative ledger grid with a rising trend line, drawn in theme colours. */
 function LedgerGraphic() {
@@ -135,7 +116,7 @@ export default function AuthLayout({ children, variant = "organization" }: AuthL
         <LedgerGraphic />
 
         <Box sx={{ position: "relative", ...entrance(0) }}>
-          <BrandMark inverse />
+          <BrandMark inverse to="/" />
         </Box>
 
         <Stack spacing={4} sx={{ position: "relative", maxWidth: 440, ...entrance(120) }}>
@@ -195,7 +176,7 @@ export default function AuthLayout({ children, variant = "organization" }: AuthL
       >
         <Stack spacing={4} sx={{ width: "100%", maxWidth: 400, ...entrance(80) }}>
           <Box sx={{ display: { xs: "block", md: "none" } }}>
-            <BrandMark />
+            <BrandMark to="/" />
           </Box>
           {children}
         </Stack>
