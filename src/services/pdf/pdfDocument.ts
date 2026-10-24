@@ -8,13 +8,14 @@ import { formatDateTime } from "../../utils/format";
  * definitions, so their content can be checked without rendering a PDF.
  */
 
+// Mirrors the light theme palette (src/theme/palette.ts); pdfDocument.test.ts keeps them in step.
 const COLORS = {
-  text: "#0F172A",
-  muted: "#64748B",
-  rule: "#E2E8F0",
-  stripe: "#F8FAFC",
-  bar: "#10B981",
-  track: "#E2E8F0",
+  text: "#1C2024",
+  muted: "#60646C",
+  rule: "#E0E1E6",
+  stripe: "#F9F9FB",
+  bar: "#3E63DD",
+  track: "#E8E8EC",
 };
 
 export interface ReportOptions {
