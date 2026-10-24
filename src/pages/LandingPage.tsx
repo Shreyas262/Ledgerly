@@ -99,7 +99,7 @@ function BrandMark({ inverse = false }: { inverse?: boolean }) {
   return (
     <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
       <Box component="img" src={logoUrl} alt="" sx={{ width: 36, height: 36 }} />
-      <Typography variant="h6" component="span" sx={{ fontWeight: 700, color: inverse ? "sidebar.activeText" : "text.primary" }}>
+      <Typography variant="h6" component="span" sx={{ fontWeight: 700, color: inverse ? "brand.activeText" : "text.primary" }}>
         Ledgerly
       </Typography>
     </Stack>
@@ -114,15 +114,15 @@ function HeroGraphic() {
     <Box aria-hidden sx={{ position: "absolute", right: { xs: -120, md: -40 }, bottom: -30, width: { xs: "140%", md: "60%" }, maxWidth: 760, opacity: 0.45, pointerEvents: "none" }}>
       <svg viewBox="0 0 600 400" width="100%" role="presentation">
         {Array.from({ length: 7 }, (_, row) => (
-          <line key={`h${row}`} x1="0" x2="600" y1={row * 60 + 20} y2={row * 60 + 20} stroke={palette.sidebar.textMuted} strokeOpacity="0.14" />
+          <line key={`h${row}`} x1="0" x2="600" y1={row * 60 + 20} y2={row * 60 + 20} stroke={palette.brand.textMuted} strokeOpacity="0.14" />
         ))}
         {Array.from({ length: 11 }, (_, col) => (
-          <line key={`v${col}`} y1="0" y2="400" x1={col * 60} x2={col * 60} stroke={palette.sidebar.textMuted} strokeOpacity="0.08" />
+          <line key={`v${col}`} y1="0" y2="400" x1={col * 60} x2={col * 60} stroke={palette.brand.textMuted} strokeOpacity="0.08" />
         ))}
         <polyline
           points="0,330 90,300 180,312 270,240 360,256 450,170 540,120 600,96"
           fill="none"
-          stroke={palette.sidebar.activeIcon}
+          stroke={palette.brand.activeIcon}
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -192,9 +192,8 @@ export function LandingPage() {
         sx={{
           position: "relative",
           overflow: "hidden",
-          color: "sidebar.text",
-          bgcolor: "sidebar.background",
-          backgroundImage: (theme) => theme.palette.sidebar.gradient,
+          color: "brand.text",
+          bgcolor: "brand.background",
         }}
       >
         <HeroGraphic />
@@ -207,23 +206,23 @@ export function LandingPage() {
           >
             <BrandMark inverse />
             <Stack direction="row" spacing={1} sx={{ display: { xs: "none", sm: "flex" } }}>
-              <Button component={RouterLink} to={PERSONAL_LOGIN} sx={{ color: "sidebar.text" }}>
+              <Button component={RouterLink} to={PERSONAL_LOGIN} sx={{ color: "brand.text" }}>
                 Personal Login
               </Button>
-              <Button component={RouterLink} to={ORGANIZATION_LOGIN} variant="outlined" sx={{ color: "sidebar.activeText", borderColor: "sidebar.border" }}>
+              <Button component={RouterLink} to={ORGANIZATION_LOGIN} variant="outlined" sx={{ color: "brand.activeText", borderColor: "brand.border" }}>
                 Organization Login
               </Button>
             </Stack>
           </Stack>
 
           <Stack spacing={3} sx={{ maxWidth: 680, pt: { xs: 6, md: 10 }, pb: { xs: 8, md: 14 } }}>
-            <Typography variant="overline" sx={{ color: "sidebar.activeIcon", ...entrance(0) }}>
+            <Typography variant="overline" sx={{ color: "brand.activeIcon", ...entrance(0) }}>
               Expense management, personal or organizational
             </Typography>
-            <Typography variant="h2" component="h1" sx={{ color: "sidebar.activeText", fontSize: { xs: "2.25rem", md: "3.25rem" }, ...entrance(60) }}>
+            <Typography variant="h2" component="h1" sx={{ color: "brand.activeText", fontSize: { xs: "2.25rem", md: "3.25rem" }, ...entrance(60) }}>
               Every expense, accounted for.
             </Typography>
-            <Typography sx={{ color: "sidebar.textMuted", fontSize: { md: "1.125rem" }, ...entrance(120) }}>
+            <Typography sx={{ color: "brand.textMuted", fontSize: { md: "1.125rem" }, ...entrance(120) }}>
               Ledgerly helps you record spending, keep receipts, stay within budget and understand where money goes —
               whether you are managing your own finances or your whole organization's.
             </Typography>
@@ -232,7 +231,6 @@ export function LandingPage() {
                 component={RouterLink}
                 to={PERSONAL_LOGIN}
                 variant="contained"
-                color="secondary"
                 size="large"
                 startIcon={<PersonOutlineOutlined />}
               >
@@ -244,7 +242,7 @@ export function LandingPage() {
                 variant="outlined"
                 size="large"
                 startIcon={<ApartmentOutlined />}
-                sx={{ color: "sidebar.activeText", borderColor: "sidebar.textMuted" }}
+                sx={{ color: "brand.activeText", borderColor: "brand.textMuted" }}
               >
                 Organization Login
               </Button>

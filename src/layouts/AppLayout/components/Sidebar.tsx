@@ -18,7 +18,6 @@ import {
   ListItemIcon,
   ListItemText,
   Typography,
-  type Theme,
 } from "@mui/material";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -34,7 +33,6 @@ const SIDEBAR_WIDTH = 260;
 
 const sidebarPaperSx = {
   bgcolor: "sidebar.background",
-  backgroundImage: (theme: Theme) => theme.palette.sidebar.gradient,
   color: "sidebar.text",
 };
 

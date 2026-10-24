@@ -132,7 +132,6 @@ export const components: Components<Omit<Theme, "components">> = {
 
         return {
           backgroundColor: sidebar.background,
-          backgroundImage: sidebar.topbarGradient,
           color: sidebar.text,
           borderBottom: `1px solid ${sidebar.border}`,
           "& .MuiIconButton-root": {
@@ -143,8 +142,8 @@ export const components: Components<Omit<Theme, "components">> = {
             color: sidebar.text,
           },
           "& .MuiAvatar-colorDefault": {
-            backgroundColor: alpha(sidebar.activeIcon, 0.16),
-            color: sidebar.activeIcon,
+            backgroundColor: sidebar.activeBackground,
+            color: sidebar.activeText,
           },
         };
       },

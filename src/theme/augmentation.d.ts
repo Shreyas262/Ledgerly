@@ -1,11 +1,9 @@
 import "@mui/material/styles";
 import "@mui/material/Typography";
 
-interface LedgerlySidebarPalette {
-  /** Solid fallback behind the gradients. */
+/** The app sidebar and top bar (`sidebar`), and the ink sign-in and landing panels (`brand`). */
+interface LedgerlyShellPalette {
   background: string;
-  gradient: string;
-  topbarGradient: string;
   text: string;
   textMuted: string;
   hover: string;
@@ -41,14 +39,26 @@ interface LedgerlyStatusPalette {
 }
 
 declare module "@mui/material/styles" {
+  interface TypeBackground {
+    /** Menus, popovers and dialogs; lighter than cards in dark mode. */
+    raised: string;
+    /** Table headers and other quiet bands inside a card. */
+    subtle: string;
+  }
+
   interface Palette {
-    sidebar: LedgerlySidebarPalette;
+    /** Idle outline of text fields and selects (3:1 against surfaces). */
+    inputBorder: string;
+    sidebar: LedgerlyShellPalette;
+    brand: LedgerlyShellPalette;
     status: LedgerlyStatusPalette;
     chart: LedgerlyChartPalette;
   }
 
   interface PaletteOptions {
-    sidebar?: LedgerlySidebarPalette;
+    inputBorder?: string;
+    sidebar?: LedgerlyShellPalette;
+    brand?: LedgerlyShellPalette;
     status?: LedgerlyStatusPalette;
     chart?: LedgerlyChartPalette;
   }
