@@ -20,11 +20,13 @@ import {
   authorizePersonalRequest,
   breakdownByType,
   buildAnalytics,
+  buildSpendingPace,
   byNewest,
   currentMonth,
   isCalendarDate,
   isMonth,
   monthOf,
+  monthlyTrend,
   shiftMonth,
   today,
   withUsage,
@@ -161,8 +163,12 @@ export const personalHandlers = [
     if ("error" in auth) return auth.error;
 
     const query = parseCollectionQuery(request);
-    const { search, ...rest } = query;
+    const { search, filter, ...rest } = query;
+    // "receipt" is not a stored field: it asks whether any receipt is attached.
+    const { receipt, ...fieldFilter } = filter ?? {};
     let expenses = (await listOwnExpenses(auth.principal.userId)).sort(byNewest);
+    if (receipt === "missing") expenses = expenses.filter((expense) => !expense.documentIds.length);
+    if (receipt === "attached") expenses = expenses.filter((expense) => expense.documentIds.length > 0);
 
     // Search matches what the user sees: description, labels and amounts,
     // including the amount as paid in another currency.
@@ -179,7 +185,10 @@ export const personalHandlers = [
         ].some((value) => value.toLowerCase().includes(needle)));
     }
 
-    return HttpResponse.json(applyCollectionQueryResult(expenses, rest));
+    return HttpResponse.json(applyCollectionQueryResult(expenses, {
+      ...rest,
+      filter: Object.keys(fieldFilter).length ? fieldFilter : undefined,
+    }));
   }),
 
   http.get(`${BASE}/expenses/:id`, async ({ params, request }) => {
@@ -534,12 +543,16 @@ export const personalHandlers = [
     const budget = budgets.find((item) => item.month === month);
     const total = (items: PersonalExpense[]) => roundAmount(items.reduce((sum, expense) => sum + expense.amount, 0));
 
+    const budgetUsage = budget ? withUsage(budget, expenses) : null;
     const summary: PersonalSummary = {
       month,
       monthSpent: total(monthExpenses),
       previousMonthSpent: total(expenses.filter((expense) => monthOf(expense.expenseDate) === previous)),
       monthCount: monthExpenses.length,
-      budget: budget ? withUsage(budget, expenses) : null,
+      budget: budgetUsage,
+      pace: budgetUsage ? buildSpendingPace(budgetUsage) : null,
+      missingReceipts: monthExpenses.filter((expense) => !expense.documentIds.length).length,
+      trend: monthlyTrend(expenses, month),
       byType: breakdownByType(monthExpenses),
       recent: [...expenses].sort(byNewest).slice(0, 5),
     };

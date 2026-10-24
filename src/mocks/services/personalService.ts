@@ -5,6 +5,7 @@ import type {
   PersonalBudgetWithUsage,
   PersonalExpense,
   PersonalExpenseType,
+  PersonalSpendingPace,
   PersonalTypeBreakdown,
 } from "../../features/personal/types/personal";
 import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
@@ -99,6 +100,34 @@ export function withUsage(budget: PersonalBudget, expenses: PersonalExpense[]): 
       spent: sum(monthExpenses.filter((expense) => expense.type === limit.type)),
     })),
   };
+}
+
+const roundRupees = (value: number) => Math.round(value * 100) / 100;
+
+/**
+ * This month's pace against its budget: what is left per remaining day, where
+ * spending is heading at the average daily rate so far, and what an even rate
+ * would have spent by today. Other months have no pace.
+ */
+export function buildSpendingPace(budget: PersonalBudgetWithUsage, now = new Date()): PersonalSpendingPace | null {
+  if (budget.month !== currentMonth()) return null;
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const day = now.getDate();
+  const daysLeft = daysInMonth - day + 1;
+  return {
+    daysLeft,
+    dailyAllowance: roundRupees(Math.max(budget.remaining, 0) / daysLeft),
+    projectedSpend: roundRupees((budget.spent / day) * daysInMonth),
+    expectedByToday: roundRupees((budget.amount * day) / daysInMonth),
+  };
+}
+
+/** Spending in each of the `months` months ending with `month`, oldest first. */
+export function monthlyTrend(expenses: PersonalExpense[], month: string, months = 6): Array<{ month: string; amount: number }> {
+  return monthsBetween(shiftMonth(month, -(months - 1)), month).map((item) => ({
+    month: item,
+    amount: sum(expenses.filter((expense) => monthOf(expense.expenseDate) === item)),
+  }));
 }
 
 export function buildAnalytics(

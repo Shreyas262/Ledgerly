@@ -43,7 +43,11 @@ export function PersonalExpensesPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [notice, setNotice] = useState<string | null>((location.state as { notice?: string } | null)?.notice ?? null);
-  const [filters, setFilters] = useState<PersonalExpenseFilter>(initialPersonalExpenseFilters);
+  // A link (e.g. from the dashboard) may open the list already filtered.
+  const [filters, setFilters] = useState<PersonalExpenseFilter>(() => ({
+    ...initialPersonalExpenseFilters,
+    ...(location.state as { filters?: Partial<PersonalExpenseFilter> } | null)?.filters,
+  }));
   const [page, setPage] = useState(1);
   // Typing in the search box should not send a request per keystroke.
   const search = useDeferredValue(filters.search.trim());
@@ -54,6 +58,7 @@ export function PersonalExpensesPage() {
       filter: {
         ...(filters.type !== "all" ? { type: filters.type } : {}),
         ...(filters.paymentMethod !== "all" ? { paymentMethod: filters.paymentMethod } : {}),
+        ...(filters.receipt !== "all" ? { receipt: filters.receipt } : {}),
       },
       from: filters.dateFrom || undefined,
       to: filters.dateTo || undefined,

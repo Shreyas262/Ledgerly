@@ -10,6 +10,7 @@ import {
   type PaymentMethod,
   type PersonalExpenseFilter,
   type PersonalExpenseType,
+  type PersonalReceiptFilter,
 } from "../types/personal";
 
 interface PersonalExpenseFiltersProps {
@@ -26,6 +27,7 @@ export function PersonalExpenseFilters({ filters, onChange, onReset }: PersonalE
     filters.search.trim() !== "",
     filters.type !== "all",
     filters.paymentMethod !== "all",
+    filters.receipt !== "all",
     filters.dateFrom !== "",
     filters.dateTo !== "",
   ].filter(Boolean).length;
@@ -62,6 +64,17 @@ export function PersonalExpenseFilters({ filters, onChange, onReset }: PersonalE
         {PAYMENT_METHODS.map((method) => (
           <MenuItem key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</MenuItem>
         ))}
+      </TextField>
+      <TextField
+        select
+        size="small"
+        label="Receipt"
+        value={filters.receipt}
+        onChange={(event) => set("receipt", event.target.value as PersonalReceiptFilter)}
+      >
+        <MenuItem value="all">With or without a receipt</MenuItem>
+        <MenuItem value="attached">Receipt attached</MenuItem>
+        <MenuItem value="missing">No receipt</MenuItem>
       </TextField>
       <DateRangeFields
         value={{ from: filters.dateFrom, to: filters.dateTo }}

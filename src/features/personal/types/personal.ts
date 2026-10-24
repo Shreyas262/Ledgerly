@@ -86,10 +86,13 @@ export interface PersonalExpenseRequest {
   paymentMethod: PaymentMethod;
 }
 
+export type PersonalReceiptFilter = "all" | "attached" | "missing";
+
 export interface PersonalExpenseFilter {
   search: string;
   type: PersonalExpenseType | "all";
   paymentMethod: PaymentMethod | "all";
+  receipt: PersonalReceiptFilter;
   dateFrom: string;
   dateTo: string;
 }
@@ -98,6 +101,7 @@ export const initialPersonalExpenseFilters: PersonalExpenseFilter = {
   search: "",
   type: "all",
   paymentMethod: "all",
+  receipt: "all",
   dateFrom: "",
   dateTo: "",
 };
@@ -141,6 +145,18 @@ export interface PersonalTypeBreakdown {
   count: number;
 }
 
+/** How this month's spending is tracking against its budget. */
+export interface PersonalSpendingPace {
+  /** Days left in the month, today included. */
+  daysLeft: number;
+  /** What can still be spent per day without going over budget; 0 once over. */
+  dailyAllowance: number;
+  /** Month-end total if spending continues at the average daily rate so far. */
+  projectedSpend: number;
+  /** What would have been spent by today at an even rate through the month. */
+  expectedByToday: number;
+}
+
 export interface PersonalSummary {
   /** Calendar month the summary describes, YYYY-MM. */
   month: string;
@@ -148,6 +164,12 @@ export interface PersonalSummary {
   previousMonthSpent: number;
   monthCount: number;
   budget: PersonalBudgetWithUsage | null;
+  /** Only for the current month with a budget. */
+  pace: PersonalSpendingPace | null;
+  /** Expenses in the month with no receipt attached. */
+  missingReceipts: number;
+  /** Spending per month for the six months ending with `month`, oldest first. */
+  trend: Array<{ month: string; amount: number }>;
   byType: PersonalTypeBreakdown[];
   recent: PersonalExpense[];
 }

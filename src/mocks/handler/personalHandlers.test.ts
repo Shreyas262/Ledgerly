@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { PersonalExpense } from "../../features/personal/types/personal";
-import { listRecords } from "../services/mockDataService";
+import type { PersonalExpense, PersonalSummary } from "../../features/personal/types/personal";
+import { listRecords, saveRecord } from "../services/mockDataService";
 import { apiFetch, demoAccounts, failExchangeRateService, serveExchangeRates, setupApiServer, signIn } from "../../test/apiServer";
 import { auditEventsFor, withFixedToday } from "../../test/fixtures";
 
@@ -101,5 +101,70 @@ describe("personal expenses paid in other currencies", () => {
 
     const { data } = (await response.json()) as { data: PersonalExpense[] };
     expect(data.map((expense) => expense.description)).toEqual(["Dinner in Paris"]);
+  });
+});
+
+describe("personal summary pace, receipts and trend", () => {
+  async function givenMonth(cookie: string) {
+    expect((await apiFetch("/api/personal/budgets", { method: "POST", body: JSON.stringify({ month: "2026-10", amount: 31_000, typeLimits: [] }) }, cookie)).status).toBe(201);
+    for (const expenseDate of ["2026-10-05", "2026-10-10"]) {
+      expect((await saveExpense(cookie, { ...dinner, amount: 9_500, expenseDate })).status).toBe(201);
+    }
+    expect((await saveExpense(cookie, { ...dinner, amount: 1_000, expenseDate: "2026-07-14" })).status).toBe(201);
+  }
+
+  async function summary(cookie: string, month = "") {
+    return (await (await apiFetch(`/api/personal/summary${month ? `?month=${month}` : ""}`, {}, cookie)).json()) as PersonalSummary;
+  }
+
+  it("works out this month's pace against the budget", async () => {
+    const cookie = await signInPersonal();
+    await givenMonth(cookie);
+
+    // 19 Oct: 19 of 31 days gone, ₹19,000 of ₹31,000 spent.
+    expect((await summary(cookie)).pace).toEqual({
+      daysLeft: 13,
+      dailyAllowance: 923.08,
+      projectedSpend: 31_000,
+      expectedByToday: 19_000,
+    });
+  });
+
+  it("gives other months no pace", async () => {
+    const cookie = await signInPersonal();
+    await givenMonth(cookie);
+    expect((await apiFetch("/api/personal/budgets", { method: "POST", body: JSON.stringify({ month: "2026-07", amount: 5_000, typeLimits: [] }) }, cookie)).status).toBe(201);
+
+    expect((await summary(cookie, "2026-07")).pace).toBeNull();
+  });
+
+  it("counts this month's expenses without a receipt and shows six months of spending", async () => {
+    const cookie = await signInPersonal();
+    await givenMonth(cookie);
+
+    const result = await summary(cookie);
+
+    expect(result.missingReceipts).toBe(2);
+    expect(result.trend).toEqual([
+      { month: "2026-05", amount: 0 },
+      { month: "2026-06", amount: 0 },
+      { month: "2026-07", amount: 1_000 },
+      { month: "2026-08", amount: 0 },
+      { month: "2026-09", amount: 0 },
+      { month: "2026-10", amount: 19_000 },
+    ]);
+  });
+
+  it("filters the expense list by whether a receipt is attached", async () => {
+    const cookie = await signInPersonal();
+    await givenMonth(cookie);
+    const [withReceipt] = await listRecords<PersonalExpense>("personalExpenses");
+    await saveRecord("personalExpenses", { ...withReceipt, documentIds: ["document-1"] });
+
+    const list = async (receipt: string) =>
+      ((await (await apiFetch(`/api/personal/expenses?filter.receipt=${receipt}`, {}, cookie)).json()) as { data: PersonalExpense[] }).data;
+
+    expect((await list("attached")).map((expense) => expense.id)).toEqual([withReceipt.id]);
+    expect(await list("missing")).toHaveLength(2);
   });
 });
