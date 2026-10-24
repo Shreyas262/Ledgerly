@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Expense } from "../../features/expenses/types/expense";
 import { apiFetch, demoAccounts, setupApiServer, signIn } from "../../test/apiServer";
-import { auditEventsFor, givenExpense, readExpense, type DemoRole } from "../../test/fixtures";
+import { auditEventsFor, givenBudget, givenExpense, givenSecondAdmin, readExpense, type DemoRole } from "../../test/fixtures";
 
 setupApiServer();
 
@@ -47,6 +47,90 @@ describe("approval queue", () => {
   it("is refused to employees", async () => {
     const response = await apiFetch("/api/approvals", {}, await signInAs("employee"));
     expect(response.status).toBe(403);
+  });
+});
+
+describe("review ownership", () => {
+  it("records who started the review", async () => {
+    const expense = await givenExpense({ owner: "employee" });
+
+    expect((await post(`/api/expenses/${expense.id}/review`, await signInAs("manager"))).status).toBe(200);
+
+    expect(await readExpense(expense.id)).toMatchObject({ status: "under_review", reviewStartedBy: "user-2" });
+    const queue = (await (await apiFetch("/api/approvals", {}, await signInAs("admin"))).json()) as Expense[];
+    expect(queue.find((item) => item.id === expense.id)).toMatchObject({ reviewStartedByName: "Sarah Manager" });
+  });
+
+  it("refuses another reviewer who is not an administrator", async () => {
+    const expense = await givenExpense({ owner: "employee", status: "under_review", reviewStartedBy: "user-3" });
+    const manager = await signInAs("manager");
+
+    const approve = await post(`/api/expenses/${expense.id}/approve`, manager);
+    expect(approve.status).toBe(403);
+    expect(await approve.json()).toMatchObject({
+      message: "Mike Finance started this review, so only they or an administrator can approve or reject it.",
+    });
+    expect((await post(`/api/expenses/${expense.id}/reject`, manager, { reason: "Missing bill" })).status).toBe(403);
+    expect(await readExpense(expense.id)).toMatchObject({ status: "under_review", reviewStartedBy: "user-3" });
+  });
+
+  it("lets an administrator take a review over and records whose review was overridden", async () => {
+    const expense = await givenExpense({ owner: "employee", status: "under_review", reviewStartedBy: "user-2" });
+
+    expect((await post(`/api/expenses/${expense.id}/approve`, await signInAs("admin"))).status).toBe(200);
+
+    expect(await readExpense(expense.id)).toMatchObject({ status: "approved", reviewedBy: "user-4" });
+    expect(await auditEventsFor(expense.id)).toEqual([
+      expect.objectContaining({
+        action: "EXPENSE_APPROVED",
+        metadata: { overriddenReviewerId: "user-2" },
+        description: "Approved expense Client lunch, overriding the review started by Sarah Manager.",
+      }),
+    ]);
+  });
+
+  it("records an administrator's takeover when rejecting too", async () => {
+    const expense = await givenExpense({ owner: "employee", status: "under_review", reviewStartedBy: "user-2" });
+
+    expect((await post(`/api/expenses/${expense.id}/reject`, await signInAs("admin"), { reason: "Missing bill" })).status).toBe(200);
+
+    expect(await auditEventsFor(expense.id)).toEqual([
+      expect.objectContaining({ action: "EXPENSE_REJECTED", metadata: { reason: "Missing bill", overriddenReviewerId: "user-2" } }),
+    ]);
+  });
+});
+
+describe("administrators' own expenses", () => {
+  it("refuses an administrator their own expense and leaves it out of their queue", async () => {
+    const expense = await givenExpense({ owner: "admin" });
+    const admin = await signInAs("admin");
+
+    expect(await queueIds("/api/approvals", admin)).not.toContain(expense.id);
+    const response = await post(`/api/expenses/${expense.id}/review`, admin);
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ message: "You cannot review your own expense." });
+    expect(await readExpense(expense.id)).toMatchObject({ status: "submitted" });
+  });
+
+  it("routes the only administrator's expense to Finance for their department", async () => {
+    const expense = await givenExpense({ owner: "admin" });
+    const finance = await signInAs("finance");
+
+    expect(await queueIds("/api/approvals", finance)).toContain(expense.id);
+    expect((await post(`/api/expenses/${expense.id}/review`, finance)).status).toBe(200);
+    expect((await post(`/api/expenses/${expense.id}/approve`, finance)).status).toBe(200);
+    expect(await readExpense(expense.id)).toMatchObject({ status: "approved", approvedBy: "user-3" });
+  });
+
+  it("leaves an administrator's expense to another administrator when there is one", async () => {
+    await givenSecondAdmin();
+    const expense = await givenExpense({ owner: "admin" });
+    const finance = await signInAs("finance");
+
+    expect(await queueIds("/api/approvals", finance)).not.toContain(expense.id);
+    expect((await post(`/api/expenses/${expense.id}/review`, finance)).status).toBe(403);
+    expect(await readExpense(expense.id)).toMatchObject({ status: "submitted" });
   });
 });
 
@@ -112,6 +196,7 @@ describe("review, approve and reject", () => {
     expect(rejected.status).toBe(200);
     expect(await readExpense(expense.id)).toMatchObject({
       status: "rejected",
+      rejectedBy: "user-2",
       rejectionReason: "Missing itemised bill",
     });
     expect(await auditEventsFor(expense.id)).toEqual([
@@ -170,6 +255,43 @@ describe("reimbursement", () => {
     expect(await queueIds("/api/reimbursements", finance)).not.toContain(expense.id);
     expect((await post(`/api/expenses/${expense.id}/start-reimbursement`, finance)).status).toBe(403);
     expect((await post(`/api/expenses/${expense.id}/start-reimbursement`, await signInAs("admin"))).status).toBe(200);
+  });
+
+  it("refuses an administrator their own expense and leaves it out of their queue", async () => {
+    await givenSecondAdmin();
+    const expense = await givenExpense({ owner: "admin", status: "approved", approvedBy: "user-admin-2" });
+    const admin = await signInAs("admin");
+
+    expect(await queueIds("/api/reimbursements", admin)).not.toContain(expense.id);
+    expect((await post(`/api/expenses/${expense.id}/start-reimbursement`, admin)).status).toBe(403);
+    expect(await readExpense(expense.id)).toMatchObject({ status: "approved" });
+  });
+
+  it("lets Finance reimburse the only administrator's expense it approved", async () => {
+    const expense = await givenExpense({ owner: "admin", status: "approved", approvedBy: "user-3" });
+    const finance = await signInAs("finance");
+
+    const queue = (await (await apiFetch("/api/reimbursements", {}, finance)).json()) as Expense[];
+    expect(queue.find((item) => item.id === expense.id)).toMatchObject({ approverMayReimburse: true });
+    expect((await post(`/api/expenses/${expense.id}/start-reimbursement`, finance)).status).toBe(200);
+    expect((await post(`/api/expenses/${expense.id}/reimburse`, finance)).status).toBe(200);
+    expect(await readExpense(expense.id)).toMatchObject({ status: "reimbursed" });
+  });
+
+  it("names a closed budget the reimbursement still counts against, and completes it", async () => {
+    await givenBudget({ status: "closed", startDate: "2026-01-01", endDate: "2026-09-30" });
+    await givenBudget({ startDate: "2026-10-01", endDate: "2026-12-31" });
+    const inClosedPeriod = await givenExpense({ owner: "employee", status: "approved", approvedBy: "user-2", expenseDate: "2026-09-20" });
+    const inActivePeriod = await givenExpense({ owner: "employee", status: "approved", approvedBy: "user-2", expenseDate: "2026-10-05" });
+    const finance = await signInAs("finance");
+
+    const queue = (await (await apiFetch("/api/reimbursements", {}, finance)).json()) as Expense[];
+    expect(queue.find((item) => item.id === inClosedPeriod.id)).toMatchObject({ closedBudgetName: "Test budget" });
+    expect(queue.find((item) => item.id === inActivePeriod.id)?.closedBudgetName).toBeUndefined();
+
+    // Winding down a closed period stays possible.
+    expect((await post(`/api/expenses/${inClosedPeriod.id}/start-reimbursement`, finance)).status).toBe(200);
+    expect((await post(`/api/expenses/${inClosedPeriod.id}/reimburse`, finance)).status).toBe(200);
   });
 
   it("refuses managers", async () => {

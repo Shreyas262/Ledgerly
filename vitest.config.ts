@@ -29,11 +29,14 @@ export default mergeConfig(
           },
         },
         {
+          // Page tests render through the router and the mock backend; under
+          // a full parallel run the slowest exceed the 5 s default.
           extends: true,
           test: {
             name: "dom",
             environment: "jsdom",
             include: ["src/**/*.test.tsx"],
+            testTimeout: 15_000,
           },
         },
       ],

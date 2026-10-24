@@ -89,7 +89,7 @@ export function AnalyticsFilterBar({ filters, onChange, onReset, scope, options,
         </Stack>
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: { sm: "center" }, flexWrap: "wrap", rowGap: 1.5 }}>
-          {scope !== "TEAM" && (
+          {(scope === "ORGANIZATION" || scope === "DEPARTMENT") && (
             <>
               <TextField
                 select

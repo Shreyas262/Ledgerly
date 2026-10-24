@@ -90,6 +90,51 @@ describe("allocation integrity", () => {
     );
   });
 
+  it("does not lower an allocation below what has already been reimbursed against it", async () => {
+    const { budget, departmentAllocations, teamAllocations } = await givenBudget({
+      amount: 100_000,
+      departments: { "dept-engineering": 50_000 },
+      teams: { "team-engineering": 40_000 },
+      expenseTypes: [{ teamId: "team-engineering", expenseType: "MEALS", amount: 1_000 }],
+    });
+    await givenExpense({ status: "reimbursed", type: "TRAVEL", amount: 30_419, expenseDate: "2026-10-01" });
+    await givenExpense({ status: "reimbursed", type: "MEALS", amount: 800, expenseDate: "2026-10-02" });
+    // Not reimbursed yet, so not counted.
+    await givenExpense({ status: "approved", type: "TRAVEL", amount: 9_000, expenseDate: "2026-10-03" });
+
+    const department = await send("POST", `/api/budgets/${budget.id}/departments`, admin, { departmentId: "dept-engineering", amount: 31_000 });
+    expect(department.status).toBe(422);
+    const team = await send("POST", `/api/budgets/${budget.id}/teams`, admin, {
+      departmentAllocationId: departmentAllocations[0].id,
+      teamId: "team-engineering",
+      amount: 10_000,
+    });
+    expect(team.status).toBe(422);
+    expect(await team.json()).toMatchObject({
+      code: "BUDGET_EXCEEDED",
+      message: "The team allocation cannot be lower than the ₹31,219 already reimbursed against it.",
+    });
+    await expectBudgetExceeded(
+      await send("POST", `/api/budgets/${budget.id}/expense-types`, admin, {
+        teamAllocationId: teamAllocations[0].id,
+        expenseType: "MEALS",
+        amount: 500,
+      }),
+    );
+
+    // Amounts that still cover the spend are accepted.
+    expect((await send("POST", `/api/budgets/${budget.id}/teams`, admin, {
+      departmentAllocationId: departmentAllocations[0].id,
+      teamId: "team-engineering",
+      amount: 31_219,
+    })).status).toBe(200);
+    expect((await send("POST", `/api/budgets/${budget.id}/expense-types`, admin, {
+      teamAllocationId: teamAllocations[0].id,
+      expenseType: "MEALS",
+      amount: 800,
+    })).status).toBe(200);
+  });
+
   it("audits allocation changes with previous and new amounts", async () => {
     const { budget, departmentAllocations } = await givenBudget({ departments: { "dept-engineering": 50_000 }, teams: {} });
 
@@ -195,6 +240,42 @@ describe("budget lifecycle", () => {
     });
 
     expect(response.status).toBe(409);
+  });
+
+  it("refuses a period change that would exclude expenses recorded against the budget", async () => {
+    const { budget } = await givenBudget({ startDate: "2026-01-01", endDate: "2026-12-31" });
+    await givenExpense({ status: "reimbursed", expenseDate: "2026-09-15" });
+    await givenExpense({ status: "approved", expenseDate: "2026-10-22" });
+    const edit = (startDate: string, endDate: string) =>
+      send("PUT", `/api/budgets/${budget.id}`, admin, { name: budget.name, amount: budget.amount, startDate, endDate });
+
+    const laterStart = await edit("2026-10-15", "2026-12-31");
+    expect(laterStart.status).toBe(422);
+    expect(await laterStart.json()).toMatchObject({
+      code: "BUDGET_PERIOD_IN_USE",
+      message: "The period must still cover the 2 expenses recorded against this budget, dated 15 Sep 2026 to 22 Oct 2026.",
+    });
+    expect((await edit("2026-01-01", "2026-10-10")).status).toBe(422);
+    expect(await getRecord<OrganizationBudget>("budgets", budget.id)).toMatchObject({ startDate: "2026-01-01", endDate: "2026-12-31" });
+
+    // A change that keeps every recorded expense is allowed.
+    expect((await edit("2026-09-01", "2026-11-30")).status).toBe(200);
+  });
+
+  it("ignores drafts, rejected and cancelled expenses when the period changes", async () => {
+    const { budget } = await givenBudget({ startDate: "2026-01-01", endDate: "2026-12-31" });
+    await givenExpense({ status: "draft", expenseDate: "2026-02-01" });
+    await givenExpense({ status: "rejected", expenseDate: "2026-02-01" });
+    await givenExpense({ status: "cancelled", expenseDate: "2026-02-01" });
+
+    const response = await send("PUT", `/api/budgets/${budget.id}`, admin, {
+      name: budget.name,
+      amount: budget.amount,
+      startDate: "2026-06-01",
+      endDate: "2026-12-31",
+    });
+
+    expect(response.status).toBe(200);
   });
 
   it("closes and reopens a budget, unless reopening would overlap", async () => {
@@ -339,5 +420,45 @@ describe("expense creation requires an active, allocated budget", () => {
     expect(result.canCreateExpense).toBe(true);
     expect(result.status).toBe(201);
     expect(await listRecords("expenses")).toHaveLength(1);
+  });
+});
+
+// §28.14: only drafts are deleted; budgets that have been active are closed.
+describe("deleting a budget", () => {
+  it("deletes a draft with its allocations, audited", async () => {
+    const { budget, departmentAllocations, teamAllocations, expenseTypeBudgets } = await givenBudget({
+      status: "draft",
+      expenseTypes: [{ teamId: "team-engineering", expenseType: "MEALS", amount: 1_000 }],
+    });
+
+    const response = await apiFetch(`/api/budgets/${budget.id}`, { method: "DELETE" }, await signInAs("admin"));
+
+    expect(response.status).toBe(204);
+    expect(await getRecord("budgets", budget.id)).toBeUndefined();
+    expect(await getRecord("departmentBudgetAllocations", departmentAllocations[0].id)).toBeUndefined();
+    expect(await getRecord("teamBudgetAllocations", teamAllocations[0].id)).toBeUndefined();
+    expect(await getRecord("expenseTypeBudgets", expenseTypeBudgets[0].id)).toBeUndefined();
+    expect(await auditEventsFor(budget.id)).toEqual([expect.objectContaining({ action: "BUDGET_DELETED" })]);
+  });
+
+  it("refuses active and closed budgets", async () => {
+    const admin = await signInAs("admin");
+    const { budget: active } = await givenBudget();
+    const { budget: closed } = await givenBudget({ status: "closed", startDate: "2025-01-01", endDate: "2025-12-31" });
+
+    for (const budget of [active, closed]) {
+      const response = await apiFetch(`/api/budgets/${budget.id}`, { method: "DELETE" }, admin);
+      expect(response.status).toBe(409);
+      expect(await getRecord("budgets", budget.id)).toBeDefined();
+    }
+  });
+
+  it("is refused to Finance", async () => {
+    const { budget } = await givenBudget({ status: "draft" });
+
+    const response = await apiFetch(`/api/budgets/${budget.id}`, { method: "DELETE" }, await signInAs("finance"));
+
+    expect(response.status).toBe(403);
+    expect(await getRecord("budgets", budget.id)).toBeDefined();
   });
 });

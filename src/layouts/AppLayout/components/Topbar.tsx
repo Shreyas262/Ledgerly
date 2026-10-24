@@ -13,12 +13,10 @@ import type { MouseEvent } from "react";
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "../../../store/hooks";
 
 import { useLogoutMutation } from "../../../features/auth/api/authApi";
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { accountTypeOf } from "../../../features/auth/utils/accountType";
-import { baseApi } from "../../../services/api/baseApi";
 import { useConfirm } from "../../../components/common/ConfirmProvider";
 
 interface TopbarProps {
@@ -40,7 +38,6 @@ export function Topbar({
 
   const navigate = useNavigate();
   const confirm = useConfirm();
-  const dispatch = useAppDispatch();
 
   const menuOpen = Boolean(anchorEl);
 
@@ -72,8 +69,10 @@ export function Topbar({
     try {
       await logout().unwrap();
     } finally {
-      dispatch(baseApi.util.resetApiState());
-      navigate(loginPath, { replace: true });
+      // The sign-in page clears the API state once it is shown. Clearing it
+      // here, while this page is still mounted, would let the page's guard
+      // record it as the page to return to after the next sign-in.
+      navigate(loginPath, { replace: true, state: { signedOut: true } });
     }
   };
 

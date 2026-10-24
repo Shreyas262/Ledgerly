@@ -339,7 +339,7 @@ export function UsersPage() {
         title="Delete User"
         message={
           deletingUser
-            ? `Delete ${deletingUser.name}? They lose access and are removed from their team and department. Their expense history is kept; drafts are cancelled and submitted expenses continue through approval and reimbursement.`
+            ? `Delete ${deletingUser.name}? They lose access and are removed from their team and department. Their expense history is kept and drafts are cancelled. A user with expenses in review or awaiting reimbursement cannot be deleted; deactivate them instead.`
             : ""
         }
         confirmLabel="Delete"

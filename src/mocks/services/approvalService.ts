@@ -1,6 +1,6 @@
 import type { Expense } from "../../features/expenses/types/expense";
 import { transitionOrConflict, workflowForbidden, workflowReasonRequired } from "./workflowErrors";
-import { listRecords, listRecordsByIndex } from "./mockDataService";
+import { getRecord, listRecords, listRecordsByIndex } from "./mockDataService";
 import {
   authorizeExpenseManager,
   getReviewDenialReason,
@@ -12,7 +12,7 @@ import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 /**
  * Submitted expenses the principal may review, per the approval matrix in
  * getReviewDenialReason (manager: team members; finance: managers within
- * authorized departments; admin: everyone).
+ * authorized departments; admin: everyone else).
  */
 export async function getApprovalQueue(
   principal: AuthenticatedPrincipal,
@@ -38,7 +38,7 @@ export async function getApprovalQueue(
         : await listRecordsByIndex<Expense>("expenses", "teamId", principal.teamId);
 
   const [users, roles] = await Promise.all([
-    listRecords<{ id: string; organizationId: string; teamId: string; departmentId: string; roleId: string; role?: string }>("users"),
+    listRecords<{ id: string; organizationId: string; teamId: string; departmentId: string; roleId: string; role?: string; status?: string }>("users"),
     listRecords<{ id: string; name: string }>("roles"),
   ]);
   const roleNameById = new Map(roles.map((role) => [role.id, String(role.name).toLowerCase()]));
@@ -54,15 +54,45 @@ export async function getApprovalQueue(
       },
     ]),
   );
+  const activeAdminIds = users
+    .filter(
+      (user) =>
+        user.organizationId === principal.organizationId &&
+        user.status === "active" &&
+        ownerById.get(user.id)?.roleName === "admin",
+    )
+    .map((user) => user.id);
 
   return expenses.filter((expense) => {
     const owner = ownerById.get(String(expense.employeeId));
     return (
       Boolean(owner) &&
       (expense.status === "submitted" || expense.status === "under_review") &&
-      getReviewDenialReason(principal, expense, owner!) === null
+      getReviewDenialReason(principal, expense, owner!, {
+        otherAdminAvailable: activeAdminIds.some((id) => id !== owner!.id),
+      }) === null
     );
   });
+}
+
+/**
+ * An expense in review is approved or rejected by whoever started the review.
+ * An administrator may take the review over; the reviewer they replace is
+ * returned so the audit event can record it. Others are refused.
+ */
+async function resolveReviewTakeover(
+  principal: AuthenticatedPrincipal,
+  expense: Expense,
+): Promise<{ id: string; name: string } | undefined> {
+  const reviewerId = expense.reviewStartedBy;
+  if (expense.status !== "under_review" || !reviewerId || reviewerId === principal.userId) return undefined;
+
+  const reviewer = await getRecord<{ id: string; name: string }>("users", reviewerId);
+  const name = reviewer?.name ?? "Another reviewer";
+  if (principal.role !== "admin") {
+    throw workflowForbidden(`${name} started this review, so only they or an administrator can approve or reject it.`);
+  }
+  return { id: reviewerId, name };
 }
 
 export async function startExpenseReview(
@@ -85,6 +115,8 @@ export async function startExpenseReview(
   const updatedExpense: Expense = {
     ...expense,
     status,
+    reviewStartedBy: principal.userId,
+    reviewStartedAt: now,
     updatedAt: now,
   };
 
@@ -121,6 +153,7 @@ export async function approveExpense(
     throw workflowForbidden(authorization.error.message);
   }
 
+  const takenOverFrom = await resolveReviewTakeover(principal, expense);
   const status = transitionOrConflict("APPROVE", expense.status);
   const now = new Date().toISOString();
 
@@ -143,7 +176,10 @@ export async function approveExpense(
       entityId: updatedExpense.id,
       previousState: expense.status,
       newState: updatedExpense.status,
-      description: `Approved expense ${updatedExpense.title}.`,
+      ...(takenOverFrom ? { metadata: { overriddenReviewerId: takenOverFrom.id } } : {}),
+      description: takenOverFrom
+        ? `Approved expense ${updatedExpense.title}, overriding the review started by ${takenOverFrom.name}.`
+        : `Approved expense ${updatedExpense.title}.`,
     },
     (transaction) => {
       transaction.objectStore("expenses").put(updatedExpense);
@@ -173,6 +209,7 @@ export async function rejectExpense(
     throw workflowReasonRequired("A rejection reason is required.");
   }
 
+  const takenOverFrom = await resolveReviewTakeover(principal, expense);
   const status = transitionOrConflict("REJECT", expense.status);
   const now = new Date().toISOString();
 
@@ -182,6 +219,8 @@ export async function rejectExpense(
     reviewedBy: principal.userId,
     reviewedAt: now,
     rejectionReason: normalizedReason,
+    rejectedBy: principal.userId,
+    rejectedAt: now,
     updatedAt: now,
   };
 
@@ -195,8 +234,13 @@ export async function rejectExpense(
       entityId: updatedExpense.id,
       previousState: expense.status,
       newState: updatedExpense.status,
-      metadata: { reason: normalizedReason },
-      description: `Rejected expense ${updatedExpense.title}.`,
+      metadata: {
+        reason: normalizedReason,
+        ...(takenOverFrom ? { overriddenReviewerId: takenOverFrom.id } : {}),
+      },
+      description: takenOverFrom
+        ? `Rejected expense ${updatedExpense.title}, overriding the review started by ${takenOverFrom.name}.`
+        : `Rejected expense ${updatedExpense.title}.`,
     },
     (transaction) => {
       transaction.objectStore("expenses").put(updatedExpense);

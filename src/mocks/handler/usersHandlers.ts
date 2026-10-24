@@ -45,6 +45,9 @@ interface MockCredential {
   password: string;
 }
 
+/** Expense states that still need a reviewer or a reimbursement. */
+const UNFINISHED_EXPENSE_STATUSES = new Set(["submitted", "under_review", "approved", "reimbursement_pending"]);
+
 
 /**
  * Validates explicit finance authority (§22.7). Only Finance users carry it;
@@ -418,11 +421,21 @@ export const usersHandlers = [
       }
     }
 
-    // §27.3: a user with expense history is removed rather than erased, so
-    // their expenses stay attributable. They leave their team and department,
-    // lose access, and their private drafts are cancelled; submitted work
-    // continues through the normal workflow.
+    // §27.3: a user whose expenses are still in review or awaiting
+    // reimbursement is deactivated instead, so that work keeps its owner.
     const ownedExpenses = await listRecordsByIndex<{ id: string; status: string; title: string; [key: string]: unknown }>("expenses", "employeeId", user.id);
+    const unfinished = ownedExpenses.filter((expense) => UNFINISHED_EXPENSE_STATUSES.has(expense.status)).length;
+    if (unfinished > 0) {
+      return apiError(
+        409,
+        `${user.name} has ${unfinished} expense${unfinished === 1 ? "" : "s"} in review or awaiting reimbursement. Deactivate the user instead, or delete them once those expenses are completed.`,
+        "HAS_UNFINISHED_EXPENSES",
+      );
+    }
+
+    // A user with expense history is removed rather than erased, so their
+    // expenses stay attributable. They leave their team and department, lose
+    // access, and their private drafts are cancelled.
     if (ownedExpenses.length > 0) {
       const now = new Date().toISOString();
       const { teamId: _teamId, departmentId: _departmentId, financeDepartmentIds: _finance, ...rest } = user;

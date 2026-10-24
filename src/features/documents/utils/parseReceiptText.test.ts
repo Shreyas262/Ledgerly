@@ -23,6 +23,13 @@ describe("parseReceiptText", () => {
     expect(parseReceiptText(text)).toEqual({ amount: 609, currency: "INR", date: "2026-09-27", merchant: "Cafe Coffee Day" });
   });
 
+  it("flags a whole total ending in 00 as possibly missing its decimal point", () => {
+    expect(parseReceiptText(receipt("Masala Dosa", "Total 85000"))).toMatchObject({ amount: 85_000, amountUncertain: true });
+    expect(parseReceiptText(receipt("Masala Dosa", "Total 850.00")).amountUncertain).toBeUndefined();
+    expect(parseReceiptText(receipt("Masala Dosa", "Total 850")).amountUncertain).toBeUndefined();
+    expect(parseReceiptText(receipt("Masala Dosa", "Total 1234")).amountUncertain).toBeUndefined();
+  });
+
   it("prefers a labelled total over a larger amount elsewhere", () => {
     const text = receipt("Hotel Residency", "Room deposit 5,000.00", "Total 2,450.50", "Paid by card");
 

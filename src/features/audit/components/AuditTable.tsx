@@ -25,19 +25,23 @@ export function AuditTable({ auditEvents }: AuditTableProps) {
     <TableContainer component={Paper}>
       <Table sx={{ minWidth: 960 }}>
         <TableHead>
+          {/* The date leads, so it stays in view when narrower screens scroll the table. */}
           <TableRow>
+            <TableCell>Date and time</TableCell>
             <TableCell>Action</TableCell>
             <TableCell>Record</TableCell>
             <TableCell>Performed by</TableCell>
             <TableCell>Status</TableCell>
             <TableCell>Description</TableCell>
-            <TableCell>Date and time</TableCell>
             <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {auditEvents.map((event) => (
             <TableRow key={event.id} hover>
+              <TableCell sx={{ whiteSpace: "nowrap" }}>
+                {formatDateTime(event.timestamp)}
+              </TableCell>
               <TableCell>
                 <Chip label={humanize(event.action)} size="small" />
               </TableCell>
@@ -60,9 +64,6 @@ export function AuditTable({ auditEvents }: AuditTableProps) {
                 )}
               </TableCell>
               <TableCell>{event.description ?? "—"}</TableCell>
-              <TableCell sx={{ whiteSpace: "nowrap" }}>
-                {formatDateTime(event.timestamp)}
-              </TableCell>
               <TableCell align="right">
                 <Button
                   variant="outlined"

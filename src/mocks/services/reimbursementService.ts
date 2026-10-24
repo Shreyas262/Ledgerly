@@ -41,12 +41,14 @@ export async function getReimbursementQueue(
     }
   }
 
-  // Active financial work plus its history. Cancelled expenses are included
+  // Active financial work plus its history, without the principal's own
+  // expenses, which someone else processes. Cancelled expenses are included
   // only when they were cancelled during financial processing, not drafts
   // cancelled by their owner.
   return expenses.filter(
     (expense) =>
       expense.organizationId === principal.organizationId &&
+      expense.employeeId !== principal.userId &&
       !financeOwnerIds.has(expense.employeeId) &&
       (isAdmin || principal.authorizedDepartmentIds.includes(expense.departmentId)) &&
       (expense.status === "approved" ||

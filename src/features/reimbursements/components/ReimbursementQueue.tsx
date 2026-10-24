@@ -141,8 +141,14 @@ export function ReimbursementQueue() {
         <Stack spacing={2}>
           {expenses.map((expense) => {
             const isProcessing = processingId === expense.id;
-            // Separation of duties: Finance cannot reimburse what it approved.
-            const approvedBySelf = user?.role === "finance" && expense.approvedBy === user.id;
+            // Separation of duties: Finance cannot reimburse what it approved,
+            // except the only administrator's expense.
+            const approvedBySelf =
+              user?.role === "finance" && expense.approvedBy === user.id && !expense.approverMayReimburse;
+            // Reimbursements still count against a closed budget (§28.7).
+            const closedBudgetNotice = expense.closedBudgetName
+              ? ` The budget "${expense.closedBudgetName}" is closed; this reimbursement still counts against it.`
+              : "";
             const canCancel =
               expense.status === "approved" ||
               expense.status === "reimbursement_pending";
@@ -208,7 +214,7 @@ export function ReimbursementQueue() {
                         loading={isProcessing}
                         disabled={Boolean(processingId) && !isProcessing}
                         onClick={() =>
-                          confirm({ title: "Start Reimbursement", message: `Start reimbursing "${expense.title}"?`, confirmLabel: "Start" })
+                          confirm({ title: "Start Reimbursement", message: `Start reimbursing "${expense.title}"?${closedBudgetNotice}`, confirmLabel: "Start" })
                             .then((ok) => { if (ok) void runAction(expense.id, () => startReimbursement(expense.id).unwrap()); })
                         }
                       >
@@ -222,7 +228,7 @@ export function ReimbursementQueue() {
                         loading={isProcessing}
                         disabled={Boolean(processingId) && !isProcessing}
                         onClick={() =>
-                          confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatMoney(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark Reimbursed" })
+                          confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatMoney(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.${closedBudgetNotice}`, confirmLabel: "Mark Reimbursed" })
                             .then((ok) => { if (ok) void runAction(expense.id, () => reimburseExpense(expense.id).unwrap()); })
                         }
                       >

@@ -13,14 +13,17 @@ interface KpiTrendCardProps {
   previous: number | null;
   /** Whether a decrease is the favourable direction (e.g. time to reimburse). */
   lowerIsBetter?: boolean;
+  /** Decimals the value is shown with: periods that show the same value report no change. */
+  precision?: number;
   sparkline?: number[];
 }
 
-export function KpiTrendCard({ label, value, current, previous, lowerIsBetter, sparkline }: KpiTrendCardProps) {
+export function KpiTrendCard({ label, value, current, previous, lowerIsBetter, precision, sparkline }: KpiTrendCardProps) {
   const { series } = useChartColors();
   const hasComparison = current !== null && previous !== null && previous > 0;
   const change = hasComparison ? ((current - previous) / previous) * 100 : 0;
-  const direction = !hasComparison || Math.abs(change) < 0.5 ? "flat" : change > 0 ? "up" : "down";
+  const shownEqual = hasComparison && precision !== undefined && current.toFixed(precision) === previous.toFixed(precision);
+  const direction = !hasComparison || shownEqual || Math.abs(change) < 0.5 ? "flat" : change > 0 ? "up" : "down";
   const favourable = direction === "flat" ? null : (direction === "down") === Boolean(lowerIsBetter);
   const Icon = direction === "up" ? TrendingUpIcon : direction === "down" ? TrendingDownIcon : TrendingFlatIcon;
 
@@ -35,7 +38,7 @@ export function KpiTrendCard({ label, value, current, previous, lowerIsBetter, s
               <>
                 <Icon fontSize="small" color={favourable === null ? "disabled" : favourable ? "success" : "error"} />
                 <Typography variant="caption" color="text.secondary">
-                  {direction === "flat" ? "No change" : `${Math.abs(change).toFixed(0)}% ${direction === "up" ? "higher" : "lower"}`} than the previous period
+                  {direction === "flat" ? "No change from" : `${Math.abs(change).toFixed(0)}% ${direction === "up" ? "higher" : "lower"} than`} the previous period
                 </Typography>
               </>
             ) : (

@@ -26,7 +26,20 @@ describe("applyReceiptDetails", () => {
       form: { title: "Cafe", amount: "609", currency: "INR", expenseDate: "2026-09-27" },
       filled: ["amount", "expense date", "title"],
       missing: [],
+      checkAmount: false,
     });
+  });
+
+  it("asks to check an amount that may have been misread, unless the user typed it", () => {
+    const receipt = { amount: 85_000, amountUncertain: true };
+
+    const fill = applyReceiptDetails(EMPTY, receipt, FIELDS, new Set());
+    expect(fill.checkAmount).toBe(true);
+    expect(describeReceiptFill("blurry.jpg", fill)).toBe(
+      "Filled from blurry.jpg: amount. Check them before saving. The expense date and title could not be read. The amount was read without a decimal point and may be too large, so check it against the receipt.",
+    );
+
+    expect(applyReceiptDetails(EMPTY, receipt, FIELDS, new Set<keyof Form>(["amount"])).checkAmount).toBe(false);
   });
 
   it("keeps what the user typed and does not report it as missing", () => {

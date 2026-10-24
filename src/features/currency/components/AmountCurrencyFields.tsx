@@ -82,6 +82,13 @@ export function AmountCurrencyFields({
         </TextField>
       </Stack>
 
+      {estimate.foreign && estimate.rupees !== undefined && (
+        // The rupee amount is what policies, budgets and reimbursement use, so it stands out.
+        <Typography variant="subtitle1" component="p" sx={{ fontWeight: 600 }}>
+          In rupees: {formatMoney(estimate.rupees)}
+        </Typography>
+      )}
+
       {preview && (
         <Typography variant="body2" color="text.secondary" role="status">
           {preview}

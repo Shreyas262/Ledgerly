@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { auditEventsFor, givenExpense, givenPolicy, readExpense } from "../../../test/fixtures";
+import { auditEventsFor, givenBudget, givenExpense, givenPolicy, readExpense } from "../../../test/fixtures";
 import { renderPage, setupPageTests } from "../../../test/renderPage";
 import { ExpenseDetailsPage } from "./ExpenseDetailsPage";
 
@@ -74,6 +74,85 @@ describe("ExpenseDetailsPage review", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(await readExpense(expense.id)).toMatchObject({ status: "rejected", rejectionReason: "Missing itemised bill" });
+  });
+});
+
+describe("ExpenseDetailsPage review ownership", () => {
+  function renderReview(id: string, as: "manager" | "admin") {
+    return renderPage(<ExpenseDetailsPage mode="review" />, { path: "/approvals/:id", route: `/approvals/${id}`, as });
+  }
+
+  it("shows who is reviewing and offers others no approval", async () => {
+    const expense = await givenExpense({ status: "under_review", reviewStartedBy: "user-3", title: "Hotel in Pune" });
+
+    await renderReview(expense.id, "manager");
+
+    expect(await screen.findByText("In review by Mike Finance")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
+  });
+
+  it("warns an administrator that approving overrides the review in progress", async () => {
+    const expense = await givenExpense({ status: "under_review", reviewStartedBy: "user-2", title: "Hotel in Pune" });
+    const { user } = await renderReview(expense.id, "admin");
+
+    await user.click(await screen.findByRole("button", { name: "Approve" }));
+
+    expect(await screen.findByRole("dialog", { name: "Approve Expense" })).toHaveTextContent(
+      "Sarah Manager started this review. Completing it overrides their review, which is recorded in the audit log.",
+    );
+  });
+});
+
+describe("ExpenseDetailsPage reimbursement actions", () => {
+  function renderAs(id: string, as: "admin" | "finance") {
+    return renderPage(<ExpenseDetailsPage mode="default" />, { path: "/expenses/:id", route: `/expenses/${id}`, as });
+  }
+
+  it("offers an administrator no reimbursement or cancellation of their own expense", async () => {
+    const expense = await givenExpense({ owner: "admin", status: "approved", approvedBy: "user-3", title: "Board dinner" });
+
+    await renderAs(expense.id, "admin");
+
+    expect(await screen.findByRole("heading", { name: "Board dinner" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start Reimbursement" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel Expense" })).not.toBeInTheDocument();
+  });
+
+  it("warns that a reimbursement still counts against a closed budget", async () => {
+    await givenBudget({ status: "closed", startDate: "2026-01-01", endDate: "2026-12-31" });
+    const expense = await givenExpense({ status: "approved", approvedBy: "user-2", title: "Hotel Mumbai 2 nights" });
+    const { user } = await renderAs(expense.id, "finance");
+
+    await user.click(await screen.findByRole("button", { name: "Start Reimbursement" }));
+
+    expect(await screen.findByRole("dialog", { name: "Start Reimbursement" })).toHaveTextContent(
+      'The budget "Test budget" is closed; this reimbursement still counts against it.',
+    );
+  });
+
+  it("lets Finance reimburse the only administrator's expense it approved", async () => {
+    const expense = await givenExpense({ owner: "admin", status: "approved", approvedBy: "user-3", title: "Board dinner" });
+
+    await renderAs(expense.id, "finance");
+
+    expect(await screen.findByRole("button", { name: "Start Reimbursement" })).toBeInTheDocument();
+  });
+});
+
+describe("ExpenseDetailsPage rejection history", () => {
+  it("shows a reviewer the earlier rejection after the expense is resubmitted", async () => {
+    const expense = await givenExpense({
+      status: "submitted",
+      rejectionReason: "Missing itemised bill",
+      rejectedBy: "user-2",
+      rejectedAt: "2026-10-12T09:30:00.000Z",
+    });
+
+    await renderPage(<ExpenseDetailsPage mode="review" />, { path: "/approvals/:id", route: `/approvals/${expense.id}`, as: "admin" });
+
+    expect(await screen.findByText("Previously rejected by Sarah Manager on 12 Oct 2026")).toBeInTheDocument();
+    expect(screen.getByText("Missing itemised bill")).toBeInTheDocument();
   });
 });
 

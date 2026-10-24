@@ -20,6 +20,8 @@ import {
   buildBudgetView,
   getExpenseCreationEligibility,
   findOverlappingActiveBudget,
+  getAllocationSpend,
+  getPeriodChangeDenial,
   isBudgetVisibleTo,
   loadBudgetHierarchy,
 } from "../services/budgetService";
@@ -229,6 +231,11 @@ export const budgetsHandlers = [
       return budgetExceeded(`The organization budget cannot be lower than its department allocations (${formatCurrency(allocated)}).`);
     }
 
+    const periodDenial = await getPeriodChangeDenial(existing, body.startDate!, body.endDate!);
+    if (periodDenial) {
+      return apiError(422, periodDenial, "BUDGET_PERIOD_IN_USE", { businessRule: periodDenial });
+    }
+
     if (existing.status === "active") {
       const overlapping = await findOverlappingActiveBudget(existing.organizationId, body.startDate!, body.endDate!, existing.id);
       if (overlapping) {
@@ -343,6 +350,48 @@ export const budgetsHandlers = [
     return HttpResponse.json(await buildBudgetView(budget, authorization.principal), { status: 201 });
   }),
 
+  // §28.14: only a draft, which has never tracked spend, is deleted; a budget
+  // that has been active is closed instead. Its allocations go with it.
+  http.delete("/api/budgets/:id", async ({ params, request }) => {
+    const budget = await getRecord<OrganizationBudget>("budgets", String(params.id));
+    if (!budget) return apiError(404, "Budget not found.");
+    const authorization = await authorizeRequest(request, {
+      permission: "budgets.delete",
+      scope: "ORGANIZATION",
+      resource: { organizationId: budget.organizationId },
+    });
+    if (authorization.allowed === false) return authorizationError(authorization);
+    if (budget.status !== "draft") {
+      return conflict("Only draft budgets can be deleted. Close a budget that has been active instead.", "BUDGET_NOT_DRAFT");
+    }
+
+    const { departmentAllocations, teamAllocations, expenseTypeBudgets } = await loadBudgetHierarchy();
+    const ofBudget = <T extends { id: string; organizationBudgetId: string }>(items: T[]) =>
+      items.filter((item) => item.organizationBudgetId === budget.id).map((item) => item.id);
+
+    await runAuditedTransaction(
+      ["budgets", "departmentBudgetAllocations", "teamBudgetAllocations", "expenseTypeBudgets"],
+      {
+        organizationId: budget.organizationId,
+        actorId: authorization.principal.userId,
+        action: "BUDGET_DELETED",
+        entityType: "BUDGET",
+        entityId: budget.id,
+        previousState: budget.status,
+        newState: "deleted",
+        description: `Deleted draft budget ${budget.name}.`,
+      },
+      (transaction) => {
+        transaction.objectStore("budgets").delete(budget.id);
+        for (const id of ofBudget(departmentAllocations)) transaction.objectStore("departmentBudgetAllocations").delete(id);
+        for (const id of ofBudget(teamAllocations)) transaction.objectStore("teamBudgetAllocations").delete(id);
+        for (const id of ofBudget(expenseTypeBudgets)) transaction.objectStore("expenseTypeBudgets").delete(id);
+      },
+    );
+
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // Admin: organization budget → department allocation.
   http.post("/api/budgets/:id/departments", async ({ params, request }) => {
     const budget = await getRecord<OrganizationBudget>("budgets", String(params.id));
@@ -372,6 +421,11 @@ export const budgetsHandlers = [
       if (childTotal > body.amount) {
         return budgetExceeded(`The department allocation cannot be lower than what is already assigned to its teams (${formatCurrency(childTotal)}).`);
       }
+    }
+
+    const departmentSpend = await getAllocationSpend(budget, { departmentId: body.departmentId });
+    if (departmentSpend > body.amount) {
+      return budgetExceeded(`The department allocation cannot be lower than the ${formatCurrency(departmentSpend)} already reimbursed against it.`);
     }
 
     const now = new Date().toISOString();
@@ -442,6 +496,11 @@ export const budgetsHandlers = [
       }
     }
 
+    const teamSpend = await getAllocationSpend(budget, { departmentId: team.departmentId, teamId: team.id });
+    if (teamSpend > body.amount) {
+      return budgetExceeded(`The team allocation cannot be lower than the ${formatCurrency(teamSpend)} already reimbursed against it.`);
+    }
+
     const now = new Date().toISOString();
     const allocation: TeamBudgetAllocation = {
       id: existing?.id ?? crypto.randomUUID(),
@@ -494,6 +553,15 @@ export const budgetsHandlers = [
       .reduce((sum, item) => sum + item.amount, 0);
     if (allocatedElsewhere + body.amount > teamAllocation.amount) {
       return budgetExceeded(`Expense-type budgets cannot exceed the team allocation. ${formatCurrency(teamAllocation.amount - allocatedElsewhere)} is still available.`);
+    }
+
+    const typeSpend = await getAllocationSpend(budget, {
+      departmentId: teamAllocation.departmentId,
+      teamId: teamAllocation.teamId,
+      expenseType: body.expenseType,
+    });
+    if (typeSpend > body.amount) {
+      return budgetExceeded(`The expense-type budget cannot be lower than the ${formatCurrency(typeSpend)} already reimbursed against it.`);
     }
 
     const now = new Date().toISOString();

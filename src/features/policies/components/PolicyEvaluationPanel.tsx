@@ -24,6 +24,7 @@ export function PolicyEvaluationPanel({ evaluation, title, note }: PolicyEvaluat
   const blocking = [...(details.missingInformation ?? []), ...(details.violatedRules ?? [])];
   const outcome = RESULT_TEXT[evaluation.result];
   const severity = outcome.severity === "success" && warnings.length ? "warning" : outcome.severity;
+  const inheritedFrom = [...new Set(Object.values(details.inheritedRules ?? {}))];
 
   return (
     <Alert severity={severity} variant="outlined">
@@ -32,6 +33,11 @@ export function PolicyEvaluationPanel({ evaluation, title, note }: PolicyEvaluat
         {note && <Typography variant="body2" color="text.secondary">{note}</Typography>}
         {evaluation.policyName && (
           <Typography variant="body2">Policy: {evaluation.policyName}</Typography>
+        )}
+        {inheritedFrom.length > 0 && (
+          <Typography variant="body2" color="text.secondary">
+            Rules it does not set come from {inheritedFrom.join(", ")}.
+          </Typography>
         )}
         {details.escalated && (
           <Typography variant="body2">

@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
+import { useConfirm } from "../../../components/common/ConfirmProvider";
 import { getApiErrorDetails } from "../../../services/api/apiErrors";
 import { useCreateOrganizationMutation } from "../api/platformApi";
 
@@ -41,6 +42,7 @@ function OrganizationForm({ onClose, onCreated }: CreateOrganizationDialogProps)
   const [adminPassword, setAdminPassword] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [createOrganization, { isLoading, error }] = useCreateOrganizationMutation();
+  const confirm = useConfirm();
   const serverErrors = getApiErrorDetails(error).fieldErrors ?? {};
   const fieldError = (field: keyof Errors) => errors[field] ?? serverErrors[field]?.toString();
 
@@ -60,6 +62,11 @@ function OrganizationForm({ onClose, onCreated }: CreateOrganizationDialogProps)
     const next = validate();
     setErrors(next);
     if (Object.keys(next).length) return;
+    if (!(await confirm({
+      title: "Create Organization",
+      message: `Create "${name.trim()}" with ${adminName.trim()} (${adminEmail.trim()}) as its Admin?`,
+      confirmLabel: "Create",
+    }))) return;
 
     try {
       const organization = await createOrganization({

@@ -85,3 +85,10 @@ export const administrationPermissions: Permission[] = [
   "policies.read",
   "audit.read",
 ];
+
+/**
+ * Expense data scope comes from the built-in roles (§9); a custom role's
+ * read permissions cover its holders' own expenses only.
+ */
+export const CUSTOM_ROLE_SCOPE_NOTE =
+  "Expenses and analytics show holders of a custom role their own expenses only. Team, department and organization-wide expense data comes with the built-in Manager, Finance and Admin roles.";

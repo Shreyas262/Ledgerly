@@ -77,6 +77,14 @@ export async function givenExpense(
   return expense;
 }
 
+/** Stores another active administrator in the demo organization, next to the seeded one. */
+export async function givenSecondAdmin(): Promise<string> {
+  const admin = await getRecord<Record<string, unknown>>("users", demoUsers.admin.id);
+  const id = "user-admin-2";
+  await saveRecord("users", { ...admin, id, name: "Second Admin", email: "admin2@ledgerly.com" });
+  return id;
+}
+
 /** Stores an expense policy (active, organization-wide, all types unless given). */
 export async function givenPolicy(overrides: Partial<Policy> = {}): Promise<Policy> {
   const now = new Date().toISOString();

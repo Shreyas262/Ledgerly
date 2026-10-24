@@ -13,8 +13,11 @@ import {
 import ReceiptLongOutlinedIcon from "@mui/icons-material/ReceiptLongOutlined";
 
 import {
+  useDeletePolicyMutation,
   useGetPolicyByIdQuery,
 } from "../api/policiesApi";
+import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { useGetDepartmentsQuery } from "../../organizations/api/organizationApi";
 import { useGetAuditEventsQuery } from "../../audit/api/auditApi";
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
@@ -61,6 +64,8 @@ export function PolicyDetailsPage() {
   });
   const { data: departments = [] } = useGetDepartmentsQuery();
   const canReadAudit = can("audit.read");
+  const confirm = useConfirm();
+  const [deletePolicy, { isLoading: isDeleting, error: deleteError }] = useDeletePolicyMutation();
   const { data: history } = useGetAuditEventsQuery(
     { filter: { entityId: id ?? "" }, sort: "timestamp", sortOrder: "desc", pageSize: 20 },
     { skip: !id || !canReadAudit },
@@ -79,6 +84,17 @@ export function PolicyDetailsPage() {
   }
 
   const canUpdate = can("policies.update");
+  const canDelete = policy.status === "draft" && can("policies.delete");
+
+  const handleDelete = async () => {
+    if (!(await confirm({ title: "Delete Policy", message: `Delete the draft "${policy.name}"? This cannot be undone.`, confirmLabel: "Delete", destructive: true }))) return;
+    try {
+      await deletePolicy(policy.id).unwrap();
+      navigate("/policies");
+    } catch {
+      // Error is exposed through deleteError.
+    }
+  };
   const departmentName = (departmentId: string) => departments.find((department) => department.id === departmentId)?.name ?? departmentId;
 
   return (
@@ -87,12 +103,23 @@ export function PolicyDetailsPage() {
       <PageHeader
         title={policy.name}
         description={policy.description || "Expense policy"}
-        actions={canUpdate && (
-          <Button variant="contained" onClick={() => navigate(`/policies/${policy.id}/edit`)} sx={{ minWidth: 140 }}>
-            Edit Policy
-          </Button>
+        actions={(canUpdate || canDelete) && (
+          <Stack direction="row" spacing={1}>
+            {canDelete && (
+              <Button color="error" disabled={isDeleting} onClick={handleDelete}>
+                Delete Policy
+              </Button>
+            )}
+            {canUpdate && (
+              <Button variant="contained" onClick={() => navigate(`/policies/${policy.id}/edit`)} sx={{ minWidth: 140 }}>
+                Edit Policy
+              </Button>
+            )}
+          </Stack>
         )}
       />
+
+      {deleteError && <ApiFeedback error={deleteError} />}
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 5 }}>

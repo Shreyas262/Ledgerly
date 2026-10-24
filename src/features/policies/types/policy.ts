@@ -42,6 +42,16 @@ export interface PolicyRules {
 
 export type PolicyRuleKey = keyof PolicyRules;
 
+/** The less specific policy a rule was inherited from (§21.3). */
+export interface InheritedPolicyRule {
+  policyId: EntityId;
+  policyName: string;
+  /** The source policy's expense type; absent when it covers all types. */
+  expenseType?: ExpenseType;
+}
+
+export type InheritedPolicyRules = Partial<Record<PolicyRuleKey, InheritedPolicyRule>>;
+
 /** Rule keys that produce findings, plus the baseline receipt rule. */
 export type PolicyFindingRule = Exclude<PolicyRuleKey, "approvalThreshold"> | "receipt";
 
@@ -55,6 +65,12 @@ export interface Policy extends ResourceTimestamps {
   /** Empty or omitted: applies to the whole organization. */
   departmentIds?: EntityId[];
   rules: PolicyRules;
+  /**
+   * On the policy applicable to an expense only, never stored: rules this
+   * policy does not set, inherited from less specific policies and included
+   * in `rules`.
+   */
+  inheritedRules?: InheritedPolicyRules;
   status: PolicyStatus;
   createdBy?: EntityId;
 }
@@ -88,6 +104,8 @@ export interface PolicyEvaluationDetails {
   approvalThreshold?: number;
   /** Above the approval threshold: routed to a more senior approver. */
   escalated?: boolean;
+  /** Names of the less specific policies that supplied rules the applicable policy does not set. */
+  inheritedRules?: Partial<Record<PolicyRuleKey, string>>;
 }
 
 export interface PolicyEvaluation {
@@ -119,7 +137,7 @@ export interface UpdateExpensePolicyRequest extends CreateExpensePolicyRequest {
 
 /** The policy summary any signed-in user may read for an expense type (§21.12). */
 export interface ApplicablePolicy {
-  policy: Pick<Policy, "id" | "name" | "description" | "expenseType" | "departmentIds" | "rules"> | null;
+  policy: Pick<Policy, "id" | "name" | "description" | "expenseType" | "departmentIds" | "rules" | "inheritedRules"> | null;
   /** The caller's counted spend this month for the policy's expense type(s). */
   monthlyUsage: number;
   month: string;

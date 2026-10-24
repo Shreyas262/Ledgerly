@@ -139,6 +139,52 @@ describe("selectApplicablePolicy", () => {
 
     expect((await selectApplicablePolicy("org-1", "MEALS", "dept-engineering"))?.id).toBe(newer.id);
   });
+
+  it("inherits the rules a specific policy does not set from less specific policies", async () => {
+    const standard = await givenPolicy({
+      name: "Standard",
+      rules: {
+        maximumAmount: { amount: 50_000, enforcement: "BLOCK" },
+        submissionDeadline: { days: 30, enforcement: "BLOCK" },
+        noFutureDates: { enforcement: "BLOCK" },
+      },
+    });
+    const engineering = await givenPolicy({
+      name: "Engineering",
+      departmentIds: ["dept-engineering"],
+      rules: { submissionDeadline: { days: 15, enforcement: "WARN" }, duplicateCheck: { enforcement: "WARN" } },
+    });
+    const meals = await givenPolicy({
+      name: "Meals",
+      expenseType: "MEALS",
+      rules: { maximumAmount: { amount: 3_000, enforcement: "WARN" } },
+    });
+
+    const policy = await selectApplicablePolicy("org-1", "MEALS", "dept-engineering");
+
+    expect(policy).toMatchObject({
+      id: meals.id,
+      name: "Meals",
+      rules: {
+        maximumAmount: { amount: 3_000, enforcement: "WARN" },
+        submissionDeadline: { days: 15, enforcement: "WARN" },
+        duplicateCheck: { enforcement: "WARN" },
+        noFutureDates: { enforcement: "BLOCK" },
+      },
+      inheritedRules: {
+        submissionDeadline: { policyId: engineering.id, policyName: "Engineering" },
+        duplicateCheck: { policyId: engineering.id, policyName: "Engineering" },
+        noFutureDates: { policyId: standard.id, policyName: "Standard" },
+      },
+    });
+    expect(policy?.inheritedRules?.maximumAmount).toBeUndefined();
+  });
+
+  it("leaves a policy without less specific policies unchanged", async () => {
+    const meals = await givenPolicy({ expenseType: "MEALS", rules: { maximumAmount: { amount: 3_000, enforcement: "WARN" } } });
+
+    expect(await selectApplicablePolicy("org-1", "MEALS", "dept-engineering")).toEqual(meals);
+  });
 });
 
 describe("evaluateExpensePolicy", () => {
@@ -172,6 +218,32 @@ describe("evaluateExpensePolicy", () => {
     expect((await evaluate(draft)).result).toBe("COMPLIANT");
 
     await givenExpense({ status: "under_review", amount: 600, expenseDate: "2026-10-05" });
+    expect((await evaluate(draft)).result).toBe("VIOLATES_POLICY");
+  });
+
+  it("keeps an organization-wide blocking maximum under a type policy that only warns", async () => {
+    await givenPolicy({ name: "Standard", rules: { maximumAmount: { amount: 50_000, enforcement: "BLOCK" } } });
+    await givenPolicy({ name: "Meals", expenseType: "MEALS", rules: { descriptionRequiredAbove: { amount: 3_000, enforcement: "WARN" } } });
+    const draft = await givenExpense({ status: "draft", amount: 460_268.78, documentIds: ["document-1"] });
+
+    const evaluation = await evaluate(draft);
+
+    expect(evaluation).toMatchObject({
+      policyName: "Meals",
+      result: "VIOLATES_POLICY",
+      details: {
+        violatedRules: ["Amount exceeds the maximum of ₹50,000 per expense."],
+        inheritedRules: { maximumAmount: "Standard" },
+      },
+    });
+  });
+
+  it("counts every expense type towards a monthly limit inherited from an all-types policy", async () => {
+    await givenPolicy({ name: "Standard", rules: { monthlyLimit: { amount: 3_000, enforcement: "BLOCK" } } });
+    await givenPolicy({ name: "Meals", expenseType: "MEALS", rules: { maximumAmount: { amount: 5_000, enforcement: "WARN" } } });
+    const draft = await givenExpense({ status: "draft", amount: 1_000, documentIds: ["document-1"] });
+    await givenExpense({ status: "approved", amount: 2_500, expenseDate: "2026-10-04", type: "TRAVEL" });
+
     expect((await evaluate(draft)).result).toBe("VIOLATES_POLICY");
   });
 });

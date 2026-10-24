@@ -6,6 +6,7 @@ import {
   resolveExpenseScope,
   type AuthorizationScope,
 } from "./authorizationService";
+import { isOnlyAdministrator } from "./workflowAuthorization";
 
 /**
  * A principal may always request their own expenses, or their full
@@ -67,21 +68,51 @@ export async function getAuthorizedExpenseRecords(
 
 interface NamedExpenseFields {
   employeeId: string;
+  organizationId?: string;
+  expenseDate?: string;
+  status?: string;
   teamId?: string;
   departmentId?: string;
   cancelledBy?: string;
+  reviewStartedBy?: string;
+  rejectedBy?: string;
   reimbursement?: { processedBy?: string };
 }
 
 /**
- * Adds display names for the owner, the reimbursement processor and the
- * canceller to expense responses so the UI never has to resolve users itself
+ * Adds display names for the owner, the reviewer in progress, the
+ * reimbursement processor and the canceller to expense responses so the UI never has to resolve users itself
  * (users.read is an administrative permission).
  */
 export async function withEmployeeNames<T extends NamedExpenseFields>(
   expenses: T[],
-): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; teamName?: string; departmentName?: string }>> {
+): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; reviewStartedByName?: string; rejectedByName?: string; teamName?: string; departmentName?: string; approverMayReimburse?: boolean; closedBudgetName?: string }>> {
   if (expenses.length === 0) return [];
+
+  // The only administrator's approved expenses may be reimbursed by the
+  // Finance user who approved them (§22.5).
+  const awaitingPayment = (expense: T) =>
+    expense.status === "approved" || expense.status === "reimbursement_pending";
+  const onlyAdministratorIds = new Set<string>();
+  for (const ownerId of new Set(expenses.filter(awaitingPayment).map((expense) => expense.employeeId))) {
+    if (await isOnlyAdministrator(ownerId)) onlyAdministratorIds.add(ownerId);
+  }
+
+  // Reimbursements still count against a closed budget covering the expense
+  // date when no active budget covers it (§28.7).
+  const budgets = expenses.some(awaitingPayment)
+    ? await listRecords<{ organizationId: string; name: string; status: string; startDate: string; endDate: string }>("budgets")
+    : [];
+  const closedBudgetNameOf = (expense: T) => {
+    if (!awaitingPayment(expense) || !expense.expenseDate) return undefined;
+    const date = expense.expenseDate.slice(0, 10);
+    const covering = budgets.filter(
+      (budget) => budget.organizationId === expense.organizationId && budget.startDate <= date && date <= budget.endDate,
+    );
+    return covering.some((budget) => budget.status === "active")
+      ? undefined
+      : covering.find((budget) => budget.status === "closed")?.name;
+  };
 
   const [teams, departments] = await Promise.all([
     listRecords<{ id: string; name: string }>("teams"),
@@ -92,7 +123,7 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
 
   const userIds = new Set(
     expenses.flatMap((expense) =>
-      [expense.employeeId, expense.cancelledBy, expense.reimbursement?.processedBy].filter(
+      [expense.employeeId, expense.cancelledBy, expense.reviewStartedBy, expense.rejectedBy, expense.reimbursement?.processedBy].filter(
         (id): id is string => Boolean(id),
       ),
     ),
@@ -109,6 +140,8 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
   return expenses.map((expense) => {
     const employeeName = nameById.get(expense.employeeId);
     const cancelledByName = expense.cancelledBy ? nameById.get(expense.cancelledBy) : undefined;
+    const reviewStartedByName = expense.reviewStartedBy ? nameById.get(expense.reviewStartedBy) : undefined;
+    const rejectedByName = expense.rejectedBy ? nameById.get(expense.rejectedBy) : undefined;
     const processedByName = expense.reimbursement?.processedBy
       ? nameById.get(expense.reimbursement.processedBy)
       : undefined;
@@ -123,6 +156,10 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
       ...(teamName ? { teamName } : {}),
       ...(departmentName ? { departmentName } : {}),
       ...(cancelledByName ? { cancelledByName } : {}),
+      ...(reviewStartedByName ? { reviewStartedByName } : {}),
+      ...(rejectedByName ? { rejectedByName } : {}),
+      ...(awaitingPayment(expense) && onlyAdministratorIds.has(expense.employeeId) ? { approverMayReimburse: true } : {}),
+      ...(closedBudgetNameOf(expense) ? { closedBudgetName: closedBudgetNameOf(expense) } : {}),
       ...(expense.reimbursement && processedByName
         ? { reimbursement: { ...expense.reimbursement, processedByName } }
         : {}),

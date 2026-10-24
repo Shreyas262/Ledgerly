@@ -288,6 +288,28 @@ describe("CreateExpensePage currencies", () => {
     expect(await screen.findByText(/Above the ₹5,000 maximum per expense\./)).toBeInTheDocument();
   });
 
+  it("shows the rupee amount prominently", async () => {
+    await givenBudget();
+    serveExchangeRates({ USD: 94.96 });
+    const { user } = await renderReady();
+
+    await enterDollars(user);
+
+    expect(await screen.findByText("In rupees: ₹5,697.60")).toBeInTheDocument();
+  });
+
+  it("names the policy each inherited rule comes from", async () => {
+    await givenBudget();
+    await givenPolicy({ name: "Standard", rules: { maximumAmount: { amount: 5_000, enforcement: "BLOCK" } } });
+    await givenPolicy({ name: "Meals policy", expenseType: "MEALS", rules: { duplicateCheck: { enforcement: "WARN" } } });
+    const { user } = await renderReady();
+
+    await selectOption(user, /^Expense type/, /^Meals$/);
+
+    expect(await screen.findByText("Policy: Meals policy")).toBeInTheDocument();
+    expect(screen.getByText("Above ₹5,000 per expense (from Standard)")).toBeInTheDocument();
+  });
+
   it("asks for the expense date before converting", async () => {
     await givenBudget();
     const { user } = await renderReady();

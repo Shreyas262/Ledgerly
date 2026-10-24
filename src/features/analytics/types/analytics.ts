@@ -1,7 +1,8 @@
 import type { ExpenseStatus, ExpenseType } from "../../expenses/types/expense";
 import type { PolicyFindingRule } from "../../policies/types/policy";
 
-export type AnalyticsScope = "TEAM" | "DEPARTMENT" | "ORGANIZATION";
+/** OWN: the viewer's own expenses, for roles without a team, department or organization scope. */
+export type AnalyticsScope = "OWN" | "TEAM" | "DEPARTMENT" | "ORGANIZATION";
 
 export interface AnalyticsQuery {
   from?: string;

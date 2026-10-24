@@ -92,6 +92,12 @@ export const policiesApi = baseApi.injectEndpoints({
       ],
     }),
 
+    /** Drafts that never checked an expense only (§21.9). */
+    deletePolicy: builder.mutation<void, string>({
+      query: (id) => ({ url: `/policies/${id}`, method: "DELETE" }),
+      invalidatesTags: [{ type: "Policies", id: "LIST" }],
+    }),
+
     /** The policy that applies to the caller for an expense type (§21.12). */
     getApplicablePolicy: builder.query<
       ApplicablePolicy,
@@ -113,6 +119,7 @@ export const {
   useGetPolicyByIdQuery,
   useCreatePolicyMutation,
   useUpdatePolicyMutation,
+  useDeletePolicyMutation,
   useGetApplicablePolicyQuery,
   usePreviewPolicyMutation,
 } = policiesApi;

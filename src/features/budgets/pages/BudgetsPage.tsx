@@ -73,7 +73,7 @@ export function BudgetsPage() {
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label={copy.budget} value={formatCurrency(summary.totalBudget)} description="Active budgets" /></Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label={copy.allocated} value={formatCurrency(summary.totalAllocated)} description={`${formatCurrency(Math.max(summary.totalBudget - summary.totalAllocated, 0))} unallocated`} /></Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Spend" value={formatCurrency(summary.totalSpent)} description={`${formatCurrency(summary.totalRemaining)} remaining`} /></Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Spend" value={formatCurrency(summary.totalSpent)} description={summary.totalSpent > summary.totalBudget ? `Over budget by ${formatCurrency(summary.totalSpent - summary.totalBudget)}` : `${formatCurrency(summary.totalRemaining)} remaining`} /></Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}><BudgetSummaryCard label="Utilization" value={`${summary.utilization.toFixed(1)}%`} description="Spend includes reimbursed expenses only" /></Grid>
             </Grid>
           )}

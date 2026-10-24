@@ -185,7 +185,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleApproveExpense = async () => {
-    if (!(await confirm({ title: "Approve Expense", message: `Approve "${expense.title}" for ${formatMoney(expense.amount)}? It moves to Finance for reimbursement.`, confirmLabel: "Approve" }))) return;
+    if (!(await confirm({ title: "Approve Expense", message: `Approve "${expense.title}" for ${formatMoney(expense.amount)}? It moves to Finance for reimbursement.${takeoverNotice ? ` ${takeoverNotice}` : ""}`, confirmLabel: "Approve" }))) return;
     try {
       await approveExpense(expense.id).unwrap();
     } catch {
@@ -223,7 +223,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleStartReimbursement = async () => {
-    if (!(await confirm({ title: "Start Reimbursement", message: `Start reimbursing "${expense.title}"?`, confirmLabel: "Start" }))) return;
+    if (!(await confirm({ title: "Start Reimbursement", message: `Start reimbursing "${expense.title}"?${closedBudgetNotice}`, confirmLabel: "Start" }))) return;
     try {
       await startReimbursement(expense.id).unwrap();
     } catch {
@@ -232,7 +232,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleReimburseExpense = async () => {
-    if (!(await confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatMoney(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.`, confirmLabel: "Mark Reimbursed" }))) return;
+    if (!(await confirm({ title: "Mark as Reimbursed", message: `Confirm that ${formatMoney(expense.amount)} has been paid for "${expense.title}"? This cannot be undone.${closedBudgetNotice}`, confirmLabel: "Mark Reimbursed" }))) return;
     try {
       await reimburseExpense(expense.id).unwrap();
     } catch {
@@ -268,8 +268,20 @@ export function ExpenseDetailsPage({
   // A receipt or supporting document is required before submission.
   const needsReceipt = canSubmit && (expense.documentIds?.length ?? 0) === 0;
 
-  // Only administrators may review their own expenses.
-  const canReviewThis = !isOwner || user?.role === "admin";
+  // Reimbursements still count against a closed budget (§28.7).
+  const closedBudgetNotice = expense.closedBudgetName
+    ? ` The budget "${expense.closedBudgetName}" is closed; this reimbursement still counts against it.`
+    : "";
+
+  // Nobody reviews their own expense.
+  const canReviewThis = !isOwner;
+
+  // Whoever started the review completes it; an administrator may take it over.
+  const reviewStartedByOther = Boolean(expense.reviewStartedBy) && expense.reviewStartedBy !== user?.id;
+  const canCompleteReview = !reviewStartedByOther || user?.role === "admin";
+  const takeoverNotice = reviewStartedByOther
+    ? `${expense.reviewStartedByName ?? "Another reviewer"} started this review. Completing it overrides their review, which is recorded in the audit log.`
+    : "";
 
   const canStartReview =
     isReviewMode &&
@@ -280,12 +292,14 @@ export function ExpenseDetailsPage({
   const canApprove =
     isReviewMode &&
     canReviewThis &&
+    canCompleteReview &&
     expense.status === "under_review" &&
     can("expenses.approve");
 
   const canReject =
     isReviewMode &&
     canReviewThis &&
+    canCompleteReview &&
     expense.status === "under_review" &&
     can("expenses.reject");
 
@@ -295,17 +309,22 @@ export function ExpenseDetailsPage({
     expense.status === "rejected" &&
     can("expenses.update");
 
-  // Separation of duties: Finance cannot reimburse an expense it approved.
-  const approvedBySelf = user?.role === "finance" && expense.approvedBy === user.id;
+  // Separation of duties: Finance cannot reimburse an expense it approved,
+  // except the only administrator's expense.
+  const approvedBySelf =
+    user?.role === "finance" && expense.approvedBy === user.id && !expense.approverMayReimburse;
 
+  // Nobody processes their own expense.
   const canStartReimbursement =
     !isReviewMode &&
+    !isOwner &&
     !approvedBySelf &&
     expense.status === "approved" &&
     can("reimbursements.manage");
 
   const canReimburse =
     !isReviewMode &&
+    !isOwner &&
     !approvedBySelf &&
     expense.status === "reimbursement_pending" &&
     can("reimbursements.manage");
@@ -315,6 +334,7 @@ export function ExpenseDetailsPage({
     ((expense.status === "draft" && isOwner && can("expenses.update")) ||
       ((expense.status === "approved" ||
         expense.status === "reimbursement_pending") &&
+        !isOwner &&
         can("reimbursements.manage")));
 
   const canManageDocuments =
@@ -355,13 +375,15 @@ export function ExpenseDetailsPage({
         </Alert>
       )}
 
-      {expense.rejectionReason &&
-        (expense.status === "rejected" || expense.status === "draft") && (
+      {/* The last rejection stays visible after resubmission, for the owner and reviewers. */}
+      {expense.rejectionReason && expense.status !== "cancelled" && (
           <Alert severity="warning">
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               {expense.status === "rejected"
                 ? "Rejection reason"
                 : "Previously rejected"}
+              {expense.rejectedByName ? ` by ${expense.rejectedByName}` : ""}
+              {expense.rejectedAt ? ` on ${formatDate(expense.rejectedAt)}` : ""}
             </Typography>
             <Typography variant="body2">{expense.rejectionReason}</Typography>
           </Alert>
@@ -404,6 +426,12 @@ export function ExpenseDetailsPage({
               <Typography variant="body2" color="text.secondary">
                 {EXPENSE_TYPE_LABELS[expense.type] ?? expense.type}
               </Typography>
+
+              {expense.status === "under_review" && expense.reviewStartedByName && (
+                <Typography variant="body2" color="text.secondary">
+                  In review by {expense.reviewStartedBy === user?.id ? "you" : expense.reviewStartedByName}
+                </Typography>
+              )}
             </Stack>
 
             <Chip label={EXPENSE_STATUS_LABELS[expense.status]} size="small" />
@@ -693,6 +721,8 @@ export function ExpenseDetailsPage({
             <Typography variant="body2" color="text.secondary">
               Please provide a reason for rejecting this expense.
             </Typography>
+
+            {takeoverNotice && <Alert severity="warning">{takeoverNotice}</Alert>}
 
             <TextField
               label="Rejection reason"

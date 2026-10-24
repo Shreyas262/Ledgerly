@@ -108,10 +108,31 @@ export interface Expense extends ResourceTimestamps {
   policyId?: EntityId;
   policyEvaluation?: PolicyEvaluation;
   submittedAt?: ISODateString;
+  /** Who started the review in progress; only they or an administrator complete it. */
+  reviewStartedBy?: EntityId;
+  reviewStartedAt?: ISODateString;
+  /** Display name of reviewStartedBy, resolved by the API. */
+  reviewStartedByName?: string;
   reviewedAt?: ISODateString;
   reviewedBy?: EntityId;
   approvedBy?: EntityId;
+  /**
+   * True when the Finance user who approved the expense may also reimburse
+   * it, because it belongs to the only administrator. Resolved by the API.
+   */
+  approverMayReimburse?: boolean;
+  /**
+   * For an expense awaiting reimbursement whose date only a closed budget
+   * covers: that budget's name, as the reimbursement still counts against it.
+   * Resolved by the API.
+   */
+  closedBudgetName?: string;
   rejectionReason?: string;
+  /** Who rejected the expense last, and when; kept after it is resubmitted. */
+  rejectedBy?: EntityId;
+  rejectedAt?: ISODateString;
+  /** Display name of rejectedBy, resolved by the API. */
+  rejectedByName?: string;
   reimbursement?: ReimbursementInfo;
   cancelledAt?: ISODateString;
   cancelledBy?: EntityId;
