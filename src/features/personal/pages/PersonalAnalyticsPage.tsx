@@ -33,7 +33,7 @@ import { currentMonth, formatMonth, shiftMonth } from "../utils/personalFormat";
 import { buildPersonalAnalyticsReport } from "../utils/personalAnalyticsPdf";
 import { ExportError } from "../../../components/common/ExportError";
 import { usePdfDownload } from "../../../services/pdf/usePdfDownload";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 
 type RangePreset = "3" | "6" | "12" | "custom";
 const DEFAULT_PRESET: RangePreset = "6";

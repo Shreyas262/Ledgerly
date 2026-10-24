@@ -15,9 +15,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useLogoutMutation } from "../../../features/auth/api/authApi";
-import { useAuth } from "../../../features/auth/context/AuthContext";
+import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { accountTypeOf } from "../../../features/auth/utils/accountType";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { UserAvatar } from "../../../components/common/UserAvatar";
 
 interface TopbarProps {

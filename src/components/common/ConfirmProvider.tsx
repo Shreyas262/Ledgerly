@@ -1,26 +1,12 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useRef,
   useState,
   type PropsWithChildren,
 } from "react";
 
 import { ConfirmDialog } from "./ConfirmDialog";
-
-export interface ConfirmOptions {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  /** Destructive actions (delete, cancel, reject) get a red confirm button. */
-  destructive?: boolean;
-}
-
-type Confirm = (options: ConfirmOptions) => Promise<boolean>;
-
-const ConfirmContext = createContext<Confirm | null>(null);
+import { ConfirmContext, type Confirm, type ConfirmOptions } from "./confirmContext";
 
 /**
  * Provides a promise-based confirmation dialog so any action can ask
@@ -59,12 +45,4 @@ export function ConfirmProvider({ children }: PropsWithChildren) {
       />
     </ConfirmContext.Provider>
   );
-}
-
-export function useConfirm(): Confirm {
-  const confirm = useContext(ConfirmContext);
-  if (!confirm) {
-    throw new Error("useConfirm must be used within ConfirmProvider");
-  }
-  return confirm;
 }

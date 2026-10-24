@@ -11,7 +11,7 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { usePermissions } from "../../auth/hooks/usePermissions";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { PageHeader } from "../../../components/common/PageHeader";
 
 const scopeCopy = {

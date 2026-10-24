@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { Stack, Typography, Button, Alert, Pagination, Tab, Tabs, Tooltip } from "@mui/material";
 
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
@@ -26,7 +26,7 @@ import { EmptyState } from "../../../components/common/EmptyState";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 
 import { usePermissions } from "../../../features/auth/hooks/usePermissions";
-import { useAuth } from "../../../features/auth/context/AuthContext";
+import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {

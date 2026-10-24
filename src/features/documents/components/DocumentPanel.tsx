@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { TruncatedText } from "../../../components/common/TruncatedText";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
 import { openObjectUrlInNewTab } from "../../../utils/openInNewTab";

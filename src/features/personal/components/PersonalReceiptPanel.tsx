@@ -10,7 +10,7 @@ import {
 import OpenInNewIcon from "@mui/icons-material/OpenInNewOutlined";
 import AttachFileOutlinedIcon from "@mui/icons-material/AttachFileOutlined";
 
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { TruncatedText } from "../../../components/common/TruncatedText";
 import { getApiErrorMessage } from "../../../services/api/apiErrors";
 import { formatDate } from "../../../utils/format";

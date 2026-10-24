@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import {
   Alert,
   Stack,

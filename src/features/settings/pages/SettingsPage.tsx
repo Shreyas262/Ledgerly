@@ -22,9 +22,9 @@ import SettingsBrightnessOutlined from "@mui/icons-material/SettingsBrightnessOu
 import { BackLink } from "../../../components/navigation/BackLink";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { usePermissions } from "../../auth/hooks/usePermissions";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { isPersonalAccount, isPlatformAccount } from "../../auth/utils/accountType";
 import { useSettings } from "../hooks/useSettings";
 import { resetSettings } from "../utils/settingsStorage";

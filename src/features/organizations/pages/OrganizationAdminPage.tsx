@@ -34,10 +34,8 @@ import {
   useUpdateTeamMutation,
 } from "../api/organizationApi";
 import { useGetUsersQuery } from "../../users/api/usersApi";
-import {
-  useConfirm,
-  type ConfirmOptions,
-} from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
+import type { ConfirmOptions } from "../../../components/common/confirmContext";
 import type { User } from "../../users/types/user";
 import type { Department, Team } from "../types/organization";
 import { humanize } from "../../../utils/format";

@@ -25,7 +25,7 @@ import {
   useSearchParams,
   type Location,
 } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { useLoginMutation } from "../api/authApi";
 import type { AccountType } from "../types/auth";
 import AuthLayout from "../../../layouts/AuthLayout/AuthLayout";

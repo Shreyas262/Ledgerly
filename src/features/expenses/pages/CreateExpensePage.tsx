@@ -12,7 +12,7 @@ import { applyReceiptDetails, describeReceiptFill, type ReceiptFieldMap } from "
 import { useCreateExpenseMutation } from "../api/expenseApi";
 import { ExpenseFormFields } from "../components/ExpenseFormFields";
 import { EMPTY_EXPENSE_FORM, isExpenseFormComplete, toExpenseRequest, type ExpenseFormData } from "../utils/expenseForm";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { PageHeader } from "../../../components/common/PageHeader";
 import { BackLink } from "../../../components/navigation/BackLink";

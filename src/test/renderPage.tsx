@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { Provider } from "react-redux";
-import { createMemoryRouter, RouterProvider, useLocation } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, vi } from "vitest";
 
 import { ConfirmProvider } from "../components/common/ConfirmProvider";
@@ -12,6 +12,7 @@ import { AuthProvider } from "../features/auth/context/AuthContext";
 import { baseApi } from "../services/api/baseApi";
 import { createAppTheme } from "../theme/theme";
 import { demoAccounts, setupApiServer, signIn } from "./apiServer";
+import { CurrentLocation } from "./CurrentLocation";
 
 const NativeRequest = globalThis.Request;
 
@@ -35,11 +36,6 @@ export function setupPageTests(): void {
     vi.unstubAllGlobals();
     document.cookie = "ledgerly.session=; Path=/; Max-Age=0";
   });
-}
-
-function CurrentLocation() {
-  const { pathname, search } = useLocation();
-  return <div data-testid="current-location">{`${pathname}${search}`}</div>;
 }
 
 /** Where the page navigated to, once it has left its own route. */

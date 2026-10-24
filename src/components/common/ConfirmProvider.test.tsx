@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 
-import { ConfirmProvider, useConfirm, type ConfirmOptions } from "./ConfirmProvider";
+import { ConfirmProvider } from "./ConfirmProvider";
+import { useConfirm } from "./useConfirm";
+import type { ConfirmOptions } from "./confirmContext";
 
 const deleteOptions: ConfirmOptions = {
   title: "Delete Policy",

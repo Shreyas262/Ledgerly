@@ -6,7 +6,7 @@ import {
 } from "@mui/icons-material";
 
 import { SectionHub } from "../../../components/navigation/SectionHub";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { accountTypeOf } from "../../auth/utils/accountType";
 
 const SETTINGS_DESCRIPTION = {

@@ -1,4 +1,4 @@
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { useState } from "react";
 import type { SyntheticEvent } from "react";
 

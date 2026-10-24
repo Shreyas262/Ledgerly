@@ -6,7 +6,7 @@ import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { ExportError } from "../../../components/common/ExportError";
 import { usePdfDownload } from "../../../services/pdf/usePdfDownload";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { LoadingState } from "../../../components/common/LoadingState";
 import { RefreshingState } from "../../../components/common/RefreshingState";
 import { useGetAnalyticsSummaryQuery } from "../api/analyticsApi";

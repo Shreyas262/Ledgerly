@@ -33,7 +33,7 @@ import { TruncatedText } from "../../../components/common/TruncatedText";
 import { Amount } from "../../../components/common/Amount";
 import { ConversionNote } from "../../currency/components/ConversionNote";
 import { KpiCard } from "../../dashboard/components/KpiCard";
-import { useAuth } from "../../auth/context/AuthContext";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { formatCurrency } from "../../../utils/currency";
 import { formatDate } from "../../../utils/format";
 import { useGetPersonalSummaryQuery } from "../api/personalApi";

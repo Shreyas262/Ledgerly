@@ -17,7 +17,7 @@ import {
 import { AddOutlined, DeleteOutlineOutlined } from "@mui/icons-material";
 
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { getApiErrorDetails } from "../../../services/api/apiErrors";
 import { formatCurrency } from "../../../utils/currency";
 import { useCreatePersonalBudgetMutation, useUpdatePersonalBudgetMutation } from "../api/personalApi";

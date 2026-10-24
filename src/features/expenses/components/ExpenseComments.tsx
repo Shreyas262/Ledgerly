@@ -3,8 +3,8 @@ import { Alert, Box, Button, Chip, Divider, Paper, Stack, TextField, Typography 
 
 import { useAddExpenseCommentMutation, useGetExpenseCommentsQuery } from "../api/expenseApi";
 import { MAX_COMMENT_LENGTH } from "../types/comment";
-import { useAuth } from "../../auth/context/AuthContext";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useAuth } from "../../auth/hooks/useAuth";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { ErrorState } from "../../../components/common/ErrorState";

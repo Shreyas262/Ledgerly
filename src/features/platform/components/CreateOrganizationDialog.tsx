@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 
 import { ApiFeedback } from "../../../components/common/ApiFeedback";
-import { useConfirm } from "../../../components/common/ConfirmProvider";
+import { useConfirm } from "../../../components/common/useConfirm";
 import { getApiErrorDetails } from "../../../services/api/apiErrors";
 import { useCreateOrganizationMutation } from "../api/platformApi";
 
