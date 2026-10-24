@@ -202,7 +202,7 @@ src/
 
 ## Getting started
 
-**Prerequisites:** Node.js 22 or later, and npm.
+**Prerequisites:** Node.js 24 or later, and npm.
 
 ```bash
 git clone https://github.com/Shreyas262/Ledgerly.git
@@ -228,7 +228,7 @@ Open the URL Vite prints (usually `http://localhost:5173`). The mock backend sta
 
 ### Deploying to Netlify
 
-[`netlify.toml`](netlify.toml) contains everything Netlify needs: the build command, the `dist` publish folder, Node 22, the mock API flag, and a rewrite so React Router routes like `/expenses` don't return 404 on refresh. Import the repository in Netlify and deploy without changing any settings.
+[`netlify.toml`](netlify.toml) contains everything Netlify needs: the build command, the `dist` publish folder, Node 24, the mock API flag, and a rewrite so React Router routes like `/expenses` don't return 404 on refresh. Import the repository in Netlify and deploy without changing any settings.
 
 Your data lives in your own browser (IndexedDB), so every visitor gets their own sandbox.
 
