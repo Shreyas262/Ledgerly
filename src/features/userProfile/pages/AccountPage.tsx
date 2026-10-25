@@ -1,4 +1,5 @@
 import {
+  EventRepeatOutlined,
   GroupsOutlined,
   HistoryOutlined,
   PersonOutlineOutlined,
@@ -7,6 +8,7 @@ import {
 
 import { SectionHub } from "../../../components/navigation/SectionHub";
 import { useAuth } from "../../auth/hooks/useAuth";
+import { usePermissions } from "../../auth/hooks/usePermissions";
 import { accountTypeOf } from "../../auth/utils/accountType";
 
 const SETTINGS_DESCRIPTION = {
@@ -17,8 +19,11 @@ const SETTINGS_DESCRIPTION = {
 
 export function AccountPage() {
   const { user } = useAuth();
+  const { can } = usePermissions();
   const isFinance = user?.role === "finance";
   const accountType = accountTypeOf(user);
+  // Managers and Finance users who review expenses can delegate their reviews (§22.12).
+  const canDelegate = (user?.role === "manager" || isFinance) && can("expenses.approve");
 
   return (
     <SectionHub
@@ -40,6 +45,12 @@ export function AccountPage() {
           path: "/account/team",
           icon: <GroupsOutlined />,
         }]),
+        ...(canDelegate ? [{
+          label: "Review Delegation",
+          description: "Let another reviewer review the expenses that wait for you while you are away.",
+          path: "/account/delegation",
+          icon: <EventRepeatOutlined />,
+        }] : []),
         {
           label: "Activity",
           description: "Your sign-ins and recent actions.",

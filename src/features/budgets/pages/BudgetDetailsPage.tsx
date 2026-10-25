@@ -41,6 +41,8 @@ import {
   type ExpenseType,
 } from "../../expenses/types/expense";
 import { BudgetProgress } from "../components/BudgetProgress";
+import { BudgetLevelNotes } from "../components/BudgetLevelNotes";
+import { BudgetForecastPanel } from "../components/BudgetForecastPanel";
 import { formatCurrency } from "../../../utils/currency";
 import { formatDate, humanize, toDateOnly } from "../../../utils/format";
 import { budgetViewTitle } from "../utils/budgetViewTitle";
@@ -226,6 +228,10 @@ export function BudgetDetailsPage() {
         </Alert>
       )}
 
+      {budget.scopeForecast && (
+        <BudgetForecastPanel forecast={budget.scopeForecast} startDate={budget.startDate} endDate={budget.endDate} />
+      )}
+
       {budget.viewScope === "ORGANIZATION" && (
         <Card>
           <CardContent>
@@ -237,6 +243,7 @@ export function BudgetDetailsPage() {
                 </Typography>
               </Stack>
               <BudgetProgress allocated={budget.amount} utilization={budget.utilization} />
+              <BudgetLevelNotes utilization={budget.utilization} forecast={budget.forecast} />
 
               {isAdmin && editable && (
                 <>
@@ -374,6 +381,7 @@ function DepartmentSection({ budget, department, canManage, showDepartmentTotals
                 </Typography>
               </Stack>
               <BudgetProgress allocated={department.amount} utilization={department.utilization} />
+              <BudgetLevelNotes utilization={department.utilization} forecast={department.forecast} />
             </>
           ) : (
             <Typography variant="h6">{department.departmentName}</Typography>
@@ -395,12 +403,14 @@ function DepartmentSection({ budget, department, canManage, showDepartmentTotals
                   </Typography>
                 </Stack>
                 <BudgetProgress allocated={team.amount} utilization={team.utilization} dense />
+                <BudgetLevelNotes utilization={team.utilization} forecast={team.forecast} />
                 {team.expenseTypeBudgets.length > 0 && (
                   <Stack spacing={1} sx={{ pl: 2, borderLeft: 2, borderColor: "divider" }}>
                     {team.expenseTypeBudgets.map((typeBudget) => (
                       <Stack key={typeBudget.id} spacing={0.5}>
                         <Typography variant="body2">{EXPENSE_TYPE_LABELS[typeBudget.expenseType] ?? typeBudget.expenseType}</Typography>
                         <BudgetProgress allocated={typeBudget.amount} utilization={typeBudget.utilization} dense />
+                        <BudgetLevelNotes utilization={typeBudget.utilization} forecast={typeBudget.forecast} />
                       </Stack>
                     ))}
                   </Stack>
@@ -417,6 +427,7 @@ function DepartmentSection({ budget, department, canManage, showDepartmentTotals
                 <Stack key={typeBudget.id} spacing={0.5}>
                   <Typography variant="body2">{EXPENSE_TYPE_LABELS[typeBudget.expenseType] ?? typeBudget.expenseType}</Typography>
                   <BudgetProgress allocated={typeBudget.amount} utilization={typeBudget.utilization} dense />
+                  <BudgetLevelNotes utilization={typeBudget.utilization} forecast={typeBudget.forecast} />
                 </Stack>
               ))}
             </>

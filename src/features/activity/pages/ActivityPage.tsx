@@ -105,7 +105,14 @@ export function ActivityPage() {
                     <TableCell>
                       <Chip label={humanize(event.action)} size="small" />
                     </TableCell>
-                    <TableCell>{event.description ?? "—"}</TableCell>
+                    <TableCell>
+                      {event.description ?? "—"}
+                      {event.actedOnBehalfBy && (
+                        <Typography variant="body2" color="text.secondary">
+                          By {event.actedOnBehalfBy} on your behalf
+                        </Typography>
+                      )}
+                    </TableCell>
                     <TableCell>{humanize(event.entityType)}</TableCell>
                     <TableCell sx={{ whiteSpace: "nowrap" }}>
                       {formatDateTime(event.timestamp)}

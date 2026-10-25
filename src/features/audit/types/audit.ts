@@ -27,7 +27,8 @@ export type AuditEntityType =
   | "POLICY"
   | "BUDGET"
   | "DOCUMENT"
-  | "REIMBURSEMENT";
+  | "REIMBURSEMENT"
+  | "DELEGATION";
 
 export type AuditAction =
   | "LOGIN"
@@ -65,6 +66,8 @@ export type AuditAction =
   | "EXPENSE_CANCELLED"
   | "EXPENSE_DELETED"
   | "EXPENSE_COMMENTED"
+  | "DELEGATION_CREATED"
+  | "DELEGATION_CANCELLED"
   | "REIMBURSEMENT_STARTED"
   | "REIMBURSEMENT_COMPLETED"
   | "POLICY_CREATED"

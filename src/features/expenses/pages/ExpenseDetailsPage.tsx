@@ -46,6 +46,7 @@ import { ForbiddenPage } from "../../auth/pages/ForbiddenPage";
 import { isStatus } from "../../../services/api/apiErrors";
 import { DocumentPanel } from "../../documents/components/DocumentPanel";
 import { ExpenseComments } from "../components/ExpenseComments";
+import { reviewInProgressLabel } from "../utils/reviewLabels";
 import { Amount } from "../../../components/common/Amount";
 import { ConversionNote } from "../../currency/components/ConversionNote";
 import { PageHeader } from "../../../components/common/PageHeader";
@@ -176,7 +177,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleStartReview = async () => {
-    if (!(await confirm({ title: "Start Review", message: `Start reviewing "${expense.title}"?`, confirmLabel: "Start Review" }))) return;
+    if (!(await confirm({ title: "Start Review", message: `Start reviewing "${expense.title}"${onBehalfNotice}?`, confirmLabel: "Start Review" }))) return;
     try {
       await startExpenseReview(expense.id).unwrap();
     } catch {
@@ -185,7 +186,7 @@ export function ExpenseDetailsPage({
   };
 
   const handleApproveExpense = async () => {
-    if (!(await confirm({ title: "Approve Expense", message: `Approve "${expense.title}" for ${formatMoney(expense.amount)}? It moves to Finance for reimbursement.${takeoverNotice ? ` ${takeoverNotice}` : ""}`, confirmLabel: "Approve" }))) return;
+    if (!(await confirm({ title: "Approve Expense", message: `Approve "${expense.title}" for ${formatMoney(expense.amount)}${onBehalfNotice}? It moves to Finance for reimbursement.${takeoverNotice ? ` ${takeoverNotice}` : ""}`, confirmLabel: "Approve" }))) return;
     try {
       await approveExpense(expense.id).unwrap();
     } catch {
@@ -276,8 +277,16 @@ export function ExpenseDetailsPage({
   // Nobody reviews their own expense.
   const canReviewThis = !isOwner;
 
-  // Whoever started the review completes it; an administrator may take it over.
-  const reviewStartedByOther = Boolean(expense.reviewStartedBy) && expense.reviewStartedBy !== user?.id;
+  // A delegate reviews on the delegator's behalf, and says so (§22.12).
+  const onBehalfNotice = expense.actingOnBehalfOfName ? ` on behalf of ${expense.actingOnBehalfOfName}` : "";
+
+  // Whoever started the review completes it, as do the person it was started
+  // on behalf of and their delegate; an administrator may take it over.
+  const reviewParties = [expense.reviewStartedBy, expense.reviewStartedOnBehalfOf].filter(Boolean);
+  const reviewStartedByOther =
+    Boolean(expense.reviewStartedBy) &&
+    !reviewParties.includes(user?.id) &&
+    !(expense.actingOnBehalfOfId && reviewParties.includes(expense.actingOnBehalfOfId));
   const canCompleteReview = !reviewStartedByOther || user?.role === "admin";
   const takeoverNotice = reviewStartedByOther
     ? `${expense.reviewStartedByName ?? "Another reviewer"} started this review. Completing it overrides their review, which is recorded in the audit log.`
@@ -309,10 +318,12 @@ export function ExpenseDetailsPage({
     expense.status === "rejected" &&
     can("expenses.update");
 
-  // Separation of duties: Finance cannot reimburse an expense it approved,
-  // except the only administrator's expense.
+  // Separation of duties: Finance cannot reimburse an expense it approved, or
+  // that a delegate approved on its behalf, except the only administrator's expense.
   const approvedBySelf =
-    user?.role === "finance" && expense.approvedBy === user.id && !expense.approverMayReimburse;
+    user?.role === "finance" &&
+    (expense.approvedBy === user.id || expense.approvedOnBehalfOf === user.id) &&
+    !expense.approverMayReimburse;
 
   // Nobody processes their own expense.
   const canStartReimbursement =
@@ -383,6 +394,7 @@ export function ExpenseDetailsPage({
                 ? "Rejection reason"
                 : "Previously rejected"}
               {expense.rejectedByName ? ` by ${expense.rejectedByName}` : ""}
+              {expense.rejectedOnBehalfOfName ? ` on behalf of ${expense.rejectedOnBehalfOfName}` : ""}
               {expense.rejectedAt ? ` on ${formatDate(expense.rejectedAt)}` : ""}
             </Typography>
             <Typography variant="body2">{expense.rejectionReason}</Typography>
@@ -427,9 +439,9 @@ export function ExpenseDetailsPage({
                 {EXPENSE_TYPE_LABELS[expense.type] ?? expense.type}
               </Typography>
 
-              {expense.status === "under_review" && expense.reviewStartedByName && (
+              {reviewInProgressLabel(expense, user?.id) && (
                 <Typography variant="body2" color="text.secondary">
-                  In review by {expense.reviewStartedBy === user?.id ? "you" : expense.reviewStartedByName}
+                  {reviewInProgressLabel(expense, user?.id)}
                 </Typography>
               )}
             </Stack>
@@ -719,7 +731,7 @@ export function ExpenseDetailsPage({
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Typography variant="body2" color="text.secondary">
-              Please provide a reason for rejecting this expense.
+              Please provide a reason for rejecting this expense{onBehalfNotice}.
             </Typography>
 
             {takeoverNotice && <Alert severity="warning">{takeoverNotice}</Alert>}

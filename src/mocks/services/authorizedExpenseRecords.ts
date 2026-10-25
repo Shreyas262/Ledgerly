@@ -75,18 +75,21 @@ interface NamedExpenseFields {
   departmentId?: string;
   cancelledBy?: string;
   reviewStartedBy?: string;
+  reviewStartedOnBehalfOf?: string;
   rejectedBy?: string;
+  rejectedOnBehalfOf?: string;
   reimbursement?: { processedBy?: string };
 }
 
 /**
- * Adds display names for the owner, the reviewer in progress, the
- * reimbursement processor and the canceller to expense responses so the UI never has to resolve users itself
+ * Adds display names for the owner, the reviewer in progress, the people a
+ * delegate reviewed on behalf of, the reimbursement processor and the
+ * canceller to expense responses so the UI never has to resolve users itself
  * (users.read is an administrative permission).
  */
 export async function withEmployeeNames<T extends NamedExpenseFields>(
   expenses: T[],
-): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; reviewStartedByName?: string; rejectedByName?: string; teamName?: string; departmentName?: string; approverMayReimburse?: boolean; closedBudgetName?: string }>> {
+): Promise<Array<T & { employeeName?: string; employeeRemoved?: boolean; cancelledByName?: string; reviewStartedByName?: string; reviewStartedOnBehalfOfName?: string; rejectedByName?: string; rejectedOnBehalfOfName?: string; teamName?: string; departmentName?: string; approverMayReimburse?: boolean; closedBudgetName?: string }>> {
   if (expenses.length === 0) return [];
 
   // The only administrator's approved expenses may be reimbursed by the
@@ -123,7 +126,15 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
 
   const userIds = new Set(
     expenses.flatMap((expense) =>
-      [expense.employeeId, expense.cancelledBy, expense.reviewStartedBy, expense.rejectedBy, expense.reimbursement?.processedBy].filter(
+      [
+        expense.employeeId,
+        expense.cancelledBy,
+        expense.reviewStartedBy,
+        expense.reviewStartedOnBehalfOf,
+        expense.rejectedBy,
+        expense.rejectedOnBehalfOf,
+        expense.reimbursement?.processedBy,
+      ].filter(
         (id): id is string => Boolean(id),
       ),
     ),
@@ -142,6 +153,8 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
     const cancelledByName = expense.cancelledBy ? nameById.get(expense.cancelledBy) : undefined;
     const reviewStartedByName = expense.reviewStartedBy ? nameById.get(expense.reviewStartedBy) : undefined;
     const rejectedByName = expense.rejectedBy ? nameById.get(expense.rejectedBy) : undefined;
+    const reviewStartedOnBehalfOfName = expense.reviewStartedOnBehalfOf ? nameById.get(expense.reviewStartedOnBehalfOf) : undefined;
+    const rejectedOnBehalfOfName = expense.rejectedOnBehalfOf ? nameById.get(expense.rejectedOnBehalfOf) : undefined;
     const processedByName = expense.reimbursement?.processedBy
       ? nameById.get(expense.reimbursement.processedBy)
       : undefined;
@@ -158,6 +171,8 @@ export async function withEmployeeNames<T extends NamedExpenseFields>(
       ...(cancelledByName ? { cancelledByName } : {}),
       ...(reviewStartedByName ? { reviewStartedByName } : {}),
       ...(rejectedByName ? { rejectedByName } : {}),
+      ...(reviewStartedOnBehalfOfName ? { reviewStartedOnBehalfOfName } : {}),
+      ...(rejectedOnBehalfOfName ? { rejectedOnBehalfOfName } : {}),
       ...(awaitingPayment(expense) && onlyAdministratorIds.has(expense.employeeId) ? { approverMayReimburse: true } : {}),
       ...(closedBudgetNameOf(expense) ? { closedBudgetName: closedBudgetNameOf(expense) } : {}),
       ...(expense.reimbursement && processedByName

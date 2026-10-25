@@ -21,6 +21,96 @@ async function expectBudgetExceeded(response: Response): Promise<void> {
   expect(await response.json()).toMatchObject({ code: "BUDGET_EXCEEDED" });
 }
 
+// §28.3, §28.6: administrators create and edit organization budgets with an explicit period.
+describe("creating and editing budgets", () => {
+  let admin: string;
+
+  beforeEach(async () => {
+    admin = await signInAs("admin");
+  });
+
+  const body = { name: "Budget 2027", amount: 500_000, startDate: "2027-01-01", endDate: "2027-12-31" };
+
+  it("creates a draft budget, audited", async () => {
+    const response = await send("POST", "/api/budgets", admin, { ...body, description: "  Annual  " });
+
+    expect(response.status).toBe(201);
+    const created = (await response.json()) as OrganizationBudgetView;
+    expect(created).toMatchObject({ ...body, description: "Annual", status: "draft", currency: "INR", createdBy: "user-4", viewScope: "ORGANIZATION" });
+    expect(await auditEventsFor(created.id)).toEqual([
+      expect.objectContaining({ action: "BUDGET_CREATED", newState: "draft", metadata: { amount: 500_000, currency: "INR" } }),
+    ]);
+  });
+
+  it.each([
+    ["a name", { ...body, name: "  " }, "Budget name is required."],
+    ["an amount above zero", { ...body, amount: 0 }, "Budget amount must be greater than zero."],
+    ["a period that ends after it starts", { ...body, endDate: "2026-12-31" }, "A valid budget period is required."],
+  ])("requires %s when creating and editing", async (_name, invalid, message) => {
+    const { budget } = await givenBudget({ status: "draft" });
+
+    for (const response of [
+      await send("POST", "/api/budgets", admin, invalid),
+      await send("PUT", `/api/budgets/${budget.id}`, admin, invalid),
+    ]) {
+      expect(response.status).toBe(422);
+      expect(await response.json()).toMatchObject({ code: "VALIDATION_ERROR", message });
+    }
+    expect(await listRecords("budgets")).toHaveLength(1);
+  });
+
+  it("edits a budget and audits the previous and new amounts", async () => {
+    const { budget } = await givenBudget({ status: "draft", amount: 100_000, departments: {}, teams: {} });
+
+    const response = await send("PUT", `/api/budgets/${budget.id}`, admin, { ...body, amount: 120_000 });
+
+    expect(response.status).toBe(200);
+    expect(await getRecord<OrganizationBudget>("budgets", budget.id)).toMatchObject({ name: "Budget 2027", amount: 120_000, startDate: "2027-01-01" });
+    expect(await auditEventsFor(budget.id)).toEqual([
+      expect.objectContaining({ action: "BUDGET_UPDATED", metadata: { previousAmount: 100_000, newAmount: 120_000 } }),
+    ]);
+  });
+
+  it("explains how much is allocated when the budget would fall below it", async () => {
+    const { budget } = await givenBudget({ amount: 100_000, departments: { "dept-engineering": 50_000 }, teams: {} });
+
+    const response = await send("PUT", `/api/budgets/${budget.id}`, admin, { ...body, amount: 49_999, startDate: budget.startDate, endDate: budget.endDate });
+
+    expect(await response.json()).toMatchObject({
+      code: "BUDGET_EXCEEDED",
+      message: "The organization budget cannot be lower than its department allocations (₹50,000).",
+    });
+  });
+
+  it("refuses changes to a closed budget and edits by Finance", async () => {
+    const { budget: closed } = await givenBudget({ status: "closed" });
+    const { budget: draft } = await givenBudget({ status: "draft" });
+
+    const closedEdit = await send("PUT", `/api/budgets/${closed.id}`, admin, body);
+    expect(closedEdit.status).toBe(409);
+    expect(await closedEdit.json()).toMatchObject({ message: "Closed budgets cannot be changed." });
+
+    const financeEdit = await send("PUT", `/api/budgets/${draft.id}`, await signInAs("finance"), body);
+    expect(financeEdit.status).toBe(403);
+    expect(await financeEdit.json()).toMatchObject({ message: "Only administrators can manage organization budgets and department allocations." });
+  });
+
+  it("answers not found for a budget that does not exist", async () => {
+    const missing = "/api/budgets/missing";
+
+    for (const response of [
+      await apiFetch(missing, {}, admin),
+      await send("PUT", missing, admin, body),
+      await send("POST", `${missing}/activate`, admin),
+      await send("POST", `${missing}/rollover`, admin, body),
+      await send("POST", `${missing}/departments`, admin, { departmentId: "dept-engineering", amount: 1_000 }),
+      await apiFetch(missing, { method: "DELETE" }, admin),
+    ]) {
+      expect(response.status).toBe(404);
+    }
+  });
+});
+
 // §28.2: each level is capped by its parent.
 describe("allocation integrity", () => {
   let admin: string;
@@ -133,6 +223,55 @@ describe("allocation integrity", () => {
       expenseType: "MEALS",
       amount: 800,
     })).status).toBe(200);
+  });
+
+  it("says how much is still available when an allocation exceeds its parent", async () => {
+    const { budget } = await givenBudget({ amount: 100_000, departments: { "dept-engineering": 60_000 }, teams: {} });
+
+    const response = await send("POST", `/api/budgets/${budget.id}/departments`, admin, { departmentId: "dept-finance", amount: 50_000 });
+
+    expect(await response.json()).toMatchObject({
+      code: "BUDGET_EXCEEDED",
+      message: "Department allocations cannot exceed the organization budget. ₹40,000 is still available.",
+      details: { businessRule: "Department allocations cannot exceed the organization budget. ₹40,000 is still available." },
+    });
+  });
+
+  it("refuses departments, teams and expense types that do not fit the budget", async () => {
+    await saveRecord("departments", { id: "dept-elsewhere", organizationId: "org-2", name: "Elsewhere", status: "active" });
+    const { budget, departmentAllocations, teamAllocations } = await givenBudget({
+      departments: { "dept-engineering": 50_000 },
+      teams: { "team-engineering": 20_000 },
+    });
+    const expectRefusal = async (response: Response, message: string) => {
+      expect(response.status).toBe(422);
+      expect(await response.json()).toMatchObject({ code: "VALIDATION_ERROR", message });
+    };
+
+    await expectRefusal(
+      await send("POST", `/api/budgets/${budget.id}/departments`, admin, { departmentId: "dept-elsewhere", amount: 1_000 }),
+      "Department does not belong to this organization.",
+    );
+    await expectRefusal(
+      await send("POST", `/api/budgets/${budget.id}/departments`, admin, { departmentId: "dept-engineering", amount: 0 }),
+      "Select a department and enter an amount greater than zero.",
+    );
+    await expectRefusal(
+      await send("POST", `/api/budgets/${budget.id}/teams`, admin, { departmentAllocationId: departmentAllocations[0].id, teamId: "team-finance", amount: 1_000 }),
+      "The team must belong to this department.",
+    );
+    await expectRefusal(
+      await send("POST", `/api/budgets/${budget.id}/teams`, admin, { departmentAllocationId: "missing", teamId: "team-engineering", amount: 1_000 }),
+      "The department has no allocation in this budget.",
+    );
+    await expectRefusal(
+      await send("POST", `/api/budgets/${budget.id}/expense-types`, admin, { teamAllocationId: teamAllocations[0].id, expenseType: "GIFTS", amount: 1_000 }),
+      "Select a team allocation and expense type, and enter an amount greater than zero.",
+    );
+    await expectRefusal(
+      await send("POST", `/api/budgets/${budget.id}/expense-types`, admin, { teamAllocationId: "missing", expenseType: "MEALS", amount: 1_000 }),
+      "The team has no allocation in this budget.",
+    );
   });
 
   it("audits allocation changes with previous and new amounts", async () => {
@@ -310,6 +449,35 @@ describe("budget lifecycle", () => {
     expect((await send("POST", `/api/budgets/${budget.id}/activate`, await signInAs("finance"))).status).toBe(403);
   });
 
+  it("audits each transition with the previous and new status", async () => {
+    const { budget } = await givenBudget({ status: "draft" });
+
+    await send("POST", `/api/budgets/${budget.id}/activate`, admin);
+    await send("POST", `/api/budgets/${budget.id}/close`, admin);
+    await send("POST", `/api/budgets/${budget.id}/reopen`, admin);
+
+    expect((await auditEventsFor(budget.id)).map(({ action, previousState, newState }) => ({ action, previousState, newState }))).toEqual([
+      { action: "BUDGET_ACTIVATED", previousState: "draft", newState: "active" },
+      { action: "BUDGET_CLOSED", previousState: "active", newState: "closed" },
+      { action: "BUDGET_REOPENED", previousState: "closed", newState: "active" },
+    ]);
+  });
+
+  it("leaves starting the next period to administrators and requires a name and period", async () => {
+    const { budget } = await givenBudget();
+    const path = `/api/budgets/${budget.id}/rollover`;
+
+    const finance = await send("POST", path, await signInAs("finance"), { name: "Next", startDate: "2027-01-01", endDate: "2027-12-31" });
+    expect(finance.status).toBe(403);
+    expect(await finance.json()).toMatchObject({ message: "Only administrators can start a new budget period." });
+
+    expect(await (await send("POST", path, admin, { name: "", startDate: "2027-01-01", endDate: "2027-12-31" })).json())
+      .toMatchObject({ status: 422, message: "Budget name is required." });
+    expect(await (await send("POST", path, admin, { name: "Next", startDate: "2027-12-31", endDate: "2027-01-01" })).json())
+      .toMatchObject({ status: 422, message: "A valid budget period is required." });
+    expect(await listRecords("budgets")).toHaveLength(1);
+  });
+
   it("starts the next period as a draft copy of every allocation level", async () => {
     const source = await givenBudget({
       departments: { "dept-engineering": 50_000 },
@@ -354,7 +522,88 @@ describe("budget utilization", () => {
 
     const view = (await response.json()) as OrganizationBudgetView;
     expect(view.utilization.spentAmount).toBe(2_000);
+    expect(view.utilization.committedAmount).toBe(10_000);
     expect(view.departmentAllocations.find((item) => item.departmentId === "dept-engineering")?.utilization.spentAmount).toBe(2_000);
+  });
+});
+
+// §28.8, §28.19: committed spend beside utilization, and forecasts for active budgets.
+describe("committed spend and forecasts", () => {
+  withFixedToday("2026-10-16");
+
+  async function viewAs(role: DemoRole, budgetId: string): Promise<OrganizationBudgetView> {
+    const response = await apiFetch(`/api/budgets/${budgetId}`, {}, await signInAs(role));
+    expect(response.status).toBe(200);
+    return (await response.json()) as OrganizationBudgetView;
+  }
+
+  it("reports approved, unpaid expenses in the period as committed, never as spend", async () => {
+    const { budget } = await givenBudget({ expenseTypes: [{ teamId: "team-engineering", expenseType: "MEALS", amount: 10_000 }] });
+    await givenExpense({ status: "reimbursed", amount: 2_000, expenseDate: "2026-03-01" });
+    await givenExpense({ status: "approved", amount: 3_000, expenseDate: "2026-04-01" });
+    await givenExpense({ status: "reimbursement_pending", amount: 1_000, expenseDate: "2026-05-01" });
+    // Not committed: awaiting approval, or outside the period.
+    await givenExpense({ status: "under_review", amount: 7_000, expenseDate: "2026-05-01" });
+    await givenExpense({ status: "approved", amount: 9_000, expenseDate: "2025-12-31" });
+
+    const view = await viewAs("admin", budget.id);
+
+    expect(view.utilization).toMatchObject({ spentAmount: 2_000, committedAmount: 4_000 });
+    const engineering = view.departmentAllocations.find((item) => item.departmentId === "dept-engineering")!;
+    expect(engineering.utilization).toMatchObject({ spentAmount: 2_000, committedAmount: 4_000 });
+    expect(engineering.teamAllocations[0].utilization).toMatchObject({ spentAmount: 2_000, committedAmount: 4_000 });
+    expect(engineering.teamAllocations[0].expenseTypeBudgets[0].utilization).toMatchObject({ spentAmount: 2_000, committedAmount: 4_000 });
+  });
+
+  it("forecasts every level of an active budget from reimbursed and committed spend", async () => {
+    const { budget } = await givenBudget();
+    // 28,900 in 289 days: 100 a day, 36,500 by 31 December.
+    await givenExpense({ status: "reimbursed", amount: 20_000, expenseDate: "2026-03-01" });
+    await givenExpense({ status: "approved", amount: 8_900, expenseDate: "2026-09-01" });
+
+    const view = await viewAs("admin", budget.id);
+
+    expect(view.forecast).toEqual({
+      elapsedDays: 289,
+      totalDays: 365,
+      projectedAmount: 36_500,
+      expectedByToday: 791_780.82,
+      runsOutOn: null,
+      status: "ON_TRACK",
+      overBy: 0,
+    });
+    const team = view.departmentAllocations.find((item) => item.departmentId === "dept-engineering")!.teamAllocations[0];
+    expect(team.forecast).toMatchObject({ projectedAmount: 36_500, status: "ON_TRACK" });
+    expect(view.scopeForecast).toMatchObject({ allocated: 1_000_000, spentAmount: 20_000, committedAmount: 8_900, grouping: "month" });
+    expect(view.scopeForecast?.trend.at(-1)).toEqual({ date: "2026-10-16", spentAmount: 20_000, committedAmount: 8_900 });
+    expect(view.scopeForecast?.trend.map((point) => point.date).slice(0, 3)).toEqual(["2026-01-31", "2026-02-28", "2026-03-31"]);
+  });
+
+  it.each([
+    ["a draft", { status: "draft" as const }],
+    ["a closed budget", { status: "closed" as const }],
+    ["a budget whose period has ended", { startDate: "2025-01-01", endDate: "2025-12-31" }],
+    ["a budget whose period has not started", { startDate: "2027-01-01", endDate: "2027-12-31" }],
+  ])("gives no forecast for %s", async (_name, options) => {
+    const { budget } = await givenBudget(options);
+
+    const view = await viewAs("admin", budget.id);
+
+    expect(view.forecast).toBeNull();
+    expect(view.scopeForecast).toBeNull();
+    expect(view.departmentAllocations[0].forecast).toBeNull();
+  });
+
+  it("forecasts the viewer's own level: the team for a manager, the departments together for Finance", async () => {
+    const { budget } = await givenBudget();
+    await givenExpense({ status: "reimbursed", amount: 4_000, expenseDate: "2026-03-01" });
+    await givenExpense({ owner: "finance", status: "approved", amount: 6_000, expenseDate: "2026-03-01" });
+
+    const manager = await viewAs("manager", budget.id);
+    expect(manager.scopeForecast).toMatchObject({ allocated: 50_000, spentAmount: 4_000, committedAmount: 0 });
+
+    const finance = await viewAs("finance", budget.id);
+    expect(finance.scopeForecast).toMatchObject({ allocated: 300_000, spentAmount: 4_000, committedAmount: 6_000 });
   });
 });
 

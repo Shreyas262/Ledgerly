@@ -4,7 +4,7 @@ import { closeDatabase, DB_NAME, DB_VERSION, MOCK_STORES, readAll, readAllByInde
 
 const PERSONAL_STORES = ["personalExpenses", "personalBudgets", "personalDocuments"];
 // Stores added after version 19.
-const LATER_STORES = [...PERSONAL_STORES, "expenseComments"];
+const LATER_STORES = [...PERSONAL_STORES, "expenseComments", "delegations"];
 
 function request<T>(open: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -106,6 +106,10 @@ describe("IndexedDB migrations", () => {
     expect(await readAllByIndex("personalExpenses", "ownerId", "user-personal-1")).toEqual([]);
     // Version 22 adds expense comments, read per expense.
     expect(await readAllByIndex("expenseComments", "expenseId", "expense-1")).toEqual([]);
+    // Version 23 adds review delegations, read by delegator and by delegate.
+    for (const index of ["organizationId", "delegatorId", "delegateId"]) {
+      expect(await readAllByIndex("delegations", index, "user-1")).toEqual([]);
+    }
 
     const database = await openWithoutUpgrade();
     expect(database.version).toBe(DB_VERSION);

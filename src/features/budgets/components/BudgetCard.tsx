@@ -4,7 +4,10 @@ import { formatDate } from "../../../utils/format";
 import { TruncatedText } from "../../../components/common/TruncatedText";
 import { budgetViewTitle } from "../utils/budgetViewTitle";
 
+import { CheckCircleOutlineOutlined, WarningAmberOutlined } from "@mui/icons-material";
+
 import type { BudgetStatus, OrganizationBudgetView } from "../types/budget";
+import { forecastVerdict } from "../utils/forecastText";
 import { BudgetProgress } from "./BudgetProgress";
 
 interface BudgetCardProps {
@@ -69,6 +72,16 @@ export function BudgetCard({ budget, onView }: BudgetCardProps) {
             <Stack spacing={0.5}>
               <Typography variant="caption" color="text.secondary">{viewTitle.scopeLabel}</Typography>
               <BudgetProgress allocated={totals.allocated} utilization={totals.utilization} />
+              {budget.scopeForecast && (
+                <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", pt: 0.5 }}>
+                  {budget.scopeForecast.forecast.status === "ON_TRACK" ? (
+                    <CheckCircleOutlineOutlined fontSize="small" color="success" aria-hidden="true" />
+                  ) : (
+                    <WarningAmberOutlined fontSize="small" color="warning" aria-hidden="true" />
+                  )}
+                  <Typography variant="body2" color="text.secondary">{forecastVerdict(budget.scopeForecast.forecast)}</Typography>
+                </Stack>
+              )}
             </Stack>
 
             <Typography variant="body2" color="primary">View breakdown</Typography>

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, vi } from "vitest";
 
+import type { Delegation } from "../features/approvals/types/delegation";
 import type { AuditEvent } from "../features/audit/types/audit";
 import type {
   DepartmentBudgetAllocation,
@@ -10,6 +11,8 @@ import type {
 import type { Expense, ExpenseType } from "../features/expenses/types/expense";
 import type { Policy } from "../features/policies/types/policy";
 import { getRecord, listRecords, saveRecord } from "../mocks/services/mockDataService";
+import { hashPassword } from "../mocks/services/passwordService";
+import { toDateOnly } from "../utils/format";
 
 /**
  * Scenario setup helpers. They write records straight to the mock database so
@@ -83,6 +86,65 @@ export async function givenSecondAdmin(): Promise<string> {
   const id = "user-admin-2";
   await saveRecord("users", { ...admin, id, name: "Second Admin", email: "admin2@ledgerly.com" });
   return id;
+}
+
+/**
+ * Stores another active user of the demo organization with one of the system
+ * roles, who signs in with the returned email and password.
+ */
+export async function givenUser(options: {
+  id: string;
+  name: string;
+  role: DemoRole;
+  teamId: string;
+  departmentId: string;
+  financeDepartmentIds?: string[];
+}): Promise<{ id: string; email: string; password: string }> {
+  const { id, name, role, teamId, departmentId, financeDepartmentIds } = options;
+  const email = `${id}@ledgerly.com`;
+  const password = `${id}-password`;
+  const now = new Date().toISOString();
+  await saveRecord("users", {
+    id,
+    organizationId: "org-1",
+    departmentId,
+    teamId,
+    roleId: `role-${role}`,
+    name,
+    email,
+    role,
+    permissions: [],
+    status: "active",
+    ...(financeDepartmentIds ? { financeDepartmentIds } : {}),
+    createdAt: now,
+    updatedAt: now,
+  });
+  await saveRecord("credentials", { userId: id, email, password: await hashPassword(password) });
+  return { id, email, password };
+}
+
+/**
+ * Stores a review delegation between demo users (Sarah Manager to Mike
+ * Finance unless given), covering today and the next 13 days by default.
+ */
+export async function givenDelegation(
+  overrides: Partial<Delegation> & { from?: DemoRole; to?: DemoRole } = {},
+): Promise<Delegation> {
+  const { from = "manager", to = "finance", ...fields } = overrides;
+  const now = new Date();
+  const delegation: Delegation = {
+    id: crypto.randomUUID(),
+    organizationId: "org-1",
+    delegatorId: demoUsers[from].id,
+    delegateId: demoUsers[to].id,
+    startDate: toDateOnly(now),
+    endDate: toDateOnly(new Date(now.getTime() + 13 * 86_400_000)),
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+    ...fields,
+  };
+  await saveRecord("delegations", delegation);
+  return delegation;
 }
 
 /** Stores an expense policy (active, organization-wide, all types unless given). */

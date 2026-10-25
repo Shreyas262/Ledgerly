@@ -142,9 +142,11 @@ export function ReimbursementQueue() {
           {expenses.map((expense) => {
             const isProcessing = processingId === expense.id;
             // Separation of duties: Finance cannot reimburse what it approved,
-            // except the only administrator's expense.
+            // or what a delegate approved on its behalf, except the only
+            // administrator's expense.
+            const approvedOnBehalf = expense.approvedOnBehalfOf === user?.id;
             const approvedBySelf =
-              user?.role === "finance" && expense.approvedBy === user.id && !expense.approverMayReimburse;
+              user?.role === "finance" && (expense.approvedBy === user.id || approvedOnBehalf) && !expense.approverMayReimburse;
             // Reimbursements still count against a closed budget (§28.7).
             const closedBudgetNotice = expense.closedBudgetName
               ? ` The budget "${expense.closedBudgetName}" is closed; this reimbursement still counts against it.`
@@ -204,7 +206,9 @@ export function ReimbursementQueue() {
 
                     {approvedBySelf && (expense.status === "approved" || expense.status === "reimbursement_pending") && (
                       <Typography variant="body2" color="text.secondary" sx={{ alignSelf: "center" }}>
-                        You approved this expense; another user must reimburse it.
+                        {approvedOnBehalf
+                          ? "This expense was approved on your behalf; another user must reimburse it."
+                          : "You approved this expense; another user must reimburse it."}
                       </Typography>
                     )}
 

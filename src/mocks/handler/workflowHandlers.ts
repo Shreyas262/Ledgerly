@@ -1,4 +1,4 @@
-import { apiError } from "../services/apiError";
+import { apiError, workflowErrorResponse as workflowError } from "../services/apiError";
 import { applyCollectionQuery, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
 
@@ -24,19 +24,9 @@ import {
 import { getRecord } from "../services/mockDataService";
 import { withEmployeeNames } from "../services/authorizedExpenseRecords";
 import { runAuditedTransaction } from "../services/auditService";
-import { WorkflowError } from "../services/workflowErrors";
 
 async function getExpense(id: string) {
   return getRecord<Expense>("expenses", id);
-}
-
-function workflowError(error: unknown) {
-  if (error instanceof WorkflowError) {
-    return apiError(error.status, error.message, error.code, error.details);
-  }
-
-  // Unexpected failures never expose internal messages.
-  return apiError(500, "The action could not be completed.");
 }
 
 function expenseNotFound() {

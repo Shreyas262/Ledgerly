@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { apiError } from "../../../mocks/services/apiError";
 import { saveRecord } from "../../../mocks/services/mockDataService";
 import { server } from "../../../test/apiServer";
-import { givenExpense, readExpense } from "../../../test/fixtures";
+import { givenDelegation, givenExpense, readExpense } from "../../../test/fixtures";
 import { navigatedTo, renderPage, setupPageTests } from "../../../test/renderPage";
 import { ApprovalsPage } from "./ApprovalPage";
 
@@ -109,6 +109,28 @@ describe("ApprovalsPage review queue", () => {
 
     expect(await screen.findByText("The approval queue is temporarily unavailable.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("marks expenses reviewed on someone's behalf and says whom the reviewer acts for", async () => {
+    await givenDelegation();
+    await givenExpense({ owner: "employee", title: "Hotel in Pune" });
+    const { user } = await renderPage(<ApprovalsPage />, { path: "/approvals", as: "finance" });
+
+    expect(await screen.findByText(/You are also reviewing on behalf of Sarah Manager until/)).toBeInTheDocument();
+    expect(await screen.findByText("On behalf of Sarah Manager")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Start Review" }));
+    expect(await screen.findByRole("dialog", { name: "Start Review" })).toHaveTextContent('Start reviewing "Hotel in Pune" on behalf of Sarah Manager?');
+  });
+
+  it("offers Delegate Reviews to managers", async () => {
+    await renderApprovals();
+    expect(await screen.findByRole("link", { name: "Delegate Reviews" })).toHaveAttribute("href", "/account/delegation");
+  });
+
+  it("does not offer Delegate Reviews to administrators", async () => {
+    await renderPage(<ApprovalsPage />, { path: "/approvals", as: "admin" });
+    await screen.findByText("There are no expenses waiting for approval.");
+    expect(screen.queryByRole("link", { name: "Delegate Reviews" })).not.toBeInTheDocument();
   });
 
   it("shows access denied without Retry when the queue is refused", async () => {

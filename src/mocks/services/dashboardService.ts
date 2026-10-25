@@ -6,16 +6,13 @@ import type {
   DashboardWorkQueues,
 } from "../../features/dashboard/types/dashboard";
 import type { Expense, ExpenseType } from "../../features/expenses/types/expense";
-import type { OrganizationBudget } from "../../features/budgets/types/budget";
 import { getApprovalQueue } from "./approvalService";
 import { getReimbursementQueue } from "./reimbursementService";
 import {
-  buildBudgetView,
   getExpenseCreationEligibility,
-  isBudgetVisibleTo,
+  listViewerBudgetLevels,
   resolveBudgetScope,
 } from "./budgetService";
-import { listRecordsByIndex } from "./mockDataService";
 
 export type DashboardExpenseRecord = Pick<
   Expense,
@@ -279,32 +276,28 @@ export async function buildDashboardWorkQueues(
   };
 }
 
-/** Active budgets at the principal's level (§28.5) that are at least BUDGET_ALERT_PERCENT used. */
-async function getBudgetAlerts(principal: AuthenticatedPrincipal): Promise<DashboardBudgetAlert[]> {
-  const scope = resolveBudgetScope(principal);
-  const budgets = (await listRecordsByIndex<OrganizationBudget>("budgets", "organizationId", principal.organizationId))
-    .filter((budget) => budget.status === "active");
+/** Over-committed first, then projected to exceed, then by share used. */
+const ALERT_ORDER = { OVER_COMMITTED: 0, PROJECTED_OVER: 1, NONE: 2 } as const;
 
+/**
+ * Active budgets at the principal's level (§28.5) that are at least
+ * BUDGET_ALERT_PERCENT used, projected to exceed their allocation or already
+ * over-committed (§28.19).
+ */
+async function getBudgetAlerts(principal: AuthenticatedPrincipal): Promise<DashboardBudgetAlert[]> {
   const alerts: DashboardBudgetAlert[] = [];
-  for (const budget of budgets) {
-    if (!(await isBudgetVisibleTo(principal, budget))) continue;
-    const view = await buildBudgetView(budget, principal);
-    const levels =
-      scope === "ORGANIZATION"
-        ? [{ name: budget.name, utilizationPercent: view.utilization.utilizationPercent }]
-        : scope === "DEPARTMENT"
-          ? view.departmentAllocations.map((allocation) => ({
-              name: `${allocation.departmentName} department`,
-              utilizationPercent: allocation.utilization.utilizationPercent,
-            }))
-          : view.departmentAllocations.flatMap((allocation) =>
-              allocation.teamAllocations.map((team) => ({
-                name: `${team.teamName} team`,
-                utilizationPercent: team.utilization.utilizationPercent,
-              })));
-    for (const level of levels) {
-      if (level.utilizationPercent >= BUDGET_ALERT_PERCENT) alerts.push({ budgetId: budget.id, ...level });
-    }
+  for (const level of await listViewerBudgetLevels(principal)) {
+    const forecast = level.forecast && level.forecast.status !== "ON_TRACK" ? level.forecast : null;
+    if (!forecast && level.utilizationPercent < BUDGET_ALERT_PERCENT) continue;
+    alerts.push({
+      budgetId: level.budgetId,
+      name: level.name,
+      utilizationPercent: level.utilizationPercent,
+      ...(forecast
+        ? { forecast: { status: forecast.status as "PROJECTED_OVER" | "OVER_COMMITTED", overBy: forecast.overBy, runsOutOn: forecast.runsOutOn } }
+        : {}),
+    });
   }
-  return alerts.sort((first, second) => second.utilizationPercent - first.utilizationPercent);
+  const rank = (alert: DashboardBudgetAlert) => ALERT_ORDER[alert.forecast?.status ?? "NONE"];
+  return alerts.sort((first, second) => rank(first) - rank(second) || second.utilizationPercent - first.utilizationPercent);
 }

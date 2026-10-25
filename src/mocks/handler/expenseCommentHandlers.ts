@@ -4,7 +4,8 @@ import type { Expense } from "../../features/expenses/types/expense";
 import type { ExpenseCommentThread } from "../../features/expenses/types/comment";
 import { apiError } from "../services/apiError";
 import { authorizationError } from "../services/authorizationHttp";
-import { authorizeRequest, isExpenseVisibleToPrincipal, resolveExpenseReadScope } from "../services/authorizationService";
+import { authorizeRequest, isExpenseVisibleToPrincipal } from "../services/authorizationService";
+import { getExpenseReadDenial } from "../services/expenseAccessService";
 import { addExpenseComment, getCommentClosedReason, listExpenseComments } from "../services/expenseCommentService";
 import { getRecord } from "../services/mockDataService";
 
@@ -20,24 +21,15 @@ async function authorizeExpenseReader(request: Request, expenseId: string) {
   const principalAuthorization = await authorizeRequest(request, { permission: "expenses.read", scope: "ORGANIZATION" });
   if (!principalAuthorization.allowed) return { error: authorizationError(principalAuthorization) } as const;
 
-  if (!isExpenseVisibleToPrincipal(principalAuthorization.principal, expense)) {
+  const { principal } = principalAuthorization;
+  if (!isExpenseVisibleToPrincipal(principal, expense)) {
     return { error: apiError(404, "Expense not found.") } as const;
   }
 
-  const authorization = await authorizeRequest(request, {
-    permission: "expenses.read",
-    scope: resolveExpenseReadScope(principalAuthorization.principal, expense),
-    resource: {
-      organizationId: expense.organizationId,
-      ownerId: expense.employeeId,
-      teamId: expense.teamId,
-      departmentId: expense.departmentId,
-      state: expense.status,
-    },
-  });
-  if (!authorization.allowed) return { error: authorizationError(authorization) } as const;
+  const denial = await getExpenseReadDenial(principal, expense);
+  if (denial) return { error: apiError(403, denial, "FORBIDDEN") } as const;
 
-  return { expense, principal: authorization.principal } as const;
+  return { expense, principal } as const;
 }
 
 export const expenseCommentHandlers = [

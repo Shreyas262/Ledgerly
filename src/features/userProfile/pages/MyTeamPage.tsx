@@ -17,11 +17,13 @@ import { LoadingState } from "../../../components/common/LoadingState";
 import { ErrorState } from "../../../components/common/ErrorState";
 import { EmptyState } from "../../../components/common/EmptyState";
 import { UserAvatar } from "../../../components/common/UserAvatar";
-import { humanize } from "../../../utils/format";
+import { formatDate, humanize } from "../../../utils/format";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { useGetMyTeamQuery } from "../api/myTeamApi";
 
 /** The caller's team (Finance: authorized departments) and who reviews their expenses (§9.6). */
 export function MyTeamPage() {
+  const { user } = useAuth();
   const { data, isLoading, isError, error, refetch } = useGetMyTeamQuery(undefined, { refetchOnMountOrArgChange: true });
 
   if (isLoading) return <LoadingState />;
@@ -61,8 +63,13 @@ export function MyTeamPage() {
             ) : (
               <Typography variant="body2" color="text.secondary">No reviewer is currently available. Contact an administrator.</Typography>
             )}
-            {/* Escalation only changes the reviewer when an administrator is not already the reviewer. */}
-            {data.reviewers.some((reviewer) => reviewer.role !== "admin") && (
+            {data.delegates.map((delegate) => (
+              <Typography key={`${delegate.id}-${delegate.onBehalfOfName}`} variant="body2">
+                {delegate.name} ({humanize(delegate.role)}) is reviewing on behalf of {delegate.onBehalfOfName} until {formatDate(delegate.endDate)}.
+              </Typography>
+            ))}
+            {/* Escalation changes the reviewer only for team members and managers (§22.2). */}
+            {!isDepartment && user?.role !== "admin" && data.reviewers.some((reviewer) => reviewer.role !== "admin") && (
               <Typography variant="caption" color="text.secondary">
                 Expenses above a policy approval threshold are reviewed one level higher, by Finance or an administrator.
               </Typography>

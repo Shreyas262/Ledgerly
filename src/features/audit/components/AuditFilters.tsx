@@ -37,6 +37,8 @@ const actions: AuditAction[] = [
   "EXPENSE_REJECTED",
   "EXPENSE_CANCELLED",
   "EXPENSE_COMMENTED",
+  "DELEGATION_CREATED",
+  "DELEGATION_CANCELLED",
   "REIMBURSEMENT_STARTED",
   "REIMBURSEMENT_COMPLETED",
   "POLICY_CREATED",
@@ -63,6 +65,7 @@ const entityTypes: AuditEntityType[] = [
   "BUDGET",
   "DOCUMENT",
   "REIMBURSEMENT",
+  "DELEGATION",
 ];
 
 export function AuditFilters({

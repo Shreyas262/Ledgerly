@@ -113,9 +113,21 @@ export interface Expense extends ResourceTimestamps {
   reviewStartedAt?: ISODateString;
   /** Display name of reviewStartedBy, resolved by the API. */
   reviewStartedByName?: string;
+  /** Whom a delegate started the review in progress on behalf of (§22.12). */
+  reviewStartedOnBehalfOf?: EntityId;
+  /** Display name of reviewStartedOnBehalfOf, resolved by the API. */
+  reviewStartedOnBehalfOfName?: string;
   reviewedAt?: ISODateString;
   reviewedBy?: EntityId;
   approvedBy?: EntityId;
+  /** Whom a delegate approved the expense on behalf of (§22.12). */
+  approvedOnBehalfOf?: EntityId;
+  /**
+   * For the viewer: whose delegated authority they would review this expense
+   * under, when they may not review it in their own right. Resolved by the API.
+   */
+  actingOnBehalfOfId?: EntityId;
+  actingOnBehalfOfName?: string;
   /**
    * True when the Finance user who approved the expense may also reimburse
    * it, because it belongs to the only administrator. Resolved by the API.
@@ -133,6 +145,10 @@ export interface Expense extends ResourceTimestamps {
   rejectedAt?: ISODateString;
   /** Display name of rejectedBy, resolved by the API. */
   rejectedByName?: string;
+  /** Whom a delegate rejected the expense on behalf of; kept with the last rejection. */
+  rejectedOnBehalfOf?: EntityId;
+  /** Display name of rejectedOnBehalfOf, resolved by the API. */
+  rejectedOnBehalfOfName?: string;
   reimbursement?: ReimbursementInfo;
   cancelledAt?: ISODateString;
   cancelledBy?: EntityId;

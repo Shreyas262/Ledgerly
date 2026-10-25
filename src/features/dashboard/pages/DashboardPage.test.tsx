@@ -91,6 +91,19 @@ describe("DashboardPage work queues", () => {
     expect(within(work).getByRole("link", { name: "Open Approvals" })).toHaveAttribute("href", "/approvals");
   });
 
+  it("warns a manager about a team budget projected to exceed its allocation", async () => {
+    await givenBudget();
+    // 45,000 of the team's 50,000 by 16 Oct heads for 56,833.91 by 31 Dec.
+    await givenExpense({ status: "reimbursed", amount: 45_000, expenseDate: "2026-06-01" });
+
+    await renderDashboard("manager");
+
+    const work = await screen.findByRole("region", { name: "Your work" });
+    expect(within(work).getByText("Budgets near their limit")).toBeInTheDocument();
+    expect(within(work).getByText((_content, element) =>
+      element?.tagName === "LI" && element.textContent === "Engineering team: projected ₹6,833.91 over")).toBeInTheDocument();
+  });
+
   it("shows an employee no work queues", async () => {
     await renderDashboard();
 
