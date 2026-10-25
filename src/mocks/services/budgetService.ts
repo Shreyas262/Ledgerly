@@ -11,6 +11,7 @@ import type {
 } from "../../features/budgets/types/budget";
 import { EXPENSE_TYPE_LABELS } from "../../features/expenses/types/expense";
 import { listRecords, listRecordsByIndex } from "./mockDataService";
+import { WorkflowError, workflowForbidden } from "./workflowErrors";
 import { formatCurrency } from "../../utils/currency";
 import { formatDate, toDateOnly } from "../../utils/format";
 
@@ -359,4 +360,35 @@ export async function getBudgetWarnings(expense: Expense): Promise<string[]> {
   }
 
   return warnings;
+}
+
+/* Rules shared by the budget lifecycle and allocation services. */
+
+/** An amount the API accepts for a budget or allocation. */
+export function isPositiveAmount(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/** §28.2: an allocation that breaks the hierarchy is a business-rule failure. */
+export function budgetExceeded(message: string): WorkflowError {
+  return new WorkflowError(422, "BUDGET_EXCEEDED", message, { businessRule: message });
+}
+
+/**
+ * §28.3–28.4: administrators change the organization and department levels;
+ * Finance users and administrators the team and expense-type levels. Closed
+ * budgets are not changed.
+ */
+export function assertCanChangeBudget(
+  principal: AuthenticatedPrincipal,
+  budget: OrganizationBudget,
+  level: "organization" | "team",
+): void {
+  if (level === "organization" && principal.role !== "admin") {
+    throw workflowForbidden("Only administrators can manage organization budgets and department allocations.");
+  }
+  if (level === "team" && principal.role !== "admin" && principal.role !== "finance") {
+    throw workflowForbidden("Only Finance users and administrators manage team and expense-type budgets.");
+  }
+  if (budget.status === "closed") throw new WorkflowError(409, "CONFLICT", "Closed budgets cannot be changed.");
 }

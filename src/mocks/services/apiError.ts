@@ -1,4 +1,5 @@
 import { HttpResponse } from "msw";
+import { WorkflowError } from "./workflowErrors";
 
 const DEFAULT_CODES: Record<number, string> = {
   400: "BAD_REQUEST",
@@ -20,4 +21,12 @@ export function apiError(
     { status, code, message, ...(details ? { details } : {}) },
     { status },
   );
+}
+
+/** The response for an operation a service refused; unexpected failures never expose internal messages. */
+export function workflowErrorResponse(error: unknown) {
+  if (error instanceof WorkflowError) {
+    return apiError(error.status, error.message, error.code, error.details);
+  }
+  return apiError(500, "The action could not be completed.");
 }

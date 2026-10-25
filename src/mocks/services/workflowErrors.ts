@@ -5,8 +5,9 @@ import {
 import { EXPENSE_STATUS_LABELS, type ExpenseStatus } from "../../features/expenses/types/expense";
 
 /**
- * A refused workflow operation. Services throw it with the status, code and
- * user-facing message the API returns, so handlers never interpret messages.
+ * A refused workflow or business-rule operation. Services throw it with the
+ * status, code and user-facing message the API returns, so handlers never
+ * interpret messages.
  */
 export class WorkflowError extends Error {
   readonly status: 403 | 409 | 422;
