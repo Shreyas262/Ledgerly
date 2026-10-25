@@ -19,6 +19,7 @@ import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { Amount } from "../../../components/common/Amount";
 import { ConversionNote } from "../../currency/components/ConversionNote";
 import { ExpenseStatusChip } from "./ExpenseStatusChip";
+import { reviewInProgressLabel } from "../utils/reviewLabels";
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -112,12 +113,12 @@ export function ExpenseCard({
               </Typography>
             )}
 
-            {expense.status === "under_review" && expense.reviewStartedByName && (
+            {reviewInProgressLabel(expense, user?.id) && (
               <Typography
                 variant="body2"
                 color="text.secondary"
               >
-                In review by {expense.reviewStartedBy === user?.id ? "you" : expense.reviewStartedByName}
+                {reviewInProgressLabel(expense, user?.id)}
               </Typography>
             )}
 
@@ -157,9 +158,12 @@ export function ExpenseCard({
 
             <ExpenseStatusChip status={expense.status} />
 
-            {/* Policy flags for reviewers (§21.10, §22.3). */}
-            {variant === "approval" && (policyFlags.escalated || policyFlags.warnings > 0) && (
-              <Stack direction="row" spacing={0.75}>
+            {/* Policy flags and delegated reviews for reviewers (§21.10, §22.3, §22.12). */}
+            {variant === "approval" && (policyFlags.escalated || policyFlags.warnings > 0 || expense.actingOnBehalfOfName) && (
+              <Stack direction="row" spacing={0.75} useFlexGap sx={{ flexWrap: "wrap", justifyContent: { sm: "flex-end" } }}>
+                {expense.actingOnBehalfOfName && (
+                  <Chip size="small" color="primary" variant="outlined" label={`On behalf of ${expense.actingOnBehalfOfName}`} />
+                )}
                 {policyFlags.escalated && <Chip size="small" color="info" variant="outlined" label="Above policy threshold" />}
                 {policyFlags.warnings > 0 && (
                   <Chip size="small" color="warning" variant="outlined" label={`${policyFlags.warnings} policy ${policyFlags.warnings === 1 ? "warning" : "warnings"}`} />

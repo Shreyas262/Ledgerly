@@ -25,7 +25,9 @@ async function withActorNames(events: AuditEvent[]): Promise<AuditEvent[]> {
 
 export const auditHandlers = [
   // §24: User Activity is a current-user projection of authoritative audit
-  // events. It requires authentication only and never exposes other actors.
+  // events. It requires authentication only and never exposes other actors,
+  // except a delegate's reviews on the user's behalf (§22.12), which used the
+  // user's authority.
   http.get("/api/activity", async ({ request }) => {
     const principal = await resolveAuthenticatedPrincipal(request);
 
@@ -33,13 +35,17 @@ export const auditHandlers = [
       return apiError(401, "Please sign in to continue.");
     }
 
-    const events = await listRecordsByIndex<AuditEvent>(
-      "auditEvents",
-      "actorId",
-      principal.userId,
-    );
+    const [ownEvents, organizationEvents] = await Promise.all([
+      listRecordsByIndex<AuditEvent>("auditEvents", "actorId", principal.userId),
+      listRecordsByIndex<AuditEvent>("auditEvents", "organizationId", principal.organizationId),
+    ]);
+    const onBehalfEvents = organizationEvents.filter((event) => event.metadata?.onBehalfOf === principal.userId);
+    const delegateNames = new Map<string, string>();
+    for (const actorId of new Set(onBehalfEvents.map((event) => event.actorId))) {
+      delegateNames.set(actorId, (await getRecord<{ name: string }>("users", actorId))?.name ?? "Former user");
+    }
 
-    const activity: UserActivity[] = events
+    const activity: UserActivity[] = [...ownEvents, ...onBehalfEvents]
       .filter((event) => event.organizationId === principal.organizationId)
       .sort(
         (left, right) =>
@@ -54,6 +60,7 @@ export const auditHandlers = [
         ...(event.previousState ? { previousState: event.previousState } : {}),
         ...(event.newState ? { newState: event.newState } : {}),
         ...(event.description ? { description: event.description } : {}),
+        ...(event.actorId !== principal.userId ? { actedOnBehalfBy: delegateNames.get(event.actorId) } : {}),
       }));
 
     return HttpResponse.json(applyCollectionQueryResult(activity, parseCollectionQuery(request)));

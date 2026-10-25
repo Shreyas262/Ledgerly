@@ -17,10 +17,10 @@ import { transitionExpenseState } from "../../features/expenses/domain/expenseSt
 import {
   authorizeRequest,
   isExpenseVisibleToPrincipal,
-  resolveExpenseReadScope,
   resolveExpenseScope,
   type AuthorizationScope,
 } from "../services/authorizationService";
+import { getExpenseReadDenial, withActingOnBehalfOf } from "../services/expenseAccessService";
 import {
   getAuthorizedExpenseRecords,
   isExpenseScopeAllowed,
@@ -220,21 +220,18 @@ export const expensesHandlers = [
       return authorizationError(principalAuthorization);
     }
 
-    if (!isExpenseVisibleToPrincipal(principalAuthorization.principal, expense)) {
+    const { principal } = principalAuthorization;
+    if (!isExpenseVisibleToPrincipal(principal, expense)) {
       return expenseNotFound();
     }
 
-    const authorization = await authorizeRequest(request, {
-      permission: "expenses.read",
-      scope: resolveExpenseReadScope(principalAuthorization.principal, expense),
-      resource: getExpenseResource(expense),
-    });
-
-    if (authorization.allowed === false) {
-      return authorizationError(authorization);
+    // §12.2: role scope, a review the user took part in, or a delegated review.
+    const denial = await getExpenseReadDenial(principal, expense);
+    if (denial) {
+      return apiError(403, denial, "FORBIDDEN");
     }
 
-    const [namedExpense] = await withEmployeeNames([expense]);
+    const [namedExpense] = await withEmployeeNames([await withActingOnBehalfOf(principal, expense)]);
     return HttpResponse.json(namedExpense);
   }),
 

@@ -42,6 +42,7 @@ const SettingsPage = lazyPage(() => import("../features/settings/pages/SettingsP
 const AuditPage = lazy(() => import("../features/audit/pages/AuditPage"));
 const AuditDetailsPage = lazy(() => import("../features/audit/pages/AuditDetailsPage"));
 const MyTeamPage = lazyPage(() => import("../features/userProfile/pages/MyTeamPage"), "MyTeamPage");
+const ReviewDelegationPage = lazyPage(() => import("../features/approvals/pages/ReviewDelegationPage"), "ReviewDelegationPage");
 const AccountPage = lazyPage(() => import("../features/userProfile/pages/AccountPage"), "AccountPage");
 const ActivityPage = lazyPage(() => import("../features/activity/pages/ActivityPage"), "ActivityPage");
 const AdminPage = lazyPage(() => import("../features/organizations/pages/AdminPage"), "AdminPage");
@@ -307,6 +308,18 @@ const organizationRoutes: RouteObject[] = [
     handle: {
       title: "My Team",
     },
+  },
+  {
+    element: <PermissionRoute permission="expenses.approve" />,
+    children: [
+      {
+        path: "/account/delegation",
+        element: <ReviewDelegationPage />,
+        handle: {
+          title: "Review Delegation",
+        },
+      },
+    ],
   },
 ];
 

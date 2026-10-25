@@ -2,7 +2,8 @@ import { apiError } from "../services/apiError";
 import { applyCollectionQuery, parseCollectionQuery } from "../../services/api/queryParams";
 import { http, HttpResponse } from "msw";
 import type { Document } from "../../features/documents/types/document";
-import { authorizeRequest, isExpenseVisibleToPrincipal, resolveExpenseReadScope } from "../services/authorizationService";
+import { authorizeRequest, isExpenseVisibleToPrincipal } from "../services/authorizationService";
+import { getExpenseReadDenial } from "../services/expenseAccessService";
 import { authorizationError } from "../services/authorizationHttp";
 import { runAuditedTransaction } from "../services/auditService";
 import { getRecord, listRecords } from "../services/mockDataService";
@@ -25,6 +26,8 @@ type MockExpenseResource = {
   status: string;
   amount: number;
   documentIds?: string[];
+  reviewStartedBy?: string;
+  reviewedBy?: string;
 };
 
 /**
@@ -54,13 +57,17 @@ async function getAuthorizedExpense(request: Request, expenseId: string, permiss
     return { error: apiError(404, "Expense not found.") } as const;
   }
 
-  // Document access follows the expense scope for reads (§29.11); document
-  // changes are limited to the owner of a draft expense (§29.9).
+  // Document reads follow the expense's read access (§12.2, §29.5).
+  if (permission === "documents.read") {
+    const denial = await getExpenseReadDenial(principalAuthorization.principal, expense);
+    if (denial) return { error: apiError(403, denial, "FORBIDDEN") } as const;
+    return { expense, principal: principalAuthorization.principal } as const;
+  }
+
+  // Document changes are limited to the owner of a draft expense (§29.9).
   const authorization = await authorizeRequest(request, {
     permission,
-    scope: permission === "documents.read"
-      ? resolveExpenseReadScope(principalAuthorization.principal, expense)
-      : "OWN",
+    scope: "OWN",
     resource: {
       organizationId: expense.organizationId,
       ownerId: expense.employeeId,

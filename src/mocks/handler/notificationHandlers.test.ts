@@ -56,6 +56,15 @@ describe("comment notifications", () => {
     expect(await commentNotifications("manager")).toHaveLength(1);
   });
 
+  it("tells the reviewer who started the review, before they decide", async () => {
+    const expense = await givenExpense({ owner: "employee", status: "submitted" });
+    const review = await apiFetch(`/api/expenses/${expense.id}/review`, { method: "POST" }, await signInAs("manager"));
+    expect(review.status).toBe(200);
+    await comment(expense.id, "employee", "The invoice is attached.");
+
+    expect(await commentNotifications("manager")).toHaveLength(1);
+  });
+
   it("tells earlier commenters about later replies, not about comments before they joined", async () => {
     const expense = await givenExpense({ owner: "manager", status: "approved" });
     await comment(expense.id, "manager", "Paid by card.");

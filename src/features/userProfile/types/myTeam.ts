@@ -18,6 +18,16 @@ export interface ExpenseReviewer {
   role: string;
 }
 
+/** Someone reviewing on behalf of one of the caller's reviewers (§22.12). */
+export interface ReviewerDelegate {
+  id: EntityId;
+  name: string;
+  role: string;
+  onBehalfOfName: string;
+  /** Last day of the delegation (YYYY-MM-DD). */
+  endDate: string;
+}
+
 /** The caller's team (or, for Finance, authorized departments) and who reviews their expenses. */
 export interface MyTeam {
   /** TEAM: the caller's team. DEPARTMENT: Finance's authorized departments. */
@@ -28,4 +38,6 @@ export interface MyTeam {
   reviewers: ExpenseReviewer[];
   /** How the reviewers were determined, in plain language. */
   reviewerBasis: string;
+  /** Delegations in effect from those reviewers. */
+  delegates: ReviewerDelegate[];
 }

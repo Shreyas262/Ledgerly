@@ -2,6 +2,7 @@ import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import type { Permission } from "../../features/roles/types/role";
 import type { Expense } from "../../features/expenses/types/expense";
 import { getRecord, listRecords, listRecordsByIndex } from "./mockDataService";
+import { getActiveDelegators } from "./delegationService";
 import { formatCurrency } from "../../utils/currency";
 
 export interface WorkflowAuthorizationFailure {
@@ -10,8 +11,14 @@ export interface WorkflowAuthorizationFailure {
   message: string;
 }
 
+/** The person a delegate acts for (§22.12). */
+export interface OnBehalfOf {
+  id: string;
+  name: string;
+}
+
 export type WorkflowAuthorizationResult =
-  | { allowed: true; principal: AuthenticatedPrincipal }
+  | { allowed: true; principal: AuthenticatedPrincipal; onBehalfOf?: OnBehalfOf }
   | { allowed: false; error: WorkflowAuthorizationFailure };
 
 function forbidden(message: string): WorkflowAuthorizationResult {
@@ -179,6 +186,41 @@ export function getReviewDenialReason(
   return "You are not authorized to review expenses.";
 }
 
+export type ReviewAuthority =
+  | { allowed: true; onBehalfOf?: OnBehalfOf }
+  | { allowed: false; reason: string };
+
+/**
+ * Whether the principal may review the expense (§22.3, §22.12): in their own
+ * right per the approval matrix, or else on behalf of someone whose review
+ * authority they hold today through a delegation. Own authority comes first,
+ * the principal's own expense is never reviewable, and only the delegator's
+ * own position in the matrix counts, so delegations never chain.
+ */
+export async function resolveReviewAuthority(
+  principal: AuthenticatedPrincipal,
+  expense: Pick<Expense, "organizationId" | "employeeId" | "teamId" | "departmentId" | "policyEvaluation">,
+): Promise<ReviewAuthority> {
+  const owner = await resolveExpenseOwner(String(expense.employeeId));
+  if (!owner) {
+    return { allowed: false, reason: "The person who submitted this expense could not be found." };
+  }
+
+  const context = {
+    otherAdminAvailable: owner.roleName === "admin" && (await hasOtherActiveAdmin(owner.organizationId, owner.id)),
+  };
+  const denial = getReviewDenialReason(principal, expense, owner, context);
+  if (!denial) return { allowed: true };
+  if (expense.employeeId === principal.userId) return { allowed: false, reason: denial };
+
+  for (const { delegator, name } of await getActiveDelegators(principal)) {
+    if (getReviewDenialReason(delegator, expense, owner, context) === null) {
+      return { allowed: true, onBehalfOf: { id: delegator.userId, name } };
+    }
+  }
+  return { allowed: false, reason: denial };
+}
+
 export async function authorizeExpenseManager(
   principal: AuthenticatedPrincipal,
   expense: Expense,
@@ -188,14 +230,9 @@ export async function authorizeExpenseManager(
     return forbidden("You are not authorized to perform this approval operation.");
   }
 
-  const owner = await resolveExpenseOwner(String(expense.employeeId));
-  if (!owner) {
-    return forbidden("The person who submitted this expense could not be found.");
-  }
-
-  const otherAdminAvailable = owner.roleName === "admin" && (await hasOtherActiveAdmin(owner.organizationId, owner.id));
-  const denial = getReviewDenialReason(principal, expense, owner, { otherAdminAvailable });
-  return denial ? forbidden(denial) : { allowed: true, principal };
+  const authority = await resolveReviewAuthority(principal, expense);
+  if (authority.allowed === false) return forbidden(authority.reason);
+  return { allowed: true, principal, ...(authority.onBehalfOf ? { onBehalfOf: authority.onBehalfOf } : {}) };
 }
 
 /**
@@ -224,15 +261,20 @@ export async function authorizeExpenseFinance(
     return forbidden("You cannot process your own expense, so another authorized user must handle it.");
   }
 
-  // Separation of duties: a Finance user who approved an expense cannot
-  // also process its reimbursement, except an expense of the only
-  // administrator, which Finance approves in place of another administrator.
+  // Separation of duties: a Finance user who approved an expense, or for
+  // whom a delegate approved it, cannot also process its reimbursement,
+  // except an expense of the only administrator, which Finance approves in
+  // place of another administrator.
+  const approvedBySelf = expense.approvedBy === principal.userId;
+  const approvedOnBehalf = expense.approvedOnBehalfOf === principal.userId;
   if (
     principal.role === "finance" &&
-    expense.approvedBy === principal.userId &&
+    (approvedBySelf || approvedOnBehalf) &&
     !(await isOnlyAdministrator(String(expense.employeeId)))
   ) {
-    return forbidden("You approved this expense, so another authorized user must process its reimbursement.");
+    return forbidden(approvedBySelf
+      ? "You approved this expense, so another authorized user must process its reimbursement."
+      : "This expense was approved on your behalf, so another authorized user must process its reimbursement.");
   }
 
   if (

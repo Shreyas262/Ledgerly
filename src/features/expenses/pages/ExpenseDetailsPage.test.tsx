@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { auditEventsFor, givenBudget, givenExpense, givenPolicy, readExpense } from "../../../test/fixtures";
+import { auditEventsFor, givenBudget, givenDelegation, givenExpense, givenPolicy, readExpense } from "../../../test/fixtures";
 import { renderPage, setupPageTests } from "../../../test/renderPage";
 import { ExpenseDetailsPage } from "./ExpenseDetailsPage";
 
@@ -92,6 +92,30 @@ describe("ExpenseDetailsPage review ownership", () => {
     expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
   });
 
+  it("lets a delegate review on the delegator's behalf, and says so", async () => {
+    await givenDelegation();
+    const expense = await givenExpense({ status: "submitted", title: "Hotel in Pune" });
+    const { user } = await renderPage(<ExpenseDetailsPage mode="review" />, { path: "/approvals/:id", route: `/approvals/${expense.id}`, as: "finance" });
+
+    await user.click(await screen.findByRole("button", { name: "Start Review" }));
+    expect(await screen.findByRole("dialog", { name: "Start Review" })).toHaveTextContent('Start reviewing "Hotel in Pune" on behalf of Sarah Manager?');
+    await user.click(screen.getAllByRole("button", { name: "Start Review" }).at(-1)!);
+
+    expect(await screen.findByText("In review by you on behalf of Sarah Manager")).toBeInTheDocument();
+    expect(await readExpense(expense.id)).toMatchObject({ status: "under_review", reviewStartedOnBehalfOf: "user-2" });
+  });
+
+  it("lets a delegate finish a review the delegator started", async () => {
+    await givenDelegation();
+    const expense = await givenExpense({ status: "under_review", reviewStartedBy: "user-2", title: "Hotel in Pune" });
+    const { user } = await renderPage(<ExpenseDetailsPage mode="review" />, { path: "/approvals/:id", route: `/approvals/${expense.id}`, as: "finance" });
+
+    await user.click(await screen.findByRole("button", { name: "Approve" }));
+    const dialog = await screen.findByRole("dialog", { name: "Approve Expense" });
+    expect(dialog).toHaveTextContent("on behalf of Sarah Manager?");
+    expect(dialog).not.toHaveTextContent("overrides");
+  });
+
   it("warns an administrator that approving overrides the review in progress", async () => {
     const expense = await givenExpense({ status: "under_review", reviewStartedBy: "user-2", title: "Hotel in Pune" });
     const { user } = await renderReview(expense.id, "admin");
@@ -129,6 +153,15 @@ describe("ExpenseDetailsPage reimbursement actions", () => {
     expect(await screen.findByRole("dialog", { name: "Start Reimbursement" })).toHaveTextContent(
       'The budget "Test budget" is closed; this reimbursement still counts against it.',
     );
+  });
+
+  it("offers Finance no reimbursement of an expense approved on its behalf", async () => {
+    const expense = await givenExpense({ owner: "manager", status: "approved", approvedBy: "user-finance-2", approvedOnBehalfOf: "user-3", title: "Taxi" });
+
+    await renderAs(expense.id, "finance");
+
+    expect(await screen.findByRole("heading", { name: "Taxi" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start Reimbursement" })).not.toBeInTheDocument();
   });
 
   it("lets Finance reimburse the only administrator's expense it approved", async () => {

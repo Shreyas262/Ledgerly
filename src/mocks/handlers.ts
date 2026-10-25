@@ -17,12 +17,14 @@ import { notificationHandlers } from "./handler/notificationHandlers";
 import { personalHandlers } from "./handler/personalHandlers";
 import { platformHandlers } from "./handler/platformHandlers";
 import { exchangeRateHandlers } from "./handler/exchangeRateHandlers";
+import { delegationHandlers } from "./handler/delegationHandlers";
 
 export const handlers = [
   authGuardHandler,
   ...authHandlers,
   ...expensesHandlers,
   ...workflowHandlers,
+  ...delegationHandlers,
   ...documentHandlers,
   ...expenseCommentHandlers,
   ...dashboardHandlers,

@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { apiError } from "../services/apiError";
-import { isExpenseVisibleToPrincipal, isWithinScope, resolveAuthenticatedPrincipal, resolveExpenseReadScope } from "../services/authorizationService";
+import { isExpenseVisibleToPrincipal, resolveAuthenticatedPrincipal } from "../services/authorizationService";
+import { getExpenseReadDenial } from "../services/expenseAccessService";
 import { getStoredComments, type StoredExpenseComment } from "../services/expenseCommentService";
 import { getRecord, listRecords, listRecordsByIndex } from "../services/mockDataService";
 import { getApprovalQueue } from "../services/approvalService";
@@ -19,15 +20,11 @@ const WINDOW_DAYS = 30;
 const LIMIT = 40;
 
 /** Whether the user may still open the expense, as `GET /api/expenses/:id` decides. */
-function canReadExpense(principal: AuthenticatedPrincipal, expense: Expense): boolean {
+async function canReadExpense(principal: AuthenticatedPrincipal, expense: Expense): Promise<boolean> {
   return (
     principal.effectivePermissions.includes("expenses.read") &&
     isExpenseVisibleToPrincipal(principal, expense) &&
-    isWithinScope(
-      principal,
-      { organizationId: expense.organizationId, ownerId: expense.employeeId, teamId: expense.teamId, departmentId: expense.departmentId },
-      resolveExpenseReadScope(principal, expense),
-    )
+    (await getExpenseReadDenial(principal, expense)) === null
   );
 }
 
@@ -51,6 +48,18 @@ export const notificationHandlers = [
     const nameOf = (id: string) => users.find((user) => user.id === id)?.name ?? "A reviewer";
     const notifications: AppNotification[] = [];
 
+    // Review delegations to the user (§22.12).
+    for (const event of events) {
+      if (event.entityType !== "DELEGATION" || event.metadata?.delegateId !== principal.userId || new Date(event.timestamp).getTime() < since) continue;
+      const period = `${formatDate(String(event.metadata.startDate))} to ${formatDate(String(event.metadata.endDate))}`;
+      const base = { id: event.id, category: "REVIEW_QUEUE" as const, link: "/approvals", timestamp: event.timestamp };
+      if (event.action === "DELEGATION_CREATED") {
+        notifications.push({ ...base, severity: "info", title: "Reviews delegated to you", message: `${nameOf(event.actorId)} delegated expense reviews to you from ${period}.` });
+      } else if (event.action === "DELEGATION_CANCELLED") {
+        notifications.push({ ...base, severity: "info", title: "Review delegation cancelled", message: `${nameOf(event.actorId)} cancelled the delegation of expense reviews to you (${period}).` });
+      }
+    }
+
     for (const event of events) {
       // Reimbursement events are recorded against the expense id.
       if ((event.entityType !== "EXPENSE" && event.entityType !== "REIMBURSEMENT") || new Date(event.timestamp).getTime() < since) continue;
@@ -59,16 +68,20 @@ export const notificationHandlers = [
       const base = { id: event.id, link: `/expenses/${expense.id}`, timestamp: event.timestamp };
       const byOther = event.actorId !== principal.userId;
       const label = `"${expense.title}"`;
+      // "Mike Finance on behalf of Sarah Manager" for reviews by a delegate.
+      const reviewer = typeof event.metadata?.onBehalfOf === "string"
+        ? `${nameOf(event.actorId)} on behalf of ${nameOf(event.metadata.onBehalfOf)}`
+        : nameOf(event.actorId);
 
       switch (event.action) {
         case "EXPENSE_REVIEWED":
-          if (byOther) notifications.push({ ...base, category: "EXPENSE_UPDATES", severity: "info", title: "Review started", message: `${nameOf(event.actorId)} started reviewing ${label}.` });
+          if (byOther) notifications.push({ ...base, category: "EXPENSE_UPDATES", severity: "info", title: "Review started", message: `${reviewer} started reviewing ${label}.` });
           break;
         case "EXPENSE_APPROVED":
-          if (byOther) notifications.push({ ...base, category: "EXPENSE_UPDATES", severity: "success", title: "Expense approved", message: `${label} was approved by ${nameOf(event.actorId)}.` });
+          if (byOther) notifications.push({ ...base, category: "EXPENSE_UPDATES", severity: "success", title: "Expense approved", message: `${label} was approved by ${reviewer}.` });
           break;
         case "EXPENSE_REJECTED":
-          if (byOther) notifications.push({ ...base, category: "EXPENSE_UPDATES", severity: "error", title: "Expense rejected", message: `${label} was rejected by ${nameOf(event.actorId)}.${expense.rejectionReason ? ` Reason: ${expense.rejectionReason}` : ""}` });
+          if (byOther) notifications.push({ ...base, category: "EXPENSE_UPDATES", severity: "error", title: "Expense rejected", message: `${label} was rejected by ${reviewer}.${expense.rejectionReason ? ` Reason: ${expense.rejectionReason}` : ""}` });
           break;
         case "EXPENSE_CANCELLED":
           if (byOther) notifications.push({ ...base, category: "EXPENSE_UPDATES", severity: "warning", title: "Expense cancelled", message: `${label} was cancelled by ${nameOf(event.actorId)}.` });
@@ -99,11 +112,12 @@ export const notificationHandlers = [
     for (const event of events) {
       if (event.action !== "EXPENSE_COMMENTED" || event.actorId === principal.userId || new Date(event.timestamp).getTime() < since) continue;
       const expense = expenseById.get(event.entityId) ?? (await getRecord<Expense>("expenses", event.entityId));
-      if (!expense || !canReadExpense(principal, expense)) continue;
+      if (!expense || !(await canReadExpense(principal, expense))) continue;
       if (!threads.has(expense.id)) threads.set(expense.id, await getStoredComments(expense.id));
       const thread = threads.get(expense.id) ?? [];
       const involved =
         expense.employeeId === principal.userId ||
+        expense.reviewStartedBy === principal.userId ||
         expense.reviewedBy === principal.userId ||
         thread.some((comment) => comment.authorId === principal.userId && comment.createdAt < event.timestamp);
       const comment = thread.find((item) => item.id === event.metadata?.commentId);
@@ -124,12 +138,17 @@ export const notificationHandlers = [
     const reviewQueue = await getApprovalQueue(principal);
     if (reviewQueue.length) {
       const waiting = reviewQueue.filter((expense) => expense.status === "submitted");
+      const delegated = reviewQueue.filter((expense) => expense.actingOnBehalfOfId).length;
+      const details = [
+        waiting.length ? `${waiting.length} not yet started` : "",
+        delegated ? `${delegated} on behalf of others` : "",
+      ].filter(Boolean);
       notifications.push({
         id: "queue-review",
         category: "REVIEW_QUEUE",
         severity: "info",
         title: "Expenses awaiting review",
-        message: `${reviewQueue.length} ${reviewQueue.length === 1 ? "expense is" : "expenses are"} in your review queue${waiting.length ? `, ${waiting.length} not yet started` : ""}.`,
+        message: `${reviewQueue.length} ${reviewQueue.length === 1 ? "expense is" : "expenses are"} in your review queue${details.length ? `, ${details.join(" and ")}` : ""}.`,
         link: "/approvals",
         timestamp: latest(reviewQueue.map((expense) => expense.submittedAt ?? expense.updatedAt)),
       });

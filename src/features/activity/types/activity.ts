@@ -13,4 +13,6 @@ export interface UserActivity {
   previousState?: string;
   newState?: string;
   description?: string;
+  /** For a review a delegate did on the user's behalf: the delegate's name (§22.12). */
+  actedOnBehalfBy?: string;
 }

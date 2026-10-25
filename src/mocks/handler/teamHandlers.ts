@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import { apiError } from "../services/apiError";
 import { resolveAuthenticatedPrincipal } from "../services/authorizationService";
 import { listRecords } from "../services/mockDataService";
+import { getDelegatesOf } from "../services/delegationService";
 import type { ExpenseReviewer, MyTeam, TeamMember } from "../../features/userProfile/types/myTeam";
 
 interface UserRecord {
@@ -68,18 +69,23 @@ export const teamHandlers = [
     const toReviewer = (user: UserRecord): ExpenseReviewer => ({ id: user.id, name: user.name, role: roleName(user) });
     const admins = active.filter((user) => roleName(user) === "admin");
     const others = (list: UserRecord[]) => list.filter((user) => user.id !== principal.userId);
+    const financeFor = (departmentId: string) => others(active.filter((user) =>
+      roleName(user) === "finance" &&
+      (user.financeDepartmentIds?.length ? user.financeDepartmentIds : [user.departmentId]).includes(departmentId)));
     let reviewers: UserRecord[];
     let reviewerBasis: string;
     if (principal.role === "admin") {
-      reviewers = admins;
-      reviewerBasis = "Administrators review administrators' expenses, and may approve their own.";
+      // Nobody reviews their own expense; the only administrator's go to Finance (§22.2).
+      const otherAdmins = others(admins);
+      reviewers = otherAdmins.length ? otherAdmins : financeFor(principal.departmentId);
+      reviewerBasis = otherAdmins.length
+        ? "Another administrator reviews your expenses."
+        : "You are the only administrator, so Finance users authorized for your department review your expenses.";
     } else if (isFinance) {
       reviewers = others(admins);
       reviewerBasis = "Expenses submitted by Finance users are reviewed by an administrator.";
     } else if (principal.role === "manager") {
-      const finance = others(active.filter((user) =>
-        roleName(user) === "finance" &&
-        (user.financeDepartmentIds?.length ? user.financeDepartmentIds : [user.departmentId]).includes(principal.departmentId)));
+      const finance = financeFor(principal.departmentId);
       reviewers = finance.length ? finance : others(admins);
       reviewerBasis = finance.length
         ? "Managers' expenses are reviewed by Finance users authorized for your department, or by an administrator."
@@ -92,6 +98,17 @@ export const teamHandlers = [
         : "Your team has no manager, so an administrator reviews your expenses.";
     }
 
+    // Who is reviewing on a reviewer's behalf, never the caller themselves (§22.12).
+    const delegates = (await getDelegatesOf(principal.organizationId, reviewers.map((user) => user.id)))
+      .filter((delegation) => delegation.delegateId !== principal.userId)
+      .map((delegation) => ({
+        id: delegation.delegateId,
+        name: delegation.delegateName,
+        role: delegation.delegateRole,
+        onBehalfOfName: delegation.delegatorName,
+        endDate: delegation.endDate,
+      }));
+
     const response: MyTeam = {
       scope: isFinance ? "DEPARTMENT" : "TEAM",
       teamName: teamName(principal.teamId),
@@ -99,6 +116,7 @@ export const teamHandlers = [
       members,
       reviewers: reviewers.map(toReviewer).sort(byName),
       reviewerBasis,
+      delegates,
     };
     return HttpResponse.json(response);
   }),
