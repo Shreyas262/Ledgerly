@@ -1,3 +1,4 @@
+import type { BudgetForecastStatus } from "../../budgets/types/budget";
 import type { CurrencyConversion } from "../../currency/types/currency";
 import type { ExpenseStatus, ExpenseType } from "../../expenses/types/expense";
 
@@ -62,13 +63,19 @@ export interface DashboardBudgetAlert {
   /** The budget, department or team allocation, as the viewer sees it. */
   name: string;
   utilizationPercent: number;
+  /** Present when the level is projected to exceed its allocation or already over-committed (§28.19). */
+  forecast?: {
+    status: Exclude<BudgetForecastStatus, "ON_TRACK">;
+    overBy: number;
+    runsOutOn: string | null;
+  };
 }
 
 /** Work waiting on the user in their role; null where the role has no such queue. */
 export interface DashboardWorkQueues {
   approvals: { count: number; oldestWaitingDays: number | null } | null;
   reimbursements: { count: number; amount: number } | null;
-  /** Active budgets at the viewer's level that are 80% or more used. */
+  /** Active budgets at the viewer's level that are 80% or more used, projected to exceed or over-committed. */
   budgetAlerts: DashboardBudgetAlert[] | null;
 }
 

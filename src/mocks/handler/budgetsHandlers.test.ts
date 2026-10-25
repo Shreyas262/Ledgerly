@@ -522,7 +522,88 @@ describe("budget utilization", () => {
 
     const view = (await response.json()) as OrganizationBudgetView;
     expect(view.utilization.spentAmount).toBe(2_000);
+    expect(view.utilization.committedAmount).toBe(10_000);
     expect(view.departmentAllocations.find((item) => item.departmentId === "dept-engineering")?.utilization.spentAmount).toBe(2_000);
+  });
+});
+
+// §28.8, §28.19: committed spend beside utilization, and forecasts for active budgets.
+describe("committed spend and forecasts", () => {
+  withFixedToday("2026-10-16");
+
+  async function viewAs(role: DemoRole, budgetId: string): Promise<OrganizationBudgetView> {
+    const response = await apiFetch(`/api/budgets/${budgetId}`, {}, await signInAs(role));
+    expect(response.status).toBe(200);
+    return (await response.json()) as OrganizationBudgetView;
+  }
+
+  it("reports approved, unpaid expenses in the period as committed, never as spend", async () => {
+    const { budget } = await givenBudget({ expenseTypes: [{ teamId: "team-engineering", expenseType: "MEALS", amount: 10_000 }] });
+    await givenExpense({ status: "reimbursed", amount: 2_000, expenseDate: "2026-03-01" });
+    await givenExpense({ status: "approved", amount: 3_000, expenseDate: "2026-04-01" });
+    await givenExpense({ status: "reimbursement_pending", amount: 1_000, expenseDate: "2026-05-01" });
+    // Not committed: awaiting approval, or outside the period.
+    await givenExpense({ status: "under_review", amount: 7_000, expenseDate: "2026-05-01" });
+    await givenExpense({ status: "approved", amount: 9_000, expenseDate: "2025-12-31" });
+
+    const view = await viewAs("admin", budget.id);
+
+    expect(view.utilization).toMatchObject({ spentAmount: 2_000, committedAmount: 4_000 });
+    const engineering = view.departmentAllocations.find((item) => item.departmentId === "dept-engineering")!;
+    expect(engineering.utilization).toMatchObject({ spentAmount: 2_000, committedAmount: 4_000 });
+    expect(engineering.teamAllocations[0].utilization).toMatchObject({ spentAmount: 2_000, committedAmount: 4_000 });
+    expect(engineering.teamAllocations[0].expenseTypeBudgets[0].utilization).toMatchObject({ spentAmount: 2_000, committedAmount: 4_000 });
+  });
+
+  it("forecasts every level of an active budget from reimbursed and committed spend", async () => {
+    const { budget } = await givenBudget();
+    // 28,900 in 289 days: 100 a day, 36,500 by 31 December.
+    await givenExpense({ status: "reimbursed", amount: 20_000, expenseDate: "2026-03-01" });
+    await givenExpense({ status: "approved", amount: 8_900, expenseDate: "2026-09-01" });
+
+    const view = await viewAs("admin", budget.id);
+
+    expect(view.forecast).toEqual({
+      elapsedDays: 289,
+      totalDays: 365,
+      projectedAmount: 36_500,
+      expectedByToday: 791_780.82,
+      runsOutOn: null,
+      status: "ON_TRACK",
+      overBy: 0,
+    });
+    const team = view.departmentAllocations.find((item) => item.departmentId === "dept-engineering")!.teamAllocations[0];
+    expect(team.forecast).toMatchObject({ projectedAmount: 36_500, status: "ON_TRACK" });
+    expect(view.scopeForecast).toMatchObject({ allocated: 1_000_000, spentAmount: 20_000, committedAmount: 8_900, grouping: "month" });
+    expect(view.scopeForecast?.trend.at(-1)).toEqual({ date: "2026-10-16", spentAmount: 20_000, committedAmount: 8_900 });
+    expect(view.scopeForecast?.trend.map((point) => point.date).slice(0, 3)).toEqual(["2026-01-31", "2026-02-28", "2026-03-31"]);
+  });
+
+  it.each([
+    ["a draft", { status: "draft" as const }],
+    ["a closed budget", { status: "closed" as const }],
+    ["a budget whose period has ended", { startDate: "2025-01-01", endDate: "2025-12-31" }],
+    ["a budget whose period has not started", { startDate: "2027-01-01", endDate: "2027-12-31" }],
+  ])("gives no forecast for %s", async (_name, options) => {
+    const { budget } = await givenBudget(options);
+
+    const view = await viewAs("admin", budget.id);
+
+    expect(view.forecast).toBeNull();
+    expect(view.scopeForecast).toBeNull();
+    expect(view.departmentAllocations[0].forecast).toBeNull();
+  });
+
+  it("forecasts the viewer's own level: the team for a manager, the departments together for Finance", async () => {
+    const { budget } = await givenBudget();
+    await givenExpense({ status: "reimbursed", amount: 4_000, expenseDate: "2026-03-01" });
+    await givenExpense({ owner: "finance", status: "approved", amount: 6_000, expenseDate: "2026-03-01" });
+
+    const manager = await viewAs("manager", budget.id);
+    expect(manager.scopeForecast).toMatchObject({ allocated: 50_000, spentAmount: 4_000, committedAmount: 0 });
+
+    const finance = await viewAs("finance", budget.id);
+    expect(finance.scopeForecast).toMatchObject({ allocated: 300_000, spentAmount: 4_000, committedAmount: 6_000 });
   });
 });
 

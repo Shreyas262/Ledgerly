@@ -104,15 +104,38 @@ describe("GET /api/dashboard/summary work queues", () => {
     expect(workQueues.reimbursements).toEqual({ count: 2, amount: 1_250 });
   });
 
-  it("flags budgets at 80% or more, at the viewer's level", async () => {
+  it("flags budgets at 80% or more, at the viewer's level, with their forecast", async () => {
     const { budget } = await givenBudget();
     // 45,000 of the Engineering team's 50,000 (90%); 45% of the department's 100,000.
     await givenExpense({ status: "reimbursed", amount: 45_000, expenseDate: "2026-06-01" });
 
+    // 45,000 in 289 days heads for 56,833.91 by 31 Dec, reaching 50,000 on 18 Nov.
     expect((await dashboard("manager")).workQueues.budgetAlerts).toEqual([
-      { budgetId: budget.id, name: "Engineering team", utilizationPercent: 90 },
+      {
+        budgetId: budget.id,
+        name: "Engineering team",
+        utilizationPercent: 90,
+        forecast: { status: "PROJECTED_OVER", overBy: 6_833.91, runsOutOn: "2026-11-18" },
+      },
     ]);
     expect((await dashboard("finance")).workQueues.budgetAlerts).toEqual([]);
     expect((await dashboard("admin")).workQueues.budgetAlerts).toEqual([]);
+  });
+
+  // §28.19: early warnings before a budget is 80% used.
+  it("flags budgets projected to exceed or over-committed, the over-committed first", async () => {
+    const { budget } = await givenBudget({
+      departments: { "dept-engineering": 100_000, "dept-finance": 100_000 },
+      teams: { "team-engineering": 50_000, "team-finance": 50_000 },
+    });
+    // Engineering: 30,000 reimbursed (30%) heads for about 37,900 of 100,000 — on track; its team
+    // of 50,000 is not checked for Finance. Finance: 20,000 reimbursed and 90,000 approved, unpaid.
+    await givenExpense({ status: "reimbursed", amount: 30_000, expenseDate: "2026-03-01" });
+    await givenExpense({ owner: "finance", status: "reimbursed", amount: 20_000, expenseDate: "2026-03-01" });
+    await givenExpense({ owner: "finance", status: "approved", amount: 90_000, expenseDate: "2026-10-01" });
+
+    expect((await dashboard("finance")).workQueues.budgetAlerts).toEqual([
+      expect.objectContaining({ budgetId: budget.id, name: "Finance department", utilizationPercent: 20, forecast: { status: "OVER_COMMITTED", overBy: 10_000, runsOutOn: null } }),
+    ]);
   });
 });

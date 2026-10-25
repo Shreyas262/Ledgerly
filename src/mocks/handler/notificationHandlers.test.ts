@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppNotification } from "../../features/notifications/types/notification";
 import { apiFetch, demoAccounts, setupApiServer, signIn } from "../../test/apiServer";
-import { givenExpense, type DemoRole } from "../../test/fixtures";
+import { givenBudget, givenExpense, type DemoRole } from "../../test/fixtures";
 
 setupApiServer();
 
@@ -105,5 +105,39 @@ describe("comment notifications", () => {
 
     expect(notification.message).toMatch(/word…"$/);
     expect(notification.message).not.toContain("end");
+  });
+});
+
+// §28.19: budget viewers are warned about budgets at their level.
+describe("budget forecast notifications", () => {
+  async function budgetNotices(role: DemoRole): Promise<AppNotification[]> {
+    const response = await apiFetch("/api/notifications", {}, await signInAs(role));
+    const { data } = (await response.json()) as { data: AppNotification[] };
+    return data.filter((notification) => notification.category === "BUDGET_ALERTS");
+  }
+
+  it("warns about a team budget projected to exceed its allocation, at the viewer's level only", async () => {
+    const { budget } = await givenBudget();
+    // 45,000 of the Engineering team's 50,000 by mid-October heads past 50,000 before the year ends.
+    await givenExpense({ status: "reimbursed", amount: 45_000, expenseDate: "2026-06-01" });
+
+    expect(await budgetNotices("manager")).toEqual([
+      expect.objectContaining({
+        severity: "warning",
+        title: "Budget forecast",
+        message: expect.stringMatching(/^The Engineering team budget is projected to exceed its allocation by ₹[\d,.]+, running out around \d+ Nov 2026\.$/),
+        link: `/budgets/${budget.id}`,
+      }),
+    ]);
+    expect(await budgetNotices("finance")).toEqual([]);
+  });
+
+  it("says when reimbursed and approved spend already exceeds the allocation", async () => {
+    await givenBudget();
+    await givenExpense({ owner: "finance", status: "approved", amount: 120_000, expenseDate: "2026-10-01" });
+
+    expect((await budgetNotices("finance")).map((notification) => notification.message)).toEqual([
+      "The Finance department budget has reimbursed and approved spend ₹20,000 above its allocation.",
+    ]);
   });
 });

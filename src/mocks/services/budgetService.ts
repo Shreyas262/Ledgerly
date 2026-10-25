@@ -1,6 +1,8 @@
 import type { Expense, ExpenseType } from "../../features/expenses/types/expense";
 import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import type {
+  BudgetForecast,
+  BudgetScopeForecast,
   BudgetUtilization,
   BudgetViewScope,
   DepartmentBudgetAllocation,
@@ -12,6 +14,7 @@ import type {
 import { EXPENSE_TYPE_LABELS } from "../../features/expenses/types/expense";
 import { listRecords, listRecordsByIndex } from "./mockDataService";
 import { WorkflowError, workflowForbidden } from "./workflowErrors";
+import { buildTrend, forecastBudget, trendGrouping } from "./budgetForecast";
 import { formatCurrency } from "../../utils/currency";
 import { formatDate, toDateOnly } from "../../utils/format";
 
@@ -29,22 +32,31 @@ interface NamedRecord {
   status?: string;
 }
 
-function utilization(amount: number, spentAmount: number): BudgetUtilization {
+function utilization(amount: number, spentAmount: number, committedAmount: number): BudgetUtilization {
   return {
     spentAmount,
     remainingAmount: Math.max(amount - spentAmount, 0),
     utilizationPercent: amount > 0 ? (spentAmount / amount) * 100 : 0,
+    committedAmount,
+  };
+}
+
+/** Approved expenses awaiting reimbursement: committed, not yet spent (§28.8). */
+const COMMITTED_STATUSES = new Set<Expense["status"]>(["approved", "reimbursement_pending"]);
+
+/** Expenses dated in the budget period that are reimbursed (spent) or approved and unpaid (committed). */
+async function countedExpensesInPeriod(budget: OrganizationBudget): Promise<{ spent: Expense[]; committed: Expense[] }> {
+  const expenses = (await listRecordsByIndex<Expense>("expenses", "organizationId", budget.organizationId)).filter(
+    (expense) => expense.expenseDate >= budget.startDate && expense.expenseDate <= budget.endDate,
+  );
+  return {
+    spent: expenses.filter((expense) => expense.status === "reimbursed"),
+    committed: expenses.filter((expense) => COMMITTED_STATUSES.has(expense.status)),
   };
 }
 
 async function reimbursedExpensesInPeriod(budget: OrganizationBudget): Promise<Expense[]> {
-  const expenses = await listRecordsByIndex<Expense>("expenses", "organizationId", budget.organizationId);
-  return expenses.filter(
-    (expense) =>
-      expense.status === "reimbursed" &&
-      expense.expenseDate >= budget.startDate &&
-      expense.expenseDate <= budget.endDate,
-  );
+  return (await countedExpensesInPeriod(budget)).spent;
 }
 
 function sumWhere(expenses: Expense[], predicate: (expense: Expense) => boolean): number {
@@ -112,23 +124,38 @@ export async function isBudgetVisibleTo(
   );
 }
 
-/** Builds the budget view, limited to what the principal may see. */
+/**
+ * Builds the budget view, limited to what the principal may see. Every
+ * level carries its reimbursed and committed spend and, while the budget is
+ * active and today is within its period, a forecast (§28.19).
+ */
 export async function buildBudgetView(
   budget: OrganizationBudget,
   principal: AuthenticatedPrincipal,
 ): Promise<OrganizationBudgetView> {
   const scope = resolveBudgetScope(principal) ?? "TEAM";
-  const [hierarchy, spent] = await Promise.all([loadBudgetHierarchy(), reimbursedExpensesInPeriod(budget)]);
+  const [hierarchy, counted] = await Promise.all([loadBudgetHierarchy(), countedExpensesInPeriod(budget)]);
   const nameOf = (items: NamedRecord[], id: string) => items.find((item) => item.id === id)?.name ?? id;
+  const today = todayDate();
+  const forecasting = budget.status === "active" && budget.startDate <= today && today <= budget.endDate;
+
+  /** Utilization and forecast of a level whose spend is the expenses matching it. */
+  const level = (amount: number, matches: (expense: Expense) => boolean) => {
+    const spentAmount = sumWhere(counted.spent, matches);
+    const committedAmount = sumWhere(counted.committed, matches);
+    return {
+      utilization: utilization(amount, spentAmount, committedAmount),
+      forecast: forecasting
+        ? forecastBudget({ allocated: amount, spent: spentAmount, committed: committedAmount, startDate: budget.startDate, endDate: budget.endDate, today })
+        : null,
+    };
+  };
 
   const typeView = (typeBudget: ExpenseTypeBudget) => ({
     ...typeBudget,
-    utilization: utilization(
-      typeBudget.amount,
-      sumWhere(spent, (expense) =>
-        (typeBudget.teamId ? expense.teamId === typeBudget.teamId : expense.departmentId === typeBudget.departmentId) &&
-        expense.type === typeBudget.expenseType),
-    ),
+    ...level(typeBudget.amount, (expense) =>
+      (typeBudget.teamId ? expense.teamId === typeBudget.teamId : expense.departmentId === typeBudget.departmentId) &&
+      expense.type === typeBudget.expenseType),
   });
 
   const departmentAllocations = hierarchy.departmentAllocations
@@ -144,7 +171,7 @@ export async function buildBudgetView(
         .map((team) => ({
           ...team,
           teamName: nameOf(hierarchy.teams, team.teamId),
-          utilization: utilization(team.amount, sumWhere(spent, (expense) => expense.teamId === team.teamId)),
+          ...level(team.amount, (expense) => expense.teamId === team.teamId),
           expenseTypeBudgets: hierarchy.expenseTypeBudgets
             .filter((typeBudget) => typeBudget.teamAllocationId === team.id)
             .map(typeView),
@@ -153,10 +180,7 @@ export async function buildBudgetView(
       return {
         ...allocation,
         departmentName: nameOf(hierarchy.departments, allocation.departmentId),
-        utilization: utilization(
-          allocation.amount,
-          sumWhere(spent, (expense) => expense.departmentId === allocation.departmentId),
-        ),
+        ...level(allocation.amount, (expense) => expense.departmentId === allocation.departmentId),
         teamAllocations,
         departmentTeams: scope === "TEAM"
           ? []
@@ -173,12 +197,111 @@ export async function buildBudgetView(
     // Managers only see the department that holds their team's allocation.
     .filter((allocation) => scope !== "TEAM" || allocation.teamAllocations.length > 0);
 
+  // The viewer's own level: the organization budget, their departments
+  // together, or their team, with its running totals for the forecast chart.
+  const scopeLevel =
+    scope === "ORGANIZATION"
+      ? { allocated: budget.amount, matches: () => true }
+      : scope === "DEPARTMENT"
+        ? {
+            allocated: departmentAllocations.reduce((sum, allocation) => sum + allocation.amount, 0),
+            matches: (expense: Expense) => departmentAllocations.some((allocation) => allocation.departmentId === expense.departmentId),
+          }
+        : {
+            allocated: departmentAllocations.flatMap((allocation) => allocation.teamAllocations).reduce((sum, team) => sum + team.amount, 0),
+            matches: (expense: Expense) => expense.teamId === principal.teamId,
+          };
+  const scopeTotals = level(scopeLevel.allocated, scopeLevel.matches);
+  const scopeForecast: BudgetScopeForecast | null =
+    scopeTotals.forecast && scopeLevel.allocated > 0
+      ? {
+          allocated: scopeLevel.allocated,
+          spentAmount: scopeTotals.utilization.spentAmount,
+          committedAmount: scopeTotals.utilization.committedAmount ?? 0,
+          forecast: scopeTotals.forecast,
+          grouping: trendGrouping(budget.startDate, budget.endDate),
+          trend: buildTrend(
+            counted.spent.filter(scopeLevel.matches),
+            counted.committed.filter(scopeLevel.matches),
+            budget.startDate,
+            budget.endDate,
+            today,
+          ),
+        }
+      : null;
+
   return {
     ...budget,
     viewScope: scope,
-    utilization: utilization(budget.amount, sumWhere(spent, () => true)),
+    ...level(budget.amount, () => true),
+    scopeForecast,
     departmentAllocations,
   };
+}
+
+/** One level of an active budget as the viewer sees it (§25.1, §28.19). */
+export interface ViewerBudgetLevel {
+  budgetId: string;
+  /** "Engineering department", "Engineering team" or the budget's name. */
+  name: string;
+  /** For sentences: "The Engineering department budget" or 'The organization budget "FY 2026"'. */
+  sentenceName: string;
+  /** Stable key of the level within the budget. */
+  levelId: string;
+  utilizationPercent: number;
+  forecast: BudgetForecast | null;
+}
+
+/**
+ * The levels of active budgets at the principal's level (§28.5): the
+ * organization budget for Admin, department allocations for Finance and the
+ * team allocation for a manager. Used by the dashboard's budget alerts and
+ * the budget notices.
+ */
+export async function listViewerBudgetLevels(principal: AuthenticatedPrincipal): Promise<ViewerBudgetLevel[]> {
+  const scope = resolveBudgetScope(principal);
+  if (!scope || !principal.effectivePermissions.includes("budgets.read")) return [];
+  const budgets = (await listRecordsByIndex<OrganizationBudget>("budgets", "organizationId", principal.organizationId))
+    .filter((budget) => budget.status === "active");
+
+  const levels: ViewerBudgetLevel[] = [];
+  for (const budget of budgets) {
+    if (!(await isBudgetVisibleTo(principal, budget))) continue;
+    const view = await buildBudgetView(budget, principal);
+    if (scope === "ORGANIZATION") {
+      levels.push({
+        budgetId: budget.id,
+        name: budget.name,
+        sentenceName: `The organization budget "${budget.name}"`,
+        levelId: budget.id,
+        utilizationPercent: view.utilization.utilizationPercent,
+        forecast: view.forecast,
+      });
+    } else if (scope === "DEPARTMENT") {
+      for (const allocation of view.departmentAllocations) {
+        levels.push({
+          budgetId: budget.id,
+          name: `${allocation.departmentName} department`,
+          sentenceName: `The ${allocation.departmentName} department budget`,
+          levelId: allocation.id,
+          utilizationPercent: allocation.utilization.utilizationPercent,
+          forecast: allocation.forecast,
+        });
+      }
+    } else {
+      for (const team of view.departmentAllocations.flatMap((allocation) => allocation.teamAllocations)) {
+        levels.push({
+          budgetId: budget.id,
+          name: `${team.teamName} team`,
+          sentenceName: `The ${team.teamName} team budget`,
+          levelId: team.id,
+          utilizationPercent: team.utilization.utilizationPercent,
+          forecast: team.forecast,
+        });
+      }
+    }
+  }
+  return levels;
 }
 
 /** Today's date (YYYY-MM-DD). */

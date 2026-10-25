@@ -60,24 +60,72 @@ export interface ExpenseTypeBudget extends ResourceTimestamps {
 }
 
 export interface BudgetUtilization {
+  /** Reimbursed spend: the only spend that counts against the budget. */
   spentAmount: number;
   remainingAmount: number;
   utilizationPercent: number;
+  /**
+   * Approved expenses awaiting reimbursement, dated in the period (§28.8).
+   * Shown separately and never counted as spend. Organization budgets only.
+   */
+  committedAmount?: number;
+}
+
+export type BudgetForecastStatus = "ON_TRACK" | "PROJECTED_OVER" | "OVER_COMMITTED";
+
+/** Where a level of an active budget is heading at the pace so far (§28.19). */
+export interface BudgetForecast {
+  /** Days of the period so far, today included, and in the whole period. */
+  elapsedDays: number;
+  totalDays: number;
+  /**
+   * Spend at the period end if reimbursed and committed spend continue at
+   * the average daily rate so far; null during the first week.
+   */
+  projectedAmount: number | null;
+  /** What an even rate through the period would have used by today. */
+  expectedByToday: number;
+  /** When reimbursed and committed spend would reach the allocation at this pace, within the period. */
+  runsOutOn: string | null;
+  status: BudgetForecastStatus;
+  /** How far the projection, or reimbursed and committed spend, goes over the allocation; 0 when on track. */
+  overBy: number;
+}
+
+/** Reimbursed and committed spend dated up to and including `date`, from the period start. */
+export interface BudgetTrendPoint {
+  date: string;
+  spentAmount: number;
+  committedAmount: number;
+}
+
+/** The viewer's own level of an active budget, with its running totals for the forecast chart. */
+export interface BudgetScopeForecast {
+  allocated: number;
+  spentAmount: number;
+  committedAmount: number;
+  forecast: BudgetForecast;
+  /** Grouped like the analytics trend: by day up to 31 days, by week up to 92, by month beyond. */
+  grouping: "day" | "week" | "month";
+  trend: BudgetTrendPoint[];
 }
 
 export type ExpenseTypeBudgetView = ExpenseTypeBudget & {
   utilization: BudgetUtilization;
+  forecast: BudgetForecast | null;
 };
 
 export interface TeamBudgetView extends TeamBudgetAllocation {
   teamName: string;
   utilization: BudgetUtilization;
+  forecast: BudgetForecast | null;
   expenseTypeBudgets: ExpenseTypeBudgetView[];
 }
 
 export interface DepartmentBudgetView extends DepartmentBudgetAllocation {
   departmentName: string;
   utilization: BudgetUtilization;
+  forecast: BudgetForecast | null;
   teamAllocations: TeamBudgetView[];
   /** Active teams of the department, for allocation forms. */
   departmentTeams: Array<{ id: EntityId; name: string }>;
@@ -91,6 +139,10 @@ export type BudgetViewScope = "ORGANIZATION" | "DEPARTMENT" | "TEAM";
 export interface OrganizationBudgetView extends OrganizationBudget {
   viewScope: BudgetViewScope;
   utilization: BudgetUtilization;
+  /** Forecasts exist only while the budget is active and today is within its period (§28.19). */
+  forecast: BudgetForecast | null;
+  /** The viewer's level: the organization budget, their departments together, or their team. */
+  scopeForecast: BudgetScopeForecast | null;
   departmentAllocations: DepartmentBudgetView[];
 }
 

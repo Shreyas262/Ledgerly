@@ -55,7 +55,7 @@ const NOTIFICATION_OPTIONS: Array<{ category: NotificationCategory; label: strin
   { category: "REIMBURSEMENTS", label: "Reimbursements", help: "When reimbursement of your expense starts and when it is paid." },
   { category: "POLICY_ALERTS", label: "Policy notices", help: "When you submit an expense with policy warnings or above an approval threshold." },
   { category: "REVIEW_QUEUE", label: "Work waiting for me", help: "Expenses waiting for your review or reimbursement.", reviewersOnly: true },
-  { category: "BUDGET_ALERTS", label: "Budget notices", help: "When expenses cannot be created because of the budget, and, for administrators, when a budget period has ended." },
+  { category: "BUDGET_ALERTS", label: "Budget notices", help: "When expenses cannot be created because of the budget, when a budget you oversee is projected to exceed its allocation, and, for administrators, when a budget period has ended." },
 ];
 
 export function SettingsPage() {

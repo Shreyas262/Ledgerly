@@ -66,12 +66,19 @@ export function DashboardWorkQueues({ queues }: { queues: WorkQueuesData }) {
       value: budgetAlerts.length,
       description:
         budgetAlerts.length === 0 ? (
-          "Every active budget is below 80% used."
+          "Every active budget is below 80% used and on track."
         ) : (
           <Stack component="ul" spacing={0.25} sx={{ m: 0, pl: 2 }}>
             {budgetAlerts.slice(0, 3).map((alert) => (
               <li key={`${alert.budgetId}-${alert.name}`}>
-                {alert.name}: <Typography variant="numeric">{alert.utilizationPercent.toFixed(0)}%</Typography> used
+                {alert.name}:{" "}
+                {alert.forecast?.status === "OVER_COMMITTED" ? (
+                  <>over-committed by <Typography variant="numeric">{formatCurrency(alert.forecast.overBy)}</Typography></>
+                ) : alert.forecast?.status === "PROJECTED_OVER" ? (
+                  <>projected <Typography variant="numeric">{formatCurrency(alert.forecast.overBy)}</Typography> over</>
+                ) : (
+                  <><Typography variant="numeric">{alert.utilizationPercent.toFixed(0)}%</Typography> used</>
+                )}
               </li>
             ))}
             {budgetAlerts.length > 3 && <li>and {budgetAlerts.length - 3} more</li>}

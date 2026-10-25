@@ -7,7 +7,7 @@ import { getRecord, listRecords, listRecordsByIndex } from "../services/mockData
 import { getApprovalQueue } from "../services/approvalService";
 import { getReimbursementQueue } from "../services/reimbursementService";
 import { authorizeExpenseFinance } from "../services/workflowAuthorization";
-import { getExpenseCreationEligibility, todayDate } from "../services/budgetService";
+import { getExpenseCreationEligibility, listViewerBudgetLevels, todayDate } from "../services/budgetService";
 import type { AuthenticatedPrincipal } from "../../features/auth/types/auth";
 import type { Expense } from "../../features/expenses/types/expense";
 import type { AuditEvent } from "../../features/audit/types/audit";
@@ -191,6 +191,25 @@ export const notificationHandlers = [
           timestamp: `${budget.endDate}T23:59:59.000Z`,
         });
       }
+    }
+
+    // Early warnings for budgets at the user's level (§28.19), refreshed daily.
+    const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+    for (const level of await listViewerBudgetLevels(principal)) {
+      const forecast = level.forecast;
+      if (!forecast || forecast.status === "ON_TRACK") continue;
+      const overCommitted = forecast.status === "OVER_COMMITTED";
+      notifications.push({
+        id: `budget-forecast-${level.levelId}-${forecast.status}`,
+        category: "BUDGET_ALERTS",
+        severity: "warning",
+        title: overCommitted ? "Budget over-committed" : "Budget forecast",
+        message: overCommitted
+          ? `${level.sentenceName} has reimbursed and approved spend ${formatCurrency(forecast.overBy)} above its allocation.`
+          : `${level.sentenceName} is projected to exceed its allocation by ${formatCurrency(forecast.overBy)}${forecast.runsOutOn ? `, running out around ${formatDate(forecast.runsOutOn)}` : ""}.`,
+        link: `/budgets/${level.budgetId}`,
+        timestamp: startOfToday,
+      });
     }
 
     notifications.sort((first, second) => second.timestamp.localeCompare(first.timestamp));
